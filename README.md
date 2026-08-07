@@ -104,8 +104,6 @@ That's the whole idea. Everything else is applying it in a specific place.
 | **[`@skew/angular-data`](libs/angular/data)**         | Normalized entity store, tag invalidation, durable mutation outbox.                         | **50 tests** |
 | **[`@skew/angular-workflow`](libs/angular/workflow)** | Durable multi-step flows surviving refresh, deploy, and device.                             | **42 tests** |
 
-All five Angular-scope packages are complete. Designs for `@skew/react-*`, `@skew/node`, and `@skew/nest` live in [`plan.md`](plan.md). Core was kept framework-neutral so they can be picked up without reworking it.
-
 > **Adoption rule.** Every package depends on `@skew/core` and never on a sibling. Take one, take three, take none of the Angular ones. Nothing is load-bearing for anything else.
 
 ---
