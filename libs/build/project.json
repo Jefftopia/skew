@@ -1,0 +1,35 @@
+{
+  "name": "build-tools",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/build/src",
+  "projectType": "library",
+  "tags": [
+    "scope:tooling"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/build",
+        "main": "libs/build/src/index.ts",
+        "tsConfig": "libs/build/tsconfig.lib.json",
+        "assets": [
+          "libs/build/*.md"
+        ]
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run --config libs/build/vite.config.ts"
+      },
+      "cache": true
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

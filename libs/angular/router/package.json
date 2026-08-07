@@ -1,0 +1,12 @@
+{
+  "name": "@skew/angular-router",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/core": "^22.0.0",
+    "@angular/router": "^22.0.0",
+    "@angular/common": "^22.0.0",
+    "@skew/core": "^0.0.1"
+  },
+  "sideEffects": false,
+  "description": "Recovers from stale lazy-chunk failures after a deploy, with classification that avoids reload loops."
+}

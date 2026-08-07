@@ -1,0 +1,24 @@
+{
+  "name": "@skew/core",
+  "version": "0.0.1",
+  "description": "Framework-agnostic primitives for surviving version skew: versioned envelopes, migration chains, build identity and negotiation.",
+  "keywords": [
+    "version-skew",
+    "migration",
+    "schema-versioning",
+    "deployment",
+    "offline"
+  ],
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./package.json": "./package.json"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@skew/build",
+  "version": "0.0.1",
+  "description": "Stamps build identity and emits the skew manifest so clients and servers can discover that they disagree.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "bin": { "skew-stamp": "./src/bin/skew-stamp.js" },
+  "exports": {
+    ".": { "types": "./src/index.d.ts", "default": "./src/index.js" },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false
+}

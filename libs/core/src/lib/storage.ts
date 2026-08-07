@@ -1,0 +1,151 @@
+import { SkewResult, err } from './result.js';
+import { VersionedSchema } from './versioned.js';
+
+/**
+ * Versioned persistence.
+ *
+ * The failure this exists to prevent is the quiet one. A service that does
+ * `JSON.parse(raw) as T` is asserting a shape it has not checked; the moment
+ * the model changes, every cached record on every user's machine has the old
+ * shape while being typed as the new one. You get `undefined` deep inside a
+ * renderer rather than a clean failure at the boundary.
+ */
+
+/** Minimal key/value contract. Sync drivers may return values directly. */
+export interface StorageDriver {
+  readonly sync: boolean;
+  get(key: string): string | null | Promise<string | null>;
+  set(key: string, value: string): void | Promise<void>;
+  remove(key: string): void | Promise<void>;
+  keys?(): string[] | Promise<string[]>;
+}
+
+export interface VersionedStoreOptions {
+  readonly driver: StorageDriver;
+  /** Namespace for keys. Defaults to the schema name. */
+  readonly keyPrefix?: string;
+  /** Stamped onto envelopes so a bad record can be attributed to a deployment. */
+  readonly buildId?: string;
+  /**
+   * Called whenever a read fails. The default is silence — callers inspect the
+   * returned result — but wiring this to telemetry is how you discover that a
+   * migration is wrong before users report it.
+   */
+  readonly onReadFailure?: (key: string, failure: Extract<SkewResult<never>, { ok: false }>) => void;
+}
+
+export interface VersionedStore<T> {
+  /** Reads and migrates. Returns a result — never throws on stale data. */
+  get(key: string): Promise<SkewResult<T>>;
+  /**
+   * Synchronous read, available only on sync drivers (localStorage, memory).
+   * Returns `null` on an async driver rather than lying about it.
+   *
+   * Exists because a signal or hook initialiser reading from localStorage
+   * should not have to flash empty state through a microtask.
+   */
+  peek(key: string): SkewResult<T> | null;
+  set(key: string, value: T): Promise<void>;
+  remove(key: string): Promise<void>;
+  /** Fully-qualified storage key, exposed for debugging and cache-busting. */
+  keyFor(key: string): string;
+}
+
+export function createVersionedStore<T>(
+  schema: VersionedSchema<T>,
+  options: VersionedStoreOptions,
+): VersionedStore<T> {
+  const { driver, keyPrefix = schema.name, buildId, onReadFailure } = options;
+  const keyFor = (key: string) => `${keyPrefix}:${key}`;
+
+  function parse(key: string, raw: string | null): SkewResult<T> {
+    if (raw === null) {
+      return err('invalid', 0, schema.version, `[${schema.name}] nothing stored at "${key}"`);
+    }
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(raw);
+    } catch (cause) {
+      return err('invalid', 0, schema.version, `[${schema.name}] stored value is not JSON`, cause);
+    }
+    const result = schema.read(decoded);
+    if (!result.ok) onReadFailure?.(key, result);
+    return result;
+  }
+
+  return {
+    keyFor,
+
+    async get(key: string): Promise<SkewResult<T>> {
+      const raw = await driver.get(keyFor(key));
+      return parse(key, raw);
+    },
+
+    peek(key: string): SkewResult<T> | null {
+      if (!driver.sync) return null;
+      const raw = driver.get(keyFor(key)) as string | null;
+      return parse(key, raw);
+    },
+
+    async set(key: string, value: T): Promise<void> {
+      await driver.set(keyFor(key), JSON.stringify(schema.write(value, buildId)));
+    },
+
+    async remove(key: string): Promise<void> {
+      await driver.remove(keyFor(key));
+    },
+  };
+}
+
+// --- drivers ---------------------------------------------------------------
+
+/** In-memory driver. The default in tests and on the server. */
+export function memoryDriver(seed?: Map<string, string>): StorageDriver {
+  const map = seed ?? new Map<string, string>();
+  return {
+    sync: true,
+    get: (k) => map.get(k) ?? null,
+    set: (k, v) => void map.set(k, v),
+    remove: (k) => void map.delete(k),
+    keys: () => [...map.keys()],
+  };
+}
+
+/**
+ * Web Storage driver. Degrades to memory when storage is unavailable —
+ * Safari private mode, disabled cookies, or SSR — so a read never throws in a
+ * place the caller cannot reasonably handle it.
+ */
+export function webStorageDriver(
+  kind: 'local' | 'session' = 'local',
+  win: { localStorage?: Storage; sessionStorage?: Storage } | undefined = globalThis as never,
+): StorageDriver {
+  const store = kind === 'local' ? win?.localStorage : win?.sessionStorage;
+  if (!store || !isUsable(store)) return memoryDriver();
+
+  return {
+    sync: true,
+    get: (k) => store.getItem(k),
+    set: (k, v) => {
+      try {
+        store.setItem(k, v);
+      } catch {
+        // Quota exceeded. A cache write failing is not worth breaking a save
+        // the user asked for; the next read simply misses.
+      }
+    },
+    remove: (k) => store.removeItem(k),
+    keys: () => Object.keys(store),
+  };
+}
+
+function isUsable(store: Storage): boolean {
+  const probe = '__skew_probe__';
+  try {
+    store.setItem(probe, '1');
+    store.removeItem(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
