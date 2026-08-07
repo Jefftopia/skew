@@ -18,9 +18,8 @@ import { Editor } from './editor/editor';
       <div class="badge">REMOTE · standalone</div>
       <h1>Skew — remote editor</h1>
       <p class="sub">
-        The newer of the two deployments. Served on its own port, it also
-        exposes
-        <code>./Editor</code> for the host to fetch at runtime.
+        The newer of the two deployments. Independently built and served, it
+        also exposes <code>./Editor</code> for the host to fetch at runtime.
       </p>
     </header>
 

@@ -43,7 +43,9 @@
     "demo:prod:serve": "nx run-many -t serve-dist -p prod-host prod-remote --parallel=2",
     "demo:prod:serve-host": "nx serve-dist prod-host",
     "demo:prod:serve-remote": "nx serve-dist prod-remote",
-    "demo:prod:dev": "nx run-many -t serve -p prod-host prod-remote --parallel=2"
+    "demo:prod:dev": "nx run-many -t serve -p prod-host prod-remote --parallel=2",
+    "demo:prod:same-origin": "npm run demo:prod:build && npm run demo:prod:serve-same-origin",
+    "demo:prod:serve-same-origin": "node tools/serve-same-origin.mjs"
   },
   "private": true,
   "devDependencies": {

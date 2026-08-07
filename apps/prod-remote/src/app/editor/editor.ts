@@ -36,7 +36,7 @@ interface Outcome {
         build <code>{{ build.buildId }}</code> · stamped {{ build.builtAt }} ·
         {{
           federated
-            ? 'fetched at runtime from a separate origin'
+            ? 'fetched at runtime from a separate deployment'
             : 'running standalone'
         }}
       </p>
@@ -132,15 +132,25 @@ export class Editor {
   protected readonly build = BUILD_IDENTITY;
 
   /**
-   * True when this module was served from somewhere other than the page it is
-   * rendering into — i.e. the host fetched it across the federation boundary.
+   * True when this module is rendering into a page it was not deployed with —
+   * i.e. a host fetched it across the federation boundary.
    *
-   * `import.meta.url` is the module's *own* URL, which is the only thing in
-   * scope that knows where the code came from; `location.origin` is where the
-   * page came from. When they differ, this component is a guest.
+   * `import.meta.url` is the module's *own* URL, the only thing in scope that
+   * knows where this code came from. `document.baseURI` is where the running
+   * page was deployed. Comparing the two **directories** is what makes this
+   * work under both serving modes:
+   *
+   *   standalone, two ports   module :4411/        base :4411/        → same
+   *   federated,  two ports   module :4411/        base :4410/        → differ
+   *   standalone, one origin  module :4420/remote/ base :4420/remote/ → same
+   *   federated,  one origin  module :4420/remote/ base :4420/        → differ
+   *
+   * Comparing origins instead — the obvious first attempt — silently reports
+   * "standalone" in the one-origin deployment, where the origins match by
+   * construction and are therefore no evidence of anything.
    */
   protected readonly federated =
-    new URL(import.meta.url).origin !== globalThis.location?.origin;
+    new URL('.', import.meta.url).href !== new URL('.', document.baseURI).href;
 
   /** What 0.2 declares, read off the definition rather than asserted in prose. */
   protected readonly stepCount = Object.keys(wizardV2.steps).length;

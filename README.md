@@ -276,7 +276,36 @@ npm run demo:prod:redeploy-remote
 | `demo:prod:serve`           | Serve both from `dist/`, no rebuild                               |
 | `demo:prod:redeploy-remote` | **The interesting one.** New build id, new hashes, old files gone |
 | `demo:prod:deploy-host`     | Same, for the host                                                |
+| `demo:prod:same-origin`     | The same two builds on **one** origin — see below                 |
 | `demo:prod:dev`             | Both under dev servers with HMR, for editing the demo itself      |
+
+#### Two origins or one
+
+Two ports means two **origins**, and the Same-Origin Policy then partitions `localStorage` — so the remote opened on its own at `:4411` sees an empty bucket. That is honest about what two ports mean, and it is not how any of this gets deployed.
+
+```sh
+npm run demo:prod:same-origin      # everything on http://localhost:4420
+```
+
+- **host** → <http://localhost:4420/>
+- **remote** → <http://localhost:4420/remote/>
+
+Same two build artifacts, unchanged, mounted at different paths behind one server (`tools/serve-same-origin.mjs`, Node builtins only). This is what a reverse proxy in front of a host and its remotes actually looks like, and it is the mode to reach for if you're using the demo as a template.
+
+|                                          | two ports                 | one origin |
+| ---------------------------------------- | ------------------------- | ---------- |
+| Federation                               | works                     | works      |
+| Deploy skew, rollback, schema skew       | all work                  | all work   |
+| Standalone remote reads the host's draft | **no** — different origin | **yes**    |
+| Matches production                       | rarely                    | usually    |
+
+Nothing about federation wants separate origins. The host resolves the remote by URL, and a relative URL is a URL — the manifest just says `/remote/remoteEntry.json`. **The two builds stay independently deployable either way**; `demo:prod:redeploy-remote` still purges the old chunk and still triggers recovery, on either server.
+
+Three details make one artifact work at both mount points, all of them things a real proxy does:
+
+- **The manifest is served, not baked.** The host's bundle ships a manifest pointing at `:4411`; the same-origin server returns `/remote/remoteEntry.json` for `/federation.manifest.json` instead. Same bundle, different deployment, different remote URL — which is precisely why Native Federation reads it at runtime rather than compiling remote locations in.
+- **The remote's `<base href>` is rewritten** from `/` to `/remote/` on the way out, so its relative assets and its own `initFederation('./remoteEntry.json')` resolve under the mount. The alternative is rebuilding with `--base-href /remote/`, which yields a bundle that _only_ works there.
+- **`Cache-Control: no-store`**, or the redeploy scenarios quietly stop reproducing.
 
 Each deploy increments a build number (`prod-remote-1`, `-2`, …) kept in `tmp/skew-demo/`, so successive runs are genuinely different deployments rather than identical rebuilds.
 
@@ -369,13 +398,20 @@ A draft written by one build and resumed under another is the same failure as a 
 
 #### 6 · The remote is a whole application
 
-Open <http://localhost:4411> directly. The same `Editor` renders, and the banner says _running standalone_ rather than _fetched at runtime from a separate origin_ — it checks `import.meta.url` against `location.origin`.
+Open the remote directly — <http://localhost:4411> on two ports, or <http://localhost:4420/remote/> on one origin. The same `Editor` renders, and the banner says _running standalone_ rather than _fetched at runtime from a separate deployment_.
 
 A remote that only works when embedded is a remote nobody can debug.
 
-**The drafts are empty there, and that's correct.** `localStorage` is partitioned by origin, and `:4410` and `:4411` are different origins. When the host loads the remote, the remote's code runs _inside the host's page_, so it sees the host's storage; opened on its own it gets its own, empty bucket. The card says so rather than showing you a blank form and letting you guess.
+**On two ports the drafts are empty there, and that's correct.** `localStorage` is partitioned by origin, and the port is part of the origin — `:4410` and `:4411` are two different origins that happen to share a hostname. No CORS header or configuration bridges them; it's the Same-Origin Policy, and storage is one of the things it isolates absolutely. The card says so rather than showing you a blank form and letting you guess.
 
-That partitioning is the honest version of the boundary: a real host and remote usually _do_ share an origin behind a reverse proxy, and if yours don't, storage is not the channel to pass state through.
+**On one origin the same page reads the host's draft**, migrated v1 → v2. Nothing in either build changed — only where they were mounted.
+
+Two footnotes worth carrying away:
+
+- **Cookies do _not_ follow this rule.** Cookie scope is domain + path; the port isn't in it. A cookie set at `:4410` is readable at `:4411` while `localStorage` stays sealed — two storage mechanisms on the same page with two different isolation rules, which is a reliable source of confusion on localhost.
+- **Code runs with the origin of the page that loaded it, not the URL it came from.** The remote's module is fetched from `:4411` but evaluated inside the host's document, so it sees the host's storage and cookies. That's the same rule that lets a `<script src="cdn.example.com/…">` read your session cookie — fetching code from elsewhere doesn't sandbox it, it grants it your origin. Worth remembering when choosing whose remotes to load.
+
+If you need state across genuinely separate origins, the channels are `postMessage` or a server — not storage. `BroadcastChannel` and the `storage` event look like candidates and are both same-origin only.
 
 ---
 
@@ -420,13 +456,17 @@ The adoption rule holds here too: take one package, take three, take none of the
 
 ### If something doesn't work
 
-**The ports are in use.** The demo runs on 4410/4411 to stay clear of the usual 4200. Changing them means changing four places together: `serve-dist` (and `serve-original`, for `demo:prod:dev`) in each app's `project.json`, and `apps/prod-host/public/federation.manifest.json`, which is the URL the host actually resolves at runtime.
+**The ports are in use.** The demo runs on 4410/4411 (two-origin) and 4420 (one-origin) to stay clear of the usual 4200. For the two-origin mode, changing them means changing four places together: `serve-dist` (and `serve-original`, for `demo:prod:dev`) in each app's `project.json`, and `apps/prod-host/public/federation.manifest.json`, which is the URL the host actually resolves at runtime. The one-origin server takes `--port` and needs no other change — it synthesizes its own manifest:
+
+```sh
+node tools/serve-same-origin.mjs --port 5000
+```
 
 **Scenario 1 just works, with no pause.** You reloaded after redeploying. A fresh page load fetches the new `remoteEntry.json` and there's nothing stale left to fail. The sequence has to be: load → redeploy → click.
 
 **Scenario 1 reports `exhausted`.** The recovery budget is spent for this build in this tab. See above.
 
-**The editor never loads, in any scenario.** Check the remote is actually up: `curl http://localhost:4411/remoteEntry.json`. The host fetches it cross-origin, so the static server must send CORS headers — `serve-dist` sets `cors: true`.
+**The editor never loads, in any scenario.** Check the remote is actually up: `curl http://localhost:4411/remoteEntry.json` (or `curl http://localhost:4420/remote/remoteEntry.json`). In the two-origin mode the host fetches it cross-origin, so the static server must send CORS headers — `serve-dist` sets `cors: true`. The one-origin mode needs no CORS at all, which is one fewer thing to get wrong.
 
 **`demo:prod:serve` prints "Waiting for … in another nx process" and exits immediately.** Nx dedupes continuous targets across concurrent invocations, and a server killed abruptly can leave that lock behind — the new run then attaches to a process that is no longer there and reports success while serving nothing. Both ports will refuse connections.
 
