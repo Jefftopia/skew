@@ -11,7 +11,7 @@
 <p align="center">
   <img alt="Angular 22" src="https://img.shields.io/badge/Angular-22-DD0031?style=flat-square" />
   <img alt="TypeScript 6.0" src="https://img.shields.io/badge/TypeScript-6.0-3178C6?style=flat-square" />
-  <img alt="182 tests passing" src="https://img.shields.io/badge/tests-182%20passing-2EA043?style=flat-square" />
+  <img alt="181 tests passing" src="https://img.shields.io/badge/tests-181%20passing-2EA043?style=flat-square" />
   <img alt="zero core dependencies" src="https://img.shields.io/badge/core%20deps-0-8FBFE0?style=flat-square" />
   <img alt="MIT" src="https://img.shields.io/badge/license-MIT-1E3A5F?style=flat-square" />
 </p>
