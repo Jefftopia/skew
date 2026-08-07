@@ -10,33 +10,18 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
+    "lib": ["es2020", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "strict": false,
     "paths": {
-      "@skew/angular-data": [
-        "./libs/angular/data/src/index.ts"
-      ],
-      "@skew/angular-router": [
-        "./libs/angular/router/src/index.ts"
-      ],
-      "@skew/angular-workflow": [
-        "./libs/angular/workflow/src/index.ts"
-      ],
-      "@skew/build": [
-        "./libs/build/src/index.ts"
-      ],
-      "@skew/core": [
-        "./libs/core/src/index.ts"
-      ]
+      "@skew/angular-data": ["./libs/angular/data/src/index.ts"],
+      "@skew/angular-router": ["./libs/angular/router/src/index.ts"],
+      "@skew/angular-workflow": ["./libs/angular/workflow/src/index.ts"],
+      "@skew/build": ["./libs/build/src/index.ts"],
+      "@skew/core": ["./libs/core/src/index.ts"],
+      "@skew/angular-core": ["./libs/angular/core/src/index.ts"]
     }
   },
-  "exclude": [
-    "node_modules",
-    "tmp"
-  ]
+  "exclude": ["node_modules", "tmp"]
 }

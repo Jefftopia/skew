@@ -1,0 +1,108 @@
+{
+  "name": "prod-host",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "host",
+  "sourceRoot": "apps/prod-host/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@angular-architects/native-federation:build",
+      "options": {
+        "cacheExternalArtifacts": true
+      },
+      "configurations": {
+        "production": {
+          "target": "prod-host:esbuild:production"
+        },
+        "development": {
+          "target": "prod-host:esbuild:development",
+          "dev": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "executor": "@angular-architects/native-federation:build",
+      "options": {
+        "target": "prod-host:serve-original:development",
+        "rebuildDelay": 500,
+        "cacheExternalArtifacts": true,
+        "dev": true,
+        "devServer": true,
+        "port": 0
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "esbuild": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/prod-host",
+        "browser": "apps/prod-host/src/main.ts",
+        "tsConfig": "apps/prod-host/tsconfig.app.json",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/prod-host/public"
+          }
+        ],
+        "styles": ["apps/prod-host/src/styles.css"],
+        "polyfills": ["es-module-shims"]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "serve-original": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "configurations": {
+        "production": {
+          "buildTarget": "prod-host:esbuild:production"
+        },
+        "development": {
+          "buildTarget": "prod-host:esbuild:development"
+        }
+      },
+      "options": {
+        "port": 4410
+      }
+    },
+    "serve-dist": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "staticFilePath": "dist/apps/prod-host/browser",
+        "port": 4410,
+        "spa": true,
+        "cors": true,
+        "watch": false,
+        "cacheSeconds": -1
+      }
+    }
+  }
+}

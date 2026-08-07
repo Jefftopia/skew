@@ -149,3 +149,92 @@ function isUsable(store: Storage): boolean {
     return false;
   }
 }
+
+/** Configuration options for the IndexedDB driver. */
+export interface IndexedDbDriverOptions {
+  /** The name of the IndexedDB database. Defaults to "skew-store". */
+  readonly dbName?: string;
+  /** The name of the object store. Defaults to "keyval". */
+  readonly storeName?: string;
+}
+
+/**
+ * IndexedDB driver for async, large-capacity storage.
+ * Degrades gracefully on failure (e.g. if IndexedDB is blocked).
+ */
+export function indexedDbDriver(options: IndexedDbDriverOptions = {}): StorageDriver {
+  const { dbName = 'skew-store', storeName = 'keyval' } = options;
+  let dbPromise: Promise<IDBDatabase> | null = null;
+
+  function getDb(): Promise<IDBDatabase> {
+    if (dbPromise) return dbPromise;
+    if (typeof indexedDB === 'undefined') {
+      return Promise.reject(new Error('IndexedDB is not available'));
+    }
+
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(dbName, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(storeName)) {
+          db.createObjectStore(storeName);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => {
+        dbPromise = null;
+        reject(req.error);
+      };
+    });
+    return dbPromise;
+  }
+
+  function run<T>(
+    mode: IDBTransactionMode,
+    callback: (store: IDBObjectStore) => IDBRequest<T>,
+  ): Promise<T> {
+    return getDb().then(
+      (db) =>
+        new Promise<T>((resolve, reject) => {
+          const tx = db.transaction(storeName, mode);
+          const store = tx.objectStore(storeName);
+          const req = callback(store);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        }),
+    );
+  }
+
+  return {
+    sync: false,
+    get: async (key) => {
+      try {
+        const val = await run<string>('readonly', (store) => store.get(key));
+        return val ?? null;
+      } catch {
+        return null;
+      }
+    },
+    set: async (key, value) => {
+      try {
+        await run('readwrite', (store) => store.put(value, key));
+      } catch {
+        // Fail silently on quota exceeded or other errors
+      }
+    },
+    remove: async (key) => {
+      try {
+        await run('readwrite', (store) => store.delete(key));
+      } catch {}
+    },
+    keys: async () => {
+      try {
+        return await run<string[]>('readonly', (store) =>
+          store.getAllKeys() as IDBRequest<string[]>,
+        );
+      } catch {
+        return [];
+      }
+    },
+  };
+}

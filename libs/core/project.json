@@ -38,10 +38,10 @@
     },
     "test": {
       "executor": "nx:run-commands",
+      "cache": true,
       "options": {
         "command": "vitest run --config libs/core/vite.config.ts"
-      },
-      "cache": true
+      }
     },
     "lint": {
       "executor": "@nx/eslint:lint"

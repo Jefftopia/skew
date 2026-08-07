@@ -66,6 +66,26 @@ export class Simulator {
     this.failChunk.set(false);
     write(FAIL_CHUNK, false);
   }
+
+  /**
+   * Clears the flags *and* the recovery counter.
+   *
+   * The counter lives in sessionStorage and is deliberately scoped to a build,
+   * so it survives the reload it is counting. That is correct behaviour and
+   * exactly what stops a bricked tab — but between demo runs it looks like the
+   * library has stopped working, so the reset is worth surfacing.
+   */
+  reset(): void {
+    this.failChunk.set(false);
+    this.staleOrigin.set(false);
+    write(FAIL_CHUNK, false);
+    write(STALE_ORIGIN, false);
+    try {
+      globalThis.sessionStorage?.removeItem('skew:recoveries');
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 /** An error shaped like the one a purged chunk actually produces. */

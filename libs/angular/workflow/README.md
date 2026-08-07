@@ -156,4 +156,4 @@ provideSkewWorkflow({
 
 ## Known limitation
 
-Steps share a single `TData` shape rather than accumulating a per-step type (step 3 statically knowing steps 1–2's fields). A fully generic accumulation chain is expressible, but produces type errors that are very hard to read, and validation libraries already own the per-step shape. Documented as a deliberate trade rather than an oversight — see [`plan.md`](../../../plan.md) §4.
+Steps share a single `TData` shape rather than accumulating a per-step type (step 3 statically knowing steps 1–2's fields). A fully generic accumulation chain is expressible, but produces type errors that are very hard to read, and validation libraries already own the per-step shape. Documented as a deliberate trade rather than an oversight — see the [Technical Appendix](../../../technical-appendix.md).

@@ -8,11 +8,11 @@ Signals throughout. Zoneless-safe. No NgModules.
 
 ## Why this exists
 
-Angular's `resource()` / `httpResource()` are good *reads*, but they are per-call caches:
+Angular's `resource()` / `httpResource()` are good _reads_, but they are per-call caches:
 
 ```ts
-const list = httpResource(() => '/api/bulletins');           // Bulletin[]
-const one  = httpResource(() => `/api/bulletins/${id()}`);   // Bulletin
+const list = httpResource(() => '/api/bulletins'); // Bulletin[]
+const one = httpResource(() => `/api/bulletins/${id()}`); // Bulletin
 ```
 
 These share no identity. Updating `one` leaves the matching row inside `list` stale, and there is no integration point that lets a third-party store observe what either fetched. There is also **no write primitive at all** — no optimistic update, no rollback, and nothing that survives a reload.
@@ -25,8 +25,8 @@ This package supplies the missing half.
 
 ```ts
 provideSkewData({
-  persistOutbox: true,          // queued writes survive a reload
-  buildId: BUILD_ID,            // from @skew/build
+  persistOutbox: true, // queued writes survive a reload
+  buildId: BUILD_ID, // from @skew/build
   onOutboxError: (message, detail) => telemetry.error(message, detail),
 });
 ```
@@ -101,7 +101,7 @@ Operations are closures and closures don't serialise, so a queued entry finds it
 
 ```ts
 const outbox = inject(OutboxService);
-outbox.pendingCount();   // Signal<number>
+outbox.pendingCount(); // Signal<number>
 outbox.hasPendingWork(); // Signal<boolean>  → "3 changes waiting to sync"
 outbox.isFlushing();
 ```
@@ -110,12 +110,12 @@ outbox.isFlushing();
 
 ## Invalidation
 
-Tags, not TTLs. A time-to-live is a guess about when data went stale; a mutation *knows*.
+Tags, not TTLs. A time-to-live is a guess about when data went stale; a mutation _knows_.
 
 ```ts
-tag.entity(Bulletin, '42')   // 'bulletin#42'
-tag.all(Bulletin)            // 'bulletin#*'  — matches every bulletin#…
-tag.collection('bulletins')  // 'bulletins'
+tag.entity(Bulletin, '42'); // 'bulletin#42'
+tag.all(Bulletin); // 'bulletin#*'  — matches every bulletin#…
+tag.collection('bulletins'); // 'bulletins'
 
 inject(CacheRegistry).invalidate('bulletins');
 ```
@@ -126,20 +126,20 @@ Tags are supplied as a getter and re-read on each invalidation, so a query whose
 
 ## API
 
-| Export | Purpose |
-|---|---|
-| `entity<T>({ name, key })` | Declare identity |
-| `tag.entity` / `tag.all` / `tag.collection` | Build invalidation tags |
-| `EntityStore` | `select` · `selectAll` · `query` · `peek` · `upsert` · `patch` · `remove` · `transaction` |
-| `query(config)` | Read + normalize + subscribe to tags |
-| `mutation(config)` | Write + optimistic + rollback + durability |
-| `OutboxService` | `entries` · `pendingCount` · `flush` · `clear` |
-| `CacheRegistry` | `invalidate` · `subscribe` |
-| `provideSkewData(options)` | Wire it up |
+| Export                                      | Purpose                                                                                   |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `entity<T>({ name, key })`                  | Declare identity                                                                          |
+| `tag.entity` / `tag.all` / `tag.collection` | Build invalidation tags                                                                   |
+| `EntityStore`                               | `select` · `selectAll` · `query` · `peek` · `upsert` · `patch` · `remove` · `transaction` |
+| `query(config)`                             | Read + normalize + subscribe to tags                                                      |
+| `mutation(config)`                          | Write + optimistic + rollback + durability                                                |
+| `OutboxService`                             | `entries` · `pendingCount` · `flush` · `clear`                                            |
+| `CacheRegistry`                             | `invalidate` · `subscribe`                                                                |
+| `provideSkewData(options)`                  | Wire it up                                                                                |
 
 ---
 
 ## Known gaps
 
 - **`resource()` can't normalize into this store**, so `query()` is a parallel primitive rather than an extension. Documented duplication we'd happily delete if Angular grew the hook.
-- **Server-driven invalidation isn't shipped yet.** Tags currently work per-tab. The wire contract (`{ invalidate: string[] }` over SSE) is designed in [`plan.md`](../../../plan.md).
+- **Server-driven invalidation isn't shipped yet.** Tags currently work per-tab. The wire contract (`{ invalidate: string[] }` over SSE) is designed in planning.

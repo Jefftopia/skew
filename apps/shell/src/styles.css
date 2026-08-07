@@ -1,1 +1,9 @@
-/* You can add global styles to this file, and also import other style files */
+/* Pinned light so the demo reads the same regardless of OS theme. */
+:root { color-scheme: light; }
+html, body {
+  margin: 0;
+  background: #f4f7fa;
+  color: #16202e;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }

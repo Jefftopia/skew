@@ -1,0 +1,99 @@
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.card {
+  border: 1px solid #d8dee9;
+  border-radius: 14px;
+  padding: 1.1rem 1.2rem;
+  background: #fff;
+}
+
+.card h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.card p {
+  margin: 0 0 0.9rem;
+  color: #5b6779;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+button {
+  border: 0;
+  border-radius: 9px;
+  padding: 0.5rem 0.9rem;
+  font-weight: 700;
+  font-size: 0.76rem;
+  cursor: pointer;
+  background: #1e3a5f;
+  color: #fff;
+}
+
+button.ghost {
+  background: #eef2f7;
+  color: #1e3a5f;
+}
+
+.verdict {
+  margin-top: 0.85rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.verdict.ok {
+  background: #e7f6ec;
+  border: 1px solid #a7d8b8;
+  color: #14532d;
+}
+
+.verdict.bad {
+  background: #fdecec;
+  border: 1px solid #f0b4b4;
+  color: #7f1d1d;
+}
+
+.verdict strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+code {
+  background: #f2f5f9;
+  padding: 0.1rem 0.35rem;
+  border-radius: 5px;
+  font-size: 0.74rem;
+}
+
+pre {
+  background: #f2f5f9;
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.72rem;
+  overflow-x: auto;
+  margin: 0.6rem 0 0;
+}
+
+.wizard {
+  display: grid;
+  gap: 0.5rem;
+}
+
+input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #d8dee9;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.step {
+  font-size: 0.72rem;
+  color: #5b6779;
+}

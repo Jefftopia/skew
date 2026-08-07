@@ -122,6 +122,6 @@ export const wizardV2 = defineWorkflow<WizardDataV2>({
 });
 
 export const VERSIONS = {
-  appOne: { data: 'v1', workflow: '0.1.123' },
-  appTwo: { data: 'v2', workflow: '0.2' },
+  appOne: { data: '1', workflow: '0.1.123' },
+  appTwo: { data: '2', workflow: '0.2' },
 } as const;

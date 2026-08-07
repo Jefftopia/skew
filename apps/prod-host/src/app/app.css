@@ -1,0 +1,104 @@
+:host {
+  display: block;
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: #16202e;
+}
+
+header {
+  margin-bottom: 1.5rem;
+}
+
+.badge {
+  display: inline-block;
+  background: #1e3a5f;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.7rem;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  color: #5b6779;
+  font-size: 0.85rem;
+  margin: 0;
+  max-width: 62ch;
+  line-height: 1.55;
+}
+
+.id {
+  font-size: 0.72rem;
+  color: #8b96a6;
+  margin-top: 0.45rem;
+}
+
+.id .warn {
+  color: #b45309;
+  font-weight: 700;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+nav a {
+  color: #1e3a5f;
+  text-decoration: none;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+.alert {
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.2rem;
+  font-size: 0.82rem;
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  background: #fff7e6;
+  border: 1px solid #f0d18a;
+  color: #6b4b0d;
+}
+
+.alert button {
+  margin-left: auto;
+  flex: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-weight: 700;
+  font-size: 0.74rem;
+  cursor: pointer;
+  background: #1e3a5f;
+  color: #fff;
+}
+
+.alert .why {
+  font-size: 0.74rem;
+  opacity: 0.85;
+  display: block;
+  margin-top: 0.25rem;
+  line-height: 1.5;
+}

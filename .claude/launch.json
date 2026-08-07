@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "prod-remote",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "nx",
+        "serve-dist",
+        "prod-remote"
+      ],
+      "port": 4411
+    },
+    {
+      "name": "prod-host",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "nx",
+        "serve-dist",
+        "prod-host"
+      ],
+      "port": 4410
+    }
+  ]
+}

@@ -4,3 +4,6 @@
 /.nx/cache
 /.nx/workspace-data
 .angular
+
+# Emitted by `skew-stamp` on every build — the formatter would fight the generator.
+apps/*/src/generated/

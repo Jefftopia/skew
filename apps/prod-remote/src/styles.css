@@ -1,0 +1,17 @@
+/**
+ * The demo commits to a light canvas.
+ *
+ * `color-scheme: light` is not decoration: without it a browser in dark mode
+ * paints its own default background behind the app, and every colour below —
+ * all chosen against white — lands on top of it unreadably.
+ */
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  margin: 0;
+  background: #f4f7fa;
+  color: #16202e;
+}

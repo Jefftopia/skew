@@ -1,0 +1,7 @@
+{
+  "buildId": "app-one-0.2.0",
+  "builtAt": "2026-08-08T09:00:00.000Z",
+  "modules": {
+    "app-two": { "file": "chunk-APP2XYZ.js" }
+  }
+}

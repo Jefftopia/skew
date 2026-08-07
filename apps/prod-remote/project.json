@@ -1,0 +1,108 @@
+{
+  "name": "prod-remote",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "remote",
+  "sourceRoot": "apps/prod-remote/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@angular-architects/native-federation:build",
+      "defaultConfiguration": "production",
+      "options": {
+        "cacheExternalArtifacts": true
+      },
+      "configurations": {
+        "production": {
+          "target": "prod-remote:esbuild:production"
+        },
+        "development": {
+          "target": "prod-remote:esbuild:development",
+          "dev": true
+        }
+      }
+    },
+    "serve": {
+      "executor": "@angular-architects/native-federation:build",
+      "options": {
+        "target": "prod-remote:serve-original:development",
+        "rebuildDelay": 500,
+        "cacheExternalArtifacts": true,
+        "dev": true,
+        "devServer": true,
+        "port": 0
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "esbuild": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/prod-remote",
+        "browser": "apps/prod-remote/src/main.ts",
+        "tsConfig": "apps/prod-remote/tsconfig.app.json",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/prod-remote/public"
+          }
+        ],
+        "styles": ["apps/prod-remote/src/styles.css"],
+        "polyfills": ["es-module-shims"]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "serve-original": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "port": 4411
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "prod-remote:esbuild:production"
+        },
+        "development": {
+          "buildTarget": "prod-remote:esbuild:development"
+        }
+      }
+    },
+    "serve-dist": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "staticFilePath": "dist/apps/prod-remote/browser",
+        "port": 4411,
+        "spa": true,
+        "cors": true,
+        "watch": false,
+        "cacheSeconds": -1
+      }
+    }
+  }
+}

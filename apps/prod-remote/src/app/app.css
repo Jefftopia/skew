@@ -1,0 +1,49 @@
+:host {
+  display: block;
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: #16202e;
+}
+
+header {
+  margin-bottom: 1.5rem;
+}
+
+.badge {
+  display: inline-block;
+  background: #8fbfe0;
+  color: #10283f;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.7rem;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  color: #5b6779;
+  font-size: 0.85rem;
+  margin: 0;
+  max-width: 62ch;
+  line-height: 1.55;
+}
+
+.sub code {
+  background: #f2f5f9;
+  padding: 0.1rem 0.35rem;
+  border-radius: 5px;
+  font-size: 0.76rem;
+}

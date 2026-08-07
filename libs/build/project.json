@@ -23,10 +23,10 @@
     },
     "test": {
       "executor": "nx:run-commands",
+      "cache": true,
       "options": {
         "command": "vitest run --config libs/build/vite.config.ts"
-      },
-      "cache": true
+      }
     },
     "lint": {
       "executor": "@nx/eslint:lint"
