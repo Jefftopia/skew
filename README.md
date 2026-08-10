@@ -11,7 +11,7 @@
 <p align="center">
   <img alt="Angular 22" src="https://img.shields.io/badge/Angular-22-DD0031?style=flat-square" />
   <img alt="TypeScript 6.0" src="https://img.shields.io/badge/TypeScript-6.0-3178C6?style=flat-square" />
-  <img alt="181 tests passing" src="https://img.shields.io/badge/tests-181%20passing-2EA043?style=flat-square" />
+  <img alt="189 tests passing" src="https://img.shields.io/badge/tests-189%20passing-2EA043?style=flat-square" />
   <img alt="zero core dependencies" src="https://img.shields.io/badge/core%20deps-0-8FBFE0?style=flat-square" />
   <img alt="MIT" src="https://img.shields.io/badge/license-MIT-1E3A5F?style=flat-square" />
 </p>
@@ -21,6 +21,7 @@
   <a href="#quick-start">Quick start</a> ·
   <a href="#packages">Packages</a> ·
   <a href="#skewcore">Core</a> ·
+  <a href="#handling-version-skew-in-api-data--a-step-by-step-workflow">API workflow</a> ·
   <a href="#skewangular-router">Router</a> ·
   <a href="#why-not-just">Why not…</a> ·
   <a href="#development">Development</a>
@@ -98,7 +99,7 @@ That's the whole idea. Everything else is applying it in a specific place.
 
 | Package                                               | What it does                                                                                | Status       |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------ |
-| **[`@skew/core`](libs/core)**                         | Envelopes, migration chains, build identity, skew detection. No dependencies, no framework. | **44 tests** |
+| **[`@skew/core`](libs/core)**                         | Envelopes, migration chains, build identity, skew detection. No dependencies, no framework. | **52 tests** |
 | **[`@skew/angular-core`](libs/angular/core)**         | First-class Angular DI and Signal wrappers for `@skew/core`.                                | **0 tests**  |
 | **[`@skew/build`](libs/build)**                       | `skew-stamp` — generates build identity and the manifest.                                   | **11 tests** |
 | **[`@skew/angular-router`](libs/angular/router)**     | Recovers from stale chunks without bricking the tab.                                        | **34 tests** |
@@ -128,6 +129,29 @@ export const WeeklyContent = versioned<V1>('weekly-content')
 Each step is typed against the previous version, so a migration that doesn't produce the next shape is a **compile error**. There's no terminal `.build()` — the chain _is_ the schema.
 
 > **The one rule.** A migration must never import your current application types. Close each step over its own snapshot (`V1`, `V2`, …). The moment a migration references a live interface, it silently changes meaning the next time you edit that interface — and your old migrations begin lying about what they produce.
+
+### Runtime validation (Zod / Valibot)
+
+Skew handles the envelope (`{ v, payload }`) and the migration chain, but it deliberately avoids shipping a payload validator so the core stays dependency-free. If you want to prove the payload actually matches the interface, bring your own validator (like Zod or Valibot) via the `validate` option. It runs *after* all migrations complete:
+
+```ts
+import { z } from 'zod';
+import { versioned } from '@skew/core';
+
+const WeeklyContentV3Schema = z.object({
+  id: z.string(),
+  scriptureOfWeek: z.string(),
+  orderOfWorship: z.object({ setting: z.string(), hymns: z.array(z.string()) })
+});
+
+export const WeeklyContent = versioned<V1>('weekly-content', {
+  validate: (val): val is V3 => WeeklyContentV3Schema.safeParse(val).success
+})
+  .next<V2>(/* ... */)
+  .next<V3>(/* ... */);
+```
+
+If validation fails, `.read()` returns `reason: 'invalid'` rather than throwing, so you can still handle it cleanly at the boundary.
 
 ### Failures you can act on
 
@@ -169,6 +193,165 @@ const now = drafts.peek('2026-12-06'); // sync — no flash of empty state
 ```
 
 **Adopting on existing data needs no backfill.** Un-enveloped records read as v1, so declare your _current_ shape as the base and rows upgrade themselves as users touch them.
+
+---
+
+## Handling version skew in API responses — a step-by-step workflow
+
+Everything above applies to data that outlives the code that wrote it, wherever it's stored. This is the same idea aimed at one specific boundary: a response body from an API your build didn't ship. 
+
+**Why this matters in a federated app:** Suppose a Module Federation Host consumes v1 of a fund API, but a newly deployed Remote consumes v2. Both run on the same page. The user fetches data in the Host (v1), clicks a button that opens the Remote, and hands that cached data across the boundary. If the Remote blindly casts it with `as FundV2`, the app crashes when trying to render fields that don't exist. Skew catches this mismatch and forces the Remote to cleanly migrate or reject the payload.
+
+Every step below is implemented and running in the [portfolio demo](#the-portfolio-demo--a-real-api-two-live-contract-versions) — the code snippets are lifted directly from `apps/api` and the `funds`/`orders` contracts in the Angular apps, not simplified for the README.
+
+### Step 1 — Declare what you expect, not what you hope arrives
+
+Every payload gets a schema, versioned from the shape you understand today:
+
+```ts
+// apps/prod-host/src/app/portfolio/contracts.ts
+export interface FundV1 {
+  id: string;
+  name: string;
+  currency: string;
+  nav: number;
+  cashPct: number;
+  holdings: HoldingV1[];
+}
+
+export const FundListSchemaV1 = versioned<FundV1[]>('portfolio-funds');
+```
+
+The string `'portfolio-funds'` is the contract's name, not a variable name — it's how a reader on a different build, or a different app entirely, recognises this is the same envelope. Get it wrong and two sides silently stop talking to the same schema.
+
+### Step 2 — Read every response through the schema, never through a cast
+
+```ts
+// apps/prod-host/src/app/portfolio/portfolio-page.ts
+this.http.get(`${API_BASE}/v1/funds`).subscribe({
+  next: (body) => {
+    const result = FundListSchemaV1.read(body);
+    if (!result.ok) {
+      // see Step 3 — never fall through with `body as FundV1[]`
+      return;
+    }
+    this.funds.set(result.value); // typed, migrated, current
+  },
+});
+```
+
+This is the one habit that matters more than any other line in this README: `.read(body)` where you were about to write `body as FundV1[]`. The cast compiles either way; only one of them tells you when it's wrong.
+
+### Step 3 — Handle every failure reason, not just the happy path
+
+```ts
+if (!result.ok) {
+  switch (result.reason) {
+    case 'ahead':
+      // the API is running a newer contract than this build knows —
+      // refetch after a deploy, or tell the user to reload
+      break;
+    case 'gap':
+      // your migration chain is missing a step; this is a bug, report it
+      break;
+    case 'invalid':
+      // not this schema's data at all — a real 404 body, an error page, etc.
+      break;
+    case 'threw':
+      // a migration step threw partway through — also a bug, report it
+      break;
+  }
+}
+```
+
+`ahead` is the one worth sitting with. It means the server is newer than you are, which happens constantly and isn't a bug: a colleague's tab redeployed before yours, a phone updated before the laptop did. There is no shape to migrate _down_ to — the fields the newer contract added simply were never sent to you — so the honest move is to refuse and say so, not to guess.
+
+### Step 4 — When the contract changes, extend the schema; never edit the base type
+
+```ts
+// apps/prod-remote/src/app/portfolio/contracts.ts
+interface FundV1 {
+  /* frozen — this is what v1 looked like, forever */
+}
+
+export const FundSchemaV2 = versioned<FundV1>('portfolio-fund').next<FundV2>('promote scalars to structure; add fields v1 never carried', (v1) => ({
+  /* … */
+}));
+```
+
+The migration closes over `FundV1` as a frozen snapshot, never over your current, editable interface. Import the live type into a migration and the moment someone edits it, every old migration starts lying about what it produces — silently, because TypeScript has no way to know a migration's _meaning_ changed, only that it still compiles.
+
+If a v2 field has no honest v1-derived value, say so in the value itself — `0`, `'unknown'`, a tier that's a guess — rather than inventing something plausible. A guess that looks real is a guess nobody will ever go back and check.
+
+### Step 5 — On the server: version the endpoint, don't mutate it in place
+
+```ts
+// apps/api/src/app/portfolio/funds-v1.controller.ts
+@Controller('v1/funds')
+export class FundsV1Controller {
+  @Get()
+  list() {
+    return { v: 1, payload: funds };
+  }
+}
+
+// apps/api/src/app/portfolio/funds-v2.controller.ts
+@Controller('v2/funds')
+export class FundsV2Controller {
+  @Get()
+  list() {
+    return { v: 2, payload: funds.map(toFundV2) };
+  }
+}
+```
+
+Both routes are live at once, from the same process, off the same underlying data. That's what makes this a _mid-migration_ API rather than a big-bang cutover: a client pinned to v1 keeps working the entire time a client on v2 is already shipping. The envelope (`{ v, payload }`) is written by hand here, not through `@skew/core` — the server is a separate deployment from every consumer, on its own release cycle, and shouldn't share code with any of them. The envelope shape is the contract; a library is just one implementation of reading it.
+
+### Step 6 — On writes: refuse a stale contract, don't coerce it
+
+```ts
+// apps/api/src/app/portfolio/orders.controller.ts
+@Post()
+create(@Body() body: { v: number; payload: unknown }) {
+  if (body.v !== 2) {
+    throw new ConflictException({
+      error: 'version-skew',
+      expected: 2,
+      received: body.v,
+      message: `Order was authored against contract v${body.v}; this endpoint requires v2.`,
+    });
+  }
+  // …
+}
+```
+
+The tempting alternative — detect `v: 1`, upgrade it server-side, accept it anyway — turns a real disagreement into a false success. The client sent something it built under an assumption that's now wrong; the server is the only party that knows the assumption is wrong, and staying quiet about it means the client never finds out. A `409` with a named reason is the whole fix. Whether the client can _do_ anything about it is Step 7.
+
+### Step 7 — If a write can be queued (offline, retried, or across a redeploy), route it through the outbox
+
+```ts
+// apps/prod-remote/src/app/portfolio/order-outbox.ts
+async function runOrderMutation(input: unknown, entry: OutboxEntry): Promise<unknown> {
+  const envelope = entry.schemaVersion === 2 ? OrderSchemaV2.write(input as OrderV2) : { v: entry.schemaVersion, payload: input };
+
+  const first = await postOrder(envelope);
+  if (first.status !== 409) return first.body; // (error handling omitted)
+
+  // Refused for skew — migrate the queued payload ourselves and retry once.
+  const migrated = OrderSchemaV2.read(envelope);
+  const retry = await postOrder(OrderSchemaV2.write(migrated.value));
+  return retry.body;
+}
+```
+
+Two things have to be true for this to work, and both are easy to get wrong:
+
+1. **The retry happens inside the runner, in the same call.** `@skew/angular-data`'s outbox re-runs a failed entry with the exact same input on its next flush — retrying at the library level would just resend the same stale envelope and get the same `409` forever. Migrating has to happen before the runner returns.
+2. **The queued entry carries the contract version it was written under** (`OutboxEntry.schemaVersion`), so a mutation can be migrated correctly no matter how long it sat queued or how many deploys happened while it waited.
+
+### Step 8 — Prove the failure you're preventing actually exists
+
+Every step above is a claim about what would go wrong without it. Don't take the claim on faith — this repo ships an undocumented kill switch (`setSkewDisabled()` / `provideSkewDisabled()`, in [`libs/core/src/lib/disabled.ts`](libs/core/src/lib/disabled.ts)) specifically so you can turn every protection off and watch the same code fail on its own merits: envelopes stop being written, `.read()` stops checking versions, migrations stop running. It is exported but not part of the public API — no legitimate reason to ship it — and exists only so a before/after comparison has an actual "before" to look at instead of a hypothetical one. The Basics tab of the production demo (below) has a switch wired to it; flipping it and re-running any scenario is the fastest way to convince yourself — or a reviewer — that a step here is load-bearing rather than decorative.
 
 ---
 
@@ -259,7 +442,7 @@ That builds and deploys both, then serves them:
 - **host** → <http://localhost:4410> ← start here
 - **remote** → <http://localhost:4411> — the same editor, standalone
 
-For the deploy scenarios you want two terminals: one holding the servers, one to redeploy from.
+For the deploy scenarios you want two terminals: one holding the servers, one to redeploy from. Scenarios 1 and 2 route through the Portfolio tab's fund detail page, which needs the API too — a third terminal, `npm run api`.
 
 ```sh
 # terminal 1 — leave this running
@@ -267,6 +450,9 @@ npm run demo:prod:build && npm run demo:prod:serve
 
 # terminal 2 — used during the scenarios below
 npm run demo:prod:redeploy-remote
+
+# terminal 3 — only needed for scenarios 1 and 2
+npm run api
 ```
 
 | Script                      | What it does                                                      |
@@ -311,17 +497,56 @@ Each deploy increments a build number (`prod-remote-1`, `-2`, …) kept in `tmp/
 
 ---
 
+### Seeing what you're protected from
+
+Every card names what it exercises, what that buys you, and what it costs to go without:
+
+> **TESTS** `read()` returning `ahead`
+> **ENABLES** A typed refusal at the boundary, with the data left intact
+> **WITHOUT IT** `TypeError` deep in a renderer, far from the cause
+
+The third line is not a claim you have to take on trust. There is a **protections switch** at the top of the host, and turning it off does not put `@skew` into a "pretend to fail" mode — it makes the packages **inert**. Envelopes stop being written, migrations stop running, `lazy()` stops retrying, recovery stops classifying. Re-run any scenario and the plain code you would have written instead runs in its place, and fails on its own merits.
+
+The **Basics** tab is built around this. The host is on the left, the remote is in a permanently-open drawer on the right, and a four-step walkthrough runs a single record's round trip across both — write it as v1, read it as v2, write it as v2, then watch the host refuse it. Steps 2 and 3 execute _inside the remote_; the host dispatches them over a DOM event channel (`bridge.ts` ↔ `commands.ts`) rather than asking you to go find a button in the other pane. Both halves of every comparison are on screen at once, which they were not when the remote lived on its own route.
+
+Above the steps, the **Boundary Inspector** redraws after each one:
+
+```text
+┌──────────────────────┐              ┌──────────────────────┐
+│ HOST — OLDER BUILD   │   ┌───────┐  │ REMOTE — NEWER BUILD │
+│ prod-host-21         │──▶│ v: 1  │─▶│ prod-remote-31       │
+│ understands v1       │   └───────┘  │ understands v2       │
+└──────────────────────┘              └──────────────────────┘
+
+  ✓  Migrated v1 → v2
+
+  FIELD    BEFORE                    AFTER
+  id       "demo-1"                  "demo-1"                    SAME
+  author   "Rev. Bernard J. Miller"  {"name":"Rev. …","email":""} MIGRATED
+  summary  —                         "Prepare the way of the …"  DERIVED
+```
+
+That last row is the reason this replaced a scrolling log. "It migrated" is not one fact — `author` came from somewhere real, `summary` did not. A **derived** value is the migration's best guess from a shape that never carried the field, and anything downstream treating it as a reported value is trusting a guess. A log line saying `migrated v1→v2` is accurate and hides exactly that.
+
+Flip the protections off and run step 4 again: the read _succeeds_, hands back a shape this build cannot use, and the ordinary `draft.author.toUpperCase()` that follows throws `Cannot read properties of undefined`. The inspector shows the same two fields as **LOST**. That is the whole argument for envelopes, in two clicks.
+
+The switch is `provideSkewDisabled()` / `setSkewDisabled()`. It is **exported but deliberately undocumented** — no legitimate production use, and the failures it re-enables are the silent kind. It exists because a before/after that only ever runs the "after" is not a comparison. The source explains itself; `libs/core/src/lib/disabled.ts` is the place to start.
+
+There is still a plain chronological record — an **Activity** disclosure, collapsed, at the top of the page. It is closed by default on purpose: "show me everything in order" is a real need when something misbehaves, and a bad first thing to put in front of someone who is trying to understand a concept.
+
+---
+
 ### The scenarios
 
 #### 1 · A deploy lands under a live user
 
-The one everybody has hit and nobody can reproduce.
+The one everybody has hit and nobody can reproduce. This is the Portfolio tab's story now, not Basics' — see the note at the end of this scenario for why.
 
-1. Open <http://localhost:4410> and **leave the tab alone**.
-2. In the other terminal: `npm run demo:prod:redeploy-remote`
-3. Back in the tab, click **Open the remote editor** — **without reloading**.
+1. `npm run api`, then open <http://localhost:4410/portfolio> and **click into any fund** — you need to be on a `/portfolio/fund/:id` URL, not the list.
+2. In another terminal: `npm run demo:prod:redeploy-remote`
+3. Navigate to a **different** fund from the fund list — **without reloading**.
 
-**What you should see.** A brief pause, then the editor, on the _new_ build, at the URL `/editor`.
+**What you should see.** A brief pause, then that fund's detail, on the _new_ remote build, at the URL `/portfolio/fund/<id>`.
 
 **What actually happened.** Native Federation resolved `remoteEntry.json` once, at page load, and cached the hashed file names in an import map. The redeploy deleted those files. So:
 
@@ -338,17 +563,19 @@ import rejects (real 404)
                         └─ → reload at the TARGET url
 ```
 
-The last line is the part worth watching. Angular's `urlUpdateStrategy` defaults to `'deferred'`, so when that navigation failed the address bar still said `/`. A plain `location.reload()` would have dropped you back on the home page and silently swallowed the click. You land on `/editor`.
+The last line is the part worth watching. Angular's `urlUpdateStrategy` defaults to `'deferred'`, so when that navigation failed the address bar still said the previous fund's URL. A plain `location.reload()` would have dropped you back there and silently swallowed the click. You land on the fund you actually asked for.
 
-Check the two build ids in the header afterwards — the host is unchanged, the remote moved.
+Check the two build ids (host's in the header, remote's in the fund-detail banner) afterwards — the host is unchanged, the remote moved.
+
+> **Why this moved off the Basics tab.** Basics' federation card ("4 · Load the remote — no route") loads the remote's `Editor` inline, with no route at all. `SkewRecoveryService` only ever sees a failure through `NavigationError`, so it has nothing to react to when nothing is being navigated to. Fund detail is a real page at a real URL, so it's where the full recovery story — retry, classify, reload at the _correct_ place — still lives.
 
 #### 2 · The origin is behind you
 
 Same failure. Opposite decision.
 
-1. Open <http://localhost:4410/?origin=rollback> — the header will say _probing the ROLLBACK manifest_.
+1. Open <http://localhost:4410/?origin=rollback> — the header will say _probing the ROLLBACK manifest_. Click into a fund.
 2. `npm run demo:prod:redeploy-remote`
-3. Click **Open the remote editor**.
+3. Navigate to a different fund.
 
 **What you should see.** No reload. A banner: _"Couldn't load the remote — recovery was withheld on purpose"_, explaining that the origin is serving an older build, with a **Reload anyway** button.
 
@@ -359,7 +586,7 @@ Reloading would fetch the same stale bundle, fail identically, and reload again.
 #### 3 · Reading data an older build wrote
 
 1. On the host: **Write v1 record**.
-2. **Open the remote editor** → **Read record as v2**.
+2. In the embedded remote below (Basics loads it automatically — no click) → **Read record as v2**.
 
 **What you should see.** _Migrated v1 → v2_, and the migrated record printed: the bare `author` string is now `{ name, email }`, and `summary` was derived from the body.
 
@@ -385,7 +612,7 @@ It happens more than you'd expect: a colleague saves from the new deploy while y
 #### 5 · A workflow that grew a step
 
 1. On the host, type a **title** and a **body** into **Start a wizard on 0.1** — two steps, no review. Watch the draft state go `idle` → `saving` → `saved`.
-2. Open the remote editor and click **Read the parked draft**.
+2. In the embedded remote below, click **Read the parked draft**.
 
 **What you should see.** `Parked on "details" · payload migrated v1 → v2`, and the payload printed with a `summary` field the host never wrote.
 
@@ -422,8 +649,10 @@ Two pieces of state deliberately survive things you'd expect to clear them:
 ```js
 // in the console, on http://localhost:4410
 localStorage.clear(); // the v1/v2 draft and the wizard run
-sessionStorage.clear(); // the recovery budget
+sessionStorage.clear(); // the recovery budget, the activity record, and the protection mode
 ```
+
+**The protection mode persists too**, in `sessionStorage`, and is applied before Angular boots. It has to be: a recovery in scenario 1 or 2 reloads the page, and a mode that reset on reload would flip the protections back on mid-scenario — leaving you in the protected build trying to observe the unprotected one.
 
 **The recovery budget is the one that will confuse you.** `maxRecoveries` defaults to 1 per build, and the counter lives in `sessionStorage` precisely so it survives the reload it is counting — that's what stops the loop in scenario 2. But it means a _second_ run of scenario 1 in the same tab reports `exhausted` instead of recovering. That's correct behaviour, and it looks like a bug.
 
@@ -438,8 +667,11 @@ Deploying the host again (`npm run demo:prod:deploy-host`) also clears it: the b
 | 3, 4     | `@skew/core`                 | `versioned.spec.ts` — _"refuses to migrate data from a newer build rather than silently dropping fields"_; `storage.spec.ts`                                                                              |
 | 1, 2     | `@skew/core` + `@skew/build` | `identity.spec.ts` — _"reports a stale origin when the origin is older — the reload-loop case"_; `stamp.spec.ts`                                                                                          |
 | 5        | `@skew/angular-workflow`     | `engine.spec.ts`, `workflow.spec.ts`                                                                                                                                                                      |
+| all, off | the protections switch       | `disabled.spec.ts` — asserts the failure modes it re-enables                                                                                                                                              |
 
 The demo is the integration test you can watch; those are the ones CI runs.
+
+That last row matters more than it looks. The switch is undocumented but not untested: if disabling ever stopped genuinely breaking things, every before/after above would quietly become theatre — the one outcome worse than not having the switch at all. So the tests assert the _damage_: a bare payload with no version recorded, a newer record handed back as though current, a migration skipped and the old shape kept.
 
 ### Adapting it to your own app
 
@@ -453,6 +685,29 @@ The demo is deliberately small enough to read end to end. The four files that ma
 | `tools/deploy-demo.mjs`                 | The three-step stamp → build → manifest pipeline                       |
 
 The adoption rule holds here too: take one package, take three, take none of the Angular ones. Nothing is load-bearing for anything else.
+
+### The portfolio demo — a real API, two live contract versions
+
+Behind a second tab (**Portfolio**, next to **Basics**) is a mock investment-management backend and a matching pair of federated screens, built to demonstrate one thing the chunk/draft/wizard scenarios above don't: **skew at the API boundary**, not just the storage or federation one.
+
+```sh
+npm run api              # NestJS, port 3333
+npm run demo:prod        # or demo:prod:same-origin — either works
+```
+
+`apps/api` is a small NestJS app serving mock funds, holdings, a liquidity-breach SSE stream, and a live price WebSocket — nothing persisted beyond memory, restart it to reset. It serves **two live versions of the same fund contract at once**, `/api/v1/funds` and `/api/v2/funds`, the way a real API does mid-migration: v1 is what the host still understands (scalar `nav`, scalar `currency`), v2 is what the remote understands (`nav` promoted to `{ amount, asOf }`, plus `liquidity` and `classification` fields v1 never had).
+
+**On the Portfolio tab (host):** a fund list pinned to v1 on purpose — expand a row to browse its holdings inline, or open one to bring up the remote beside it. Above the list, a **ticker typeahead**: search the tradeable universe (`GET /api/v1/tickers`), pin a symbol with the keyboard or the mouse, and the strip narrows to it while a drill-down card shows which funds hold it and what this tick did to each one's NAV. Every ticker is offered for every fund — mandate eligibility is realistic and would bury the part that teaches something.
+
+The strip itself is a plain `WebSocket` (`ws://…/ws/ticker`, ~1 tick/sec) owned by `PortfolioLive`, provided once on the `portfolio` route rather than by either page under it — which is what lets it keep running while you open, switch, and close funds. An SSE listener (`EventSource` on `/api/events/liquidity`) for randomly-timed liquidity breaches — no sooner than 3s apart, no later than 15s — pushes a toast in the corner the instant one arrives; `POST /api/events/liquidity/trigger` fires one on demand.
+
+**Clicking a fund** hands its v1 record to the remote via `sessionStorage` — the same mechanism `Editor` already uses — and navigates to `/portfolio/fund/:id`, resolved to the remote's `./FundDetail`. That route renders into an outlet _inside a drawer beside the fund list_, not over it: the list never disappears, picking a different fund swaps the drawer's context in place (same component, new route param), and the × closes it back to `/portfolio`.
+
+**`FundDetail` is the centrepiece.** It shows three views of the same fund side by side: the record **handed over** (migrated forward from the host's v1, with every field the migration had to guess — `hqlaPct`, `liquidityTier`, `classification` — visibly badged `derived`); the **authoritative** record (`GET /api/v2/funds/:id`, read through the same v2 schema, real numbers); and where they **differ**. The migration isn't wrong to guess — it's the best answer available from v1 data — but the diff is where that becomes visible instead of silently wrong. It also opens its own ticker and SSE connections: a price move touching this fund surfaces as a banner offering a refresh — never a silent rewrite of what's on screen — and a breach naming this fund pre-fills an order form from the suggested remediation.
+
+**Submitting the order is the fourth boundary** the top-level table (`§ You only ever see the fin`) names but the rest of the demo doesn't cover: _client ↔ API_. The order goes through the `@skew/angular-data` outbox, so it survives a reload, and `/api/v2/orders` genuinely refuses a v1-shaped order with `409 version-skew` — there's a **"queue as v1"** button that deliberately triggers this, so you can watch the outbox runner catch the 409, migrate the queued payload with the remote's own `OrderSchemaV2`, and retry, rather than only seeing it work.
+
+Full build-out — every phase, checkpoint, and design decision — is in [`docs/portfolio-demo-plan.md`](docs/portfolio-demo-plan.md), written as a step-by-step spec for another agent to execute; this repo's `apps/api` and the `portfolio/` folders in both Angular apps are the result of following it.
 
 ### If something doesn't work
 
@@ -477,6 +732,10 @@ npm run demo:prod:serve
 
 Redeploying from a second terminal while the servers run is fine — that's a different target, and the servers survive it. This only bites after a hard kill.
 
+**The Portfolio tab shows "Could not reach the portfolio API."** `npm run api` is a separate process from the Angular servers — nothing starts it for you. Confirm with `curl http://localhost:3333/api/v1/funds`.
+
+**Same-origin mode (`:4420`) proxies `/api/*` and `/ws/ticker`, but does not start the API itself.** `tools/serve-same-origin.mjs` forwards to `:3333`; `npm run api` still has to be running separately, in its own terminal.
+
 ---
 
 ## Development
@@ -487,7 +746,7 @@ npm run verify                   # lint + test + build, every library
 
 npm test                         # all projects
 npm run test:libs                # libraries only
-npm run test:core                # 44 · also :build-tools :angular-router :angular-data :angular-workflow
+npm run test:core                # 52 · also :build-tools :angular-router :angular-data :angular-workflow
 
 npm run build:libs               # → dist/libs/*
 npm run lint:libs

@@ -1,4 +1,5 @@
 import { SkewResult, err, ok } from './result.js';
+import { isSkewDisabled } from './disabled.js';
 
 /**
  * Anything that crosses a version boundary is wrapped with the version it was
@@ -148,6 +149,12 @@ function build<TCurrent>(
     },
 
     read(raw: unknown): SkewResult<TCurrent> {
+      // Not public API — see `disabled.ts`. Reproduces `raw as TCurrent`: no
+      // envelope check, no version comparison, no migration. Data from a newer
+      // build is handed back as though it were current, which is precisely the
+      // failure this function exists to prevent.
+      if (isSkewDisabled()) return ok(raw as TCurrent);
+
       if (raw === null || raw === undefined) {
         return err('invalid', 0, version, `[${name}] no data to read`);
       }

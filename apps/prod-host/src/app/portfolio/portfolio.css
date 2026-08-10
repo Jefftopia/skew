@@ -1,0 +1,187 @@
+/* Layout for the portfolio dashboard: fund list, breach feed below it. The
+   ticker lives in portfolio-layout.css now — it's a persistent strip above
+   both this page and the fund detail route, not part of this page's own
+   layout. Reuses .card / .verdict / dl.meta / pre / code from ../cards.css. */
+
+.dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+.fund-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.fund-row {
+  border: 1px solid #d8dee9;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.fund-row.breached {
+  border-color: #f0b4b4;
+  background: #fdecec;
+}
+
+.fund-row-main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.fund-toggle {
+  flex: none;
+  background: transparent;
+  border: 0;
+  color: #5b6779;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+}
+
+.fund-row-body {
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
+  /* Reset button defaults — this is a <button> for keyboard/AT support,
+     styled to read as the row body it visually is. */
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.fund-row-body h4 {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+  color: #16202e;
+}
+
+.fund-row-body .stats {
+  display: flex;
+  gap: 0.9rem;
+  font-size: 0.72rem;
+  color: #5b6779;
+}
+
+.breach-flag {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #7f1d1d;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-link {
+  flex: none;
+  font-size: 0.7rem;
+  padding: 0.35rem 0.6rem;
+}
+
+.holdings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.74rem;
+  border-top: 1px solid #eef2f7;
+}
+
+.holdings-table th,
+.holdings-table td {
+  text-align: left;
+  padding: 0.35rem 0.85rem;
+}
+
+.holdings-table th {
+  color: #46536a;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-top: 0.5rem;
+}
+
+.holdings-table tbody tr:hover {
+  background: #f7f9fc;
+}
+
+.panel {
+  border: 1px solid #d8dee9;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  background: #fff;
+  margin-bottom: 1rem;
+}
+
+.panel h3 {
+  margin: 0 0 0.7rem;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.breach-list {
+  display: grid;
+  gap: 0.6rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.breach-card {
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.breach-card.breach {
+  background: #fdecec;
+  border: 1px solid #f0b4b4;
+}
+
+.breach-card.warning {
+  background: #fff7e6;
+  border: 1px solid #f0d9a7;
+}
+
+.breach-card .sev {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+}
+
+.breach-card .impacted-funds {
+  margin-top: 0.35rem;
+  color: #5b6779;
+  font-size: 0.72rem;
+}
+
+.breach-card .action {
+  margin-top: 0.4rem;
+  font-style: italic;
+  color: #46536a;
+}
+
+.empty {
+  font-size: 0.76rem;
+  color: #8b96a6;
+  margin: 0;
+}
+
+/* The row whose detail is currently open in the drawer. */
+.fund-row.open {
+  border-color: #8a4fff;
+  box-shadow: 0 0 0 1px #8a4fff inset;
+}
+
+.detail-link.is-open {
+  background: #8a4fff;
+  color: #fff;
+}

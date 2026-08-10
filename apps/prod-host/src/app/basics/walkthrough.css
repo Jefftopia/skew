@@ -1,0 +1,176 @@
+:host {
+  display: block;
+}
+
+.story {
+  border: 1px solid #d8dee9;
+  border-radius: 14px;
+  background: #fff;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.story-head {
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.story-head h3 {
+  margin: 0 0 0.2rem;
+  font-size: 0.92rem;
+}
+
+.story-head p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #5b6779;
+  line-height: 1.55;
+  max-width: 62ch;
+}
+
+.story-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+ol.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+li.step {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.8rem 1.1rem;
+  border-bottom: 1px solid #f0f3f7;
+}
+
+li.step:last-child {
+  border-bottom: 0;
+}
+
+li.step.active {
+  background: #f7fbff;
+}
+
+.marker {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #eef2f7;
+  color: #5b6779;
+  flex: none;
+}
+
+.step.done .marker {
+  background: #2ea043;
+  color: #fff;
+}
+
+.step.failed .marker {
+  background: #b91c1c;
+  color: #fff;
+}
+
+.step.running .marker {
+  background: #1e3a5f;
+  color: #fff;
+}
+
+.body {
+  min-width: 0;
+}
+
+.where {
+  display: inline-block;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  margin-bottom: 0.25rem;
+}
+
+.where.host {
+  background: #e8eefb;
+  color: #1e3a5f;
+}
+
+.where.remote {
+  background: #efe6ff;
+  color: #6b4fa0;
+}
+
+.body h4 {
+  margin: 0 0 0.15rem;
+  font-size: 0.83rem;
+  color: #16202e;
+}
+
+.body p {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #5b6779;
+  line-height: 1.5;
+}
+
+.outcome {
+  margin-top: 0.45rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+}
+
+.outcome.ok {
+  background: #e7f6ec;
+  color: #14532d;
+}
+
+.outcome.bad {
+  background: #fdecec;
+  color: #7f1d1d;
+}
+
+.run {
+  flex: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  font-weight: 700;
+  font-size: 0.72rem;
+  cursor: pointer;
+  background: #1e3a5f;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.run:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.run.secondary {
+  background: #eef2f7;
+  color: #1e3a5f;
+}
+
+@media (max-width: 560px) {
+  li.step {
+    grid-template-columns: auto 1fr;
+  }
+  .run {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 0.4rem;
+  }
+}

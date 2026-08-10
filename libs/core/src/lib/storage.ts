@@ -1,5 +1,6 @@
 import { SkewResult, err } from './result.js';
 import { VersionedSchema } from './versioned.js';
+import { isSkewDisabled } from './disabled.js';
 
 /**
  * Versioned persistence.
@@ -88,7 +89,12 @@ export function createVersionedStore<T>(
     },
 
     async set(key: string, value: T): Promise<void> {
-      await driver.set(keyFor(key), JSON.stringify(schema.write(value, buildId)));
+      // Not public API — see `disabled.ts`. Writing the bare value is what a
+      // codebase without envelopes does, and it is the write side of the
+      // problem: nothing in the record says which build authored it, so no
+      // future reader can tell.
+      const stored = isSkewDisabled() ? value : schema.write(value, buildId);
+      await driver.set(keyFor(key), JSON.stringify(stored));
     },
 
     async remove(key: string): Promise<void> {

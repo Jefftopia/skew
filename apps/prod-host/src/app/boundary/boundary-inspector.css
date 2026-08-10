@@ -1,0 +1,292 @@
+:host {
+  display: block;
+}
+
+.inspector {
+  border: 1px solid #d8dee9;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.inspector-empty {
+  padding: 1.6rem 1.2rem;
+  text-align: center;
+  color: #8b96a6;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+/* --- the crossing diagram ------------------------------------------------ */
+
+.diagram {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.2rem 1.1rem 1rem;
+  background: #f7f9fc;
+  border-bottom: 1px solid #e6ecf3;
+}
+
+@media (max-width: 620px) {
+  .diagram {
+    grid-template-columns: 1fr;
+  }
+}
+
+.party {
+  border: 1px solid #d8dee9;
+  border-radius: 11px;
+  background: #fff;
+  padding: 0.65rem 0.8rem;
+  min-width: 0;
+}
+
+.party .role {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #8b96a6;
+}
+
+.party .build {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+  color: #16202e;
+  margin-top: 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.party .understands {
+  font-size: 0.7rem;
+  color: #5b6779;
+  margin-top: 0.2rem;
+}
+
+.party .understands strong {
+  color: #1e3a5f;
+}
+
+/* The envelope in flight. */
+
+.flight {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  padding: 0 0.3rem;
+}
+
+.envelope {
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid #b6c6da;
+  background: #eef4fb;
+  color: #1e3a5f;
+  white-space: nowrap;
+}
+
+.envelope.bare {
+  border-style: dashed;
+  border-color: #f0b4b4;
+  background: #fdecec;
+  color: #7f1d1d;
+}
+
+.arrow {
+  color: #9aa8bb;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+/* --- the verdict --------------------------------------------------------- */
+
+.verdict-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.verdict-bar .icon {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.verdict-bar h4 {
+  margin: 0 0 0.15rem;
+  font-size: 0.88rem;
+}
+
+.verdict-bar p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: #5b6779;
+}
+
+.v-migrated .icon,
+.v-current .icon {
+  background: #2ea043;
+}
+.v-migrated h4,
+.v-current h4 {
+  color: #14532d;
+}
+
+.v-refused .icon {
+  background: #1e3a5f;
+}
+.v-refused h4 {
+  color: #1e3a5f;
+}
+
+.v-corrupted .icon,
+.v-error .icon {
+  background: #b91c1c;
+}
+.v-corrupted h4,
+.v-error h4 {
+  color: #7f1d1d;
+}
+
+.unprotected-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #7f1d1d;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  vertical-align: middle;
+}
+
+/* --- per-field consequences ---------------------------------------------- */
+
+.fields {
+  padding: 0.3rem 1.1rem 0.9rem;
+}
+
+.fields-caption {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #8b96a6;
+  margin: 0.6rem 0 0.4rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+th {
+  text-align: left;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8b96a6;
+  padding: 0 0.5rem 0.3rem 0;
+  font-weight: 700;
+}
+
+td {
+  padding: 0.3rem 0.5rem 0.3rem 0;
+  border-top: 1px solid #f0f3f7;
+  vertical-align: top;
+}
+
+td.name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #16202e;
+  white-space: nowrap;
+}
+
+td.val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #5b6779;
+  word-break: break-word;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+  white-space: nowrap;
+}
+
+.tag.same {
+  background: #eef2f7;
+  color: #5b6779;
+}
+.tag.migrated {
+  background: #e7f6ec;
+  color: #14532d;
+}
+.tag.derived {
+  background: #fff0c2;
+  color: #7a5b13;
+}
+.tag.lost {
+  background: #fdecec;
+  color: #7f1d1d;
+}
+
+.derived-note {
+  margin: 0.6rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #7a5b13;
+  background: #fff7e6;
+  border: 1px solid #f0d9a7;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+}
+
+/* --- raw payload disclosure ---------------------------------------------- */
+
+details {
+  border-top: 1px solid #eef2f7;
+}
+
+summary {
+  cursor: pointer;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.72rem;
+  color: #5b6779;
+  user-select: none;
+}
+
+summary:hover {
+  color: #1e3a5f;
+}
+
+details pre {
+  margin: 0;
+  padding: 0 1.1rem 0.9rem;
+  font-size: 0.7rem;
+  overflow-x: auto;
+  color: #16202e;
+}

@@ -1,0 +1,109 @@
+/* Fund detail layout: banner, live-update strip, three-way reconciliation
+   table, breach/order panel. Reuses .card/.verdict/.banner/pre/code from
+   ../cards.css. */
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #fff7e6;
+  border: 1px solid #f0d9a7;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: #7a5b13;
+}
+
+.update-banner button {
+  flex: none;
+}
+
+.recon-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  margin-top: 0.5rem;
+}
+
+.recon-table th,
+.recon-table td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.recon-table th {
+  color: #46536a;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.recon-table tr.differs td {
+  background: #fff7e6;
+}
+
+.derived-badge {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #7a5b13;
+  background: #fff0c2;
+  border-radius: 999px;
+  padding: 0.08rem 0.4rem;
+  margin-left: 0.4rem;
+}
+
+.order-form {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.order-form label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.74rem;
+  color: #46536a;
+}
+
+.order-form select,
+.order-form input {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #d8dee9;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.order-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.breach-banner {
+  background: #fdecec;
+  border: 1px solid #f0b4b4;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: #7f1d1d;
+}
+
+/* Field wrapper for a custom control — a native <label> cannot be associated
+   with a component, so the text is a sibling span rather than a fake label. */
+.order-form .field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.order-form .field-label {
+  font-size: 0.74rem;
+  color: #46536a;
+}

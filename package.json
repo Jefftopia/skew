@@ -45,7 +45,9 @@
     "demo:prod:serve-remote": "nx serve-dist prod-remote",
     "demo:prod:dev": "nx run-many -t serve -p prod-host prod-remote --parallel=2",
     "demo:prod:same-origin": "npm run demo:prod:build && npm run demo:prod:serve-same-origin",
-    "demo:prod:serve-same-origin": "node tools/serve-same-origin.mjs"
+    "demo:prod:serve-same-origin": "node tools/serve-same-origin.mjs",
+    "api": "nx serve api",
+    "api:build": "nx build api"
   },
   "private": true,
   "devDependencies": {
@@ -56,16 +58,23 @@
     "@angular/compiler-cli": "~22.0.4",
     "@angular/language-service": "~22.0.4",
     "@eslint/js": "^9.8.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
     "@nx/angular": "^23.1.1",
     "@nx/eslint": "23.1.1",
     "@nx/eslint-plugin": "23.1.1",
     "@nx/js": "23.1.1",
+    "@nx/nest": "^23.1.1",
+    "@nx/node": "23.1.1",
     "@nx/vite": "^23.1.1",
     "@nx/web": "23.1.1",
+    "@nx/webpack": "23.1.1",
     "@nx/workspace": "23.1.1",
     "@schematics/angular": "~22.0.4",
     "@softarc/native-federation-orchestrator": "^4.2.2",
     "@swc/helpers": "~0.5.18",
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/utils": "^8.58.0",
     "angular-eslint": "^22.0.0",
     "autoprefixer": "^10.4.0",
@@ -81,7 +90,10 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.58.0",
     "verdaccio": "^6.3.2",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^7.0.0",
+    "webpack-dev-server": "^5.2.1"
   },
   "dependencies": {
     "@angular-architects/native-federation": "^22.0.6",
@@ -91,8 +103,15 @@
     "@angular/forms": "~22.0.4",
     "@angular/platform-browser": "~22.0.4",
     "@angular/router": "~22.0.4",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/platform-ws": "^11.1.28",
+    "@nestjs/websockets": "^11.1.28",
     "es-module-shims": "^2.8.0",
-    "rxjs": "~7.8.0"
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "~7.8.0",
+    "ws": "^8.21.3"
   },
   "nx": {
     "includedScripts": []

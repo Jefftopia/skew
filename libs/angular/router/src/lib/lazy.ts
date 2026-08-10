@@ -13,6 +13,8 @@
  * Retry is therefore a *precondition* to recovery, not one of the strategies.
  */
 
+import { isSkewDisabled } from '@skew/core';
+
 /** Defaults for `lazy()`, overridable globally by `provideSkewRecovery()`. */
 export const lazyDefaults = {
   retryAttempts: 1,
@@ -108,6 +110,11 @@ export function lazy<T>(
   }
 
   return async () => {
+    // Not public API — see `disabled.ts` in @skew/core. A bare dynamic import
+    // with no retry and no attribution: the rejection propagates exactly as the
+    // bundler produced it, and nothing downstream knows which module it was.
+    if (isSkewDisabled()) return loader();
+
     const attempts = Math.max(0, options.retryAttempts ?? lazyDefaults.retryAttempts) + 1;
     const delay = options.retryDelayMs ?? lazyDefaults.retryDelayMs;
 

@@ -1,0 +1,270 @@
+/* The persistent shell for the whole Portfolio tab: a scrolling ticker strip
+   and a toast stack, both of which survive navigating into and out of a
+   fund's detail page — see PortfolioLive for why. */
+
+.ticker-strip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  border: 1px solid #d8dee9;
+  border-radius: 10px;
+  background: #0f1722;
+  padding: 0.5rem 0.8rem;
+  margin-bottom: 1rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+}
+
+.ticker-strip .conn-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #9aa8bb;
+  flex: none;
+  margin-right: 0.6rem;
+}
+
+.ticker-strip .conn-dot.live {
+  background: #2ea043;
+}
+
+.ticker-strip .empty {
+  color: #6b7a8d;
+  font-size: 0.74rem;
+}
+
+.ticker-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0 0.9rem;
+  border-right: 1px solid #24303f;
+  color: #d6e0ec;
+}
+
+.ticker-chip:last-child {
+  border-right: 0;
+}
+
+.ticker-chip .sym {
+  color: #8fbfe0;
+  font-weight: 700;
+}
+
+.ticker-chip.up .px {
+  color: #7ee2a8;
+}
+
+.ticker-chip.down .px {
+  color: #ff9d9d;
+}
+
+.ticker-chip .arrow {
+  font-size: 0.68rem;
+}
+
+/* --- toasts ----------------------------------------------------------- */
+
+.toast-stack {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: grid;
+  gap: 0.5rem;
+  width: min(340px, calc(100vw - 2rem));
+}
+
+.toast {
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.18);
+  animation: toast-in 0.18s ease-out;
+  position: relative;
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.toast.breach {
+  background: #fdecec;
+  border: 1px solid #f0b4b4;
+  color: #7f1d1d;
+}
+
+.toast.warning {
+  background: #fff7e6;
+  border: 1px solid #f0d9a7;
+  color: #7a5b13;
+}
+
+.toast .sev {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.toast .dismiss {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.5rem;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  opacity: 0.6;
+  font-size: 0.85rem;
+  padding: 0.1rem 0.3rem;
+  cursor: pointer;
+}
+
+.toast .dismiss:hover {
+  opacity: 1;
+}
+
+/* --- ticker bar: typeahead + strip ---------------------------------------- */
+
+.ticker-bar {
+  display: grid;
+  grid-template-columns: minmax(180px, 15rem) minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 720px) {
+  .ticker-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ticker-bar .ticker-strip {
+  margin-bottom: 0;
+}
+
+/* --- pinned ticker drill-down --------------------------------------------- */
+
+.focus-card {
+  border: 1px solid #d8dee9;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.8rem 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.focus-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.focus-head strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+  color: #1e3a5f;
+}
+
+.focus-name {
+  color: #5b6779;
+  font-size: 0.78rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.focus-px {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #16202e;
+}
+
+.focus-px.up {
+  color: #14532d;
+}
+
+.focus-px.down {
+  color: #7f1d1d;
+}
+
+.focus-px .chg {
+  font-size: 0.74rem;
+  font-weight: 400;
+}
+
+.unpin {
+  background: #eef2f7;
+  color: #1e3a5f;
+  border: 0;
+  border-radius: 7px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.focus-caption {
+  margin: 0.7rem 0 0.35rem;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #8b96a6;
+}
+
+.impact-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.impact-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.7rem;
+  align-items: baseline;
+  font-size: 0.76rem;
+  padding: 0.2rem 0;
+  border-top: 1px solid #f0f3f7;
+}
+
+.impact-list .fund {
+  color: #16202e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.impact-list .weight {
+  color: #8b96a6;
+  font-size: 0.72rem;
+}
+
+.impact-list .nav {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  color: #5b6779;
+}
+
+.impact-list .nav.up {
+  color: #14532d;
+}
+
+.impact-list .nav.down {
+  color: #7f1d1d;
+}

@@ -7,7 +7,11 @@
   "include": [
     "src/**/*.ts",
     "../../libs/core/src/index.ts",
-    "../../libs/angular/workflow/src/index.ts"
+    "../../libs/angular/workflow/src/index.ts",
+    "../../libs/angular/data/src/index.ts"
   ],
-  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"]
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts"
+  ]
 }

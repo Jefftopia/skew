@@ -2,10 +2,12 @@
 /**
  * Serves both demo builds from ONE origin, the way a real deployment does.
  *
- *   node tools/serve-same-origin.mjs [--port 4420]
+ *   node tools/serve-same-origin.mjs [--port 4420] [--api-port 3333]
  *
- *   http://localhost:4420/         → apps/prod-host
- *   http://localhost:4420/remote/  → apps/prod-remote
+ *   http://localhost:4420/           → apps/prod-host
+ *   http://localhost:4420/remote/    → apps/prod-remote
+ *   http://localhost:4420/api/…      → proxied to the NestJS API
+ *   ws://localhost:4420/ws/ticker    → proxied to the same API
  *
  * The default `demo:prod:serve` puts the two apps on separate ports, which
  * makes them separate *origins* — and the Same-Origin Policy then partitions
@@ -21,8 +23,14 @@
  * Two builds, unchanged, mounted at different paths. Deploy them independently;
  * they still skew. Everything the other mode demonstrates still happens here —
  * except the storage partition, which was never the interesting part.
+ *
+ * The API is proxied rather than re-hosted for the same reason: it is its own
+ * deployment (`npm run api`, on its own port), and this server just forwards
+ * to it — including the raw TCP pipe needed for the WebSocket upgrade, since
+ * an HTTP proxy doesn't get that for free.
  */
-import { createServer } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
+import { connect as netConnect } from 'node:net';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
@@ -30,10 +38,14 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 const args = process.argv.slice(2);
 const portFlag = args.indexOf('--port');
 const PORT = portFlag !== -1 ? Number(args[portFlag + 1]) : 4420;
+const apiPortFlag = args.indexOf('--api-port');
+const API_PORT = apiPortFlag !== -1 ? Number(args[apiPortFlag + 1]) : 3333;
 
 const HOST_ROOT = resolve('dist/apps/prod-host/browser');
 const REMOTE_ROOT = resolve('dist/apps/prod-remote/browser');
 const REMOTE_PREFIX = '/remote';
+const API_PREFIX = '/api';
+const WS_PATH = '/ws/ticker';
 
 /**
  * The federation manifest for *this* topology, synthesized rather than built in.
@@ -131,8 +143,40 @@ async function sendRemoteIndex(res) {
   send(res, 200, html, MIME['.html']);
 }
 
+/**
+ * Forwards an HTTP request to the API process, byte for byte.
+ *
+ * Not a library `http-proxy` — this is a demo tool and the whole request is a
+ * dozen lines of `node:http`. `res.writeHead` copies the upstream's status and
+ * headers verbatim, so the API's own `Content-Type` (and its CORS headers,
+ * which do nothing here but are harmless) pass straight through.
+ */
+function proxyHttp(req, res) {
+  const upstream = httpRequest(
+    {
+      host: 'localhost',
+      port: API_PORT,
+      path: req.url,
+      method: req.method,
+      headers: req.headers,
+    },
+    (upstreamRes) => {
+      res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
+      upstreamRes.pipe(res);
+    },
+  );
+  upstream.on('error', () =>
+    send(res, 502, 'api unreachable — is `npm run api` running?', MIME['.txt']),
+  );
+  req.pipe(upstream);
+}
+
 const server = createServer(async (req, res) => {
   const { pathname } = new URL(req.url, `http://localhost:${PORT}`);
+
+  if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
+    return proxyHttp(req, res);
+  }
 
   // The topology-specific manifest wins over the one baked into the bundle.
   if (pathname === '/federation.manifest.json') {
@@ -167,11 +211,48 @@ const server = createServer(async (req, res) => {
   return sendFile(res, index);
 });
 
+/**
+ * Proxies the WebSocket upgrade for `/ws/ticker`.
+ *
+ * An ordinary HTTP proxy doesn't get this for free: the upgrade handshake
+ * happens once, over the same TCP connection the client then keeps open for
+ * the life of the socket, and neither `http.request` nor `res.writeHead` has
+ * a concept of "now hand this connection to someone else." So this opens a
+ * raw TCP connection to the API, replays the original request line and
+ * headers onto it by hand (what the client sent, minus nothing), and then
+ * pipes the two sockets together in both directions — at that point neither
+ * side can tell a proxy is there.
+ */
+server.on('upgrade', (req, clientSocket, head) => {
+  const { pathname } = new URL(req.url, `http://localhost:${PORT}`);
+  if (pathname !== WS_PATH) {
+    clientSocket.destroy();
+    return;
+  }
+
+  const upstream = netConnect(API_PORT, 'localhost', () => {
+    const headerLines = Object.entries(req.headers).map(
+      ([k, v]) => `${k}: ${v}`,
+    );
+    upstream.write(
+      `GET ${req.url} HTTP/1.1\r\n${headerLines.join('\r\n')}\r\n\r\n`,
+    );
+    if (head?.length) upstream.write(head);
+    clientSocket.pipe(upstream);
+    upstream.pipe(clientSocket);
+  });
+
+  upstream.on('error', () => clientSocket.destroy());
+  clientSocket.on('error', () => upstream.destroy());
+});
+
 server.listen(PORT, () => {
   process.stdout.write(
     `\n  one origin, two deployments\n\n` +
       `  host    http://localhost:${PORT}/\n` +
-      `  remote  http://localhost:${PORT}${REMOTE_PREFIX}/\n\n` +
-      `  Storage is shared here — that is the whole point.\n\n`,
+      `  remote  http://localhost:${PORT}${REMOTE_PREFIX}/\n` +
+      `  api     http://localhost:${PORT}${API_PREFIX}/  (proxied to :${API_PORT})\n\n` +
+      `  Storage is shared here — that is the whole point.\n` +
+      `  The API must be running separately: npm run api\n\n`,
   );
 });

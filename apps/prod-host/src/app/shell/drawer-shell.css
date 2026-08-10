@@ -1,0 +1,120 @@
+:host {
+  display: block;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr 0;
+  gap: 0;
+  align-items: start;
+  transition: grid-template-columns 0.22s ease;
+}
+
+.workspace.open {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 30rem);
+  gap: 1rem;
+}
+
+.main {
+  min-width: 0;
+}
+
+.drawer {
+  min-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(12px);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+  position: sticky;
+  top: 1rem;
+}
+
+.workspace.open .drawer {
+  opacity: 1;
+  transform: none;
+}
+
+/* The border is load-bearing, not decoration: everything inside it was built
+   by a different pipeline and fetched over the network at runtime. There
+   should never be ambiguity about which half of the screen is which. */
+.drawer-frame {
+  border: 2px solid #8a4fff;
+  border-radius: 14px;
+  background: #faf7ff;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #e4d9fb;
+  flex: none;
+}
+
+.drawer-tag {
+  background: #8a4fff;
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  flex: none;
+}
+
+.drawer-title {
+  font-size: 0.76rem;
+  color: #4a3570;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.drawer-close {
+  flex: none;
+  background: transparent;
+  border: 0;
+  color: #6b4fa0;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.drawer-close:hover {
+  background: #efe6ff;
+}
+
+.drawer-body {
+  padding: 0.85rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Stack on narrow screens — a 30rem drawer beside a fund list is unusable
+   below roughly a tablet. */
+@media (max-width: 1080px) {
+  .workspace.open {
+    grid-template-columns: 1fr;
+  }
+
+  .drawer {
+    position: static;
+  }
+
+  .drawer-frame {
+    max-height: none;
+  }
+}

@@ -1,5 +1,15 @@
-import { Component, signal } from '@angular/core';
-import { createVersionedStore, webStorageDriver } from '@skew/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import {
+  createVersionedStore,
+  isSkewDisabled,
+  webStorageDriver,
+} from '@skew/core';
+import {
+  listenForCommands,
+  type FieldChange,
+  type RemoteAction,
+  type RemoteResult,
+} from '../commands';
 import { runSchema } from '@skew/angular-workflow';
 import {
   DRAFT_KEY,
@@ -10,6 +20,7 @@ import {
   wizardV2,
 } from '../domain';
 import { BUILD_IDENTITY } from '../../generated/build-id';
+import { trace } from '../trace';
 
 interface Outcome {
   readonly ok: boolean;
@@ -45,10 +56,21 @@ interface Outcome {
     <div class="grid">
       <div class="card">
         <h3>Read the host's v1 record</h3>
+        <dl class="meta">
+          <dt>Tests</dt>
+          <dd>The migration chain running on read</dd>
+          <dt>Enables</dt>
+          <dd>An older build's record opens at this build's shape</dd>
+          <dt>Without it</dt>
+          <dd>
+            <code>author</code> is still a string where this code expects
+            <code>{{ '{' }} name, email {{ '}' }}</code>
+          </dd>
+        </dl>
         <p>
-          Same key, same origin, newer schema. The envelope says v1, this build
-          declares v2, so the migration runs on the way out — the host never had
-          to know it would be needed.
+          Same key, newer schema. The envelope says v1, this build declares v2,
+          so the migration runs on the way out — the host never had to know it
+          would be needed.
         </p>
         <button (click)="readAsV2()">Read record as v2</button>
         @if (readOut(); as o) {
@@ -64,10 +86,18 @@ interface Outcome {
 
       <div class="card">
         <h3>Write a v2 record</h3>
+        <dl class="meta">
+          <dt>Tests</dt>
+          <dd>Writing an envelope an older reader can recognise</dd>
+          <dt>Enables</dt>
+          <dd>The host can tell this is from the future and decline</dd>
+          <dt>Without it</dt>
+          <dd>The host reads it as v1 and corrupts what it renders</dd>
+        </dl>
         <p>
-          Then go back to the host and read it. An older build cannot migrate
-          downward — the information it would need was never written — so it
-          refuses instead of guessing.
+          Then go back to the host and read it — with protections on and then
+          off. An older build cannot migrate downward, because the information
+          it would need was never written.
         </p>
         <button (click)="writeV2()">Write v2 record</button>
         @if (writeOut(); as o) {
@@ -80,10 +110,20 @@ interface Outcome {
 
       <div class="card">
         <h3>Open the host's parked wizard on 0.2</h3>
+        <dl class="meta">
+          <dt>Tests</dt>
+          <dd>Run envelope and payload schema, unwrapped in order</dd>
+          <dt>Enables</dt>
+          <dd>A draft parked under 0.1 resumes here, migrated</dd>
+          <dt>Without it</dt>
+          <dd>
+            0.2's code reads 0.1's payload — <code>summary</code> is missing
+          </dd>
+        </dl>
         <p>
-          Type into the wizard on the host, then read the draft here. The run
-          envelope unwraps, then the payload migrates from 0.1's shape to 0.2's
-          — two schemas, versioned separately on purpose.
+          Type into the wizard on the host, then read the draft here. Two
+          schemas version separately on purpose: the run envelope belongs to the
+          library, the payload belongs to you.
         </p>
         <button (click)="readDraft()">Read the parked draft</button>
         @if (draftOut(); as o) {
@@ -179,23 +219,136 @@ export class Editor {
     driver: webStorageDriver('local'),
   });
 
-  protected async readAsV2(): Promise<void> {
+  /** Mirrors the host's switch — the flag lives in the shared `@skew/core`. */
+  private get guarded(): boolean {
+    return !isSkewDisabled();
+  }
+
+  constructor() {
+    // The host's guided walkthrough drives these same actions over a DOM
+    // event channel — see `commands.ts`. It names an intent; this build
+    // decides what that means under its own schema. Torn down with the
+    // component so a stale listener never answers on its behalf.
+    const stop = listenForCommands((action) => this.handleCommand(action));
+    inject(DestroyRef).onDestroy(stop);
+  }
+
+  private async handleCommand(
+    action: RemoteAction,
+  ): Promise<Omit<RemoteResult, 'id'>> {
+    switch (action) {
+      case 'read-record-as-v2':
+        return this.readAsV2();
+      case 'write-v2-record':
+        return this.writeV2();
+      case 'read-parked-draft':
+        return this.readDraft();
+      case 'clear-record':
+        await this.store.remove(DRAFT_KEY);
+        this.readOut.set(null);
+        this.writeOut.set(null);
+        this.migrated.set(null);
+        return {
+          ok: true,
+          headline: 'Cleared',
+          detail: 'The shared record was removed.',
+        };
+      default:
+        return {
+          ok: false,
+          headline: 'Unknown command',
+          detail: `This build does not know how to "${action}". It may be older than the host asking.`,
+        };
+    }
+  }
+
+  /**
+   * The v1 → v2 migration, field by field.
+   *
+   * Read from the raw bytes rather than reconstructed, so "before" is what
+   * was genuinely on disk. The distinction that matters is `migrated` (the
+   * value came from somewhere real) versus `derived` (this build invented a
+   * placeholder because v1 never carried the field) — collapsing those two
+   * into "it worked" is what makes a guess look like a report.
+   */
+  private describeMigration(after: DraftV2): FieldChange[] {
+    let before: Partial<Record<string, unknown>> = {};
+    try {
+      const raw = globalThis.localStorage?.getItem(
+        this.store.keyFor(DRAFT_KEY),
+      );
+      const parsed = raw ? JSON.parse(raw) : null;
+      before = (parsed?.payload ?? parsed ?? {}) as Record<string, unknown>;
+    } catch {
+      /* the table degrades to em-dashes rather than breaking the read */
+    }
+
+    const show = (v: unknown): string =>
+      v === undefined
+        ? '—'
+        : typeof v === 'string'
+          ? `"${v}"`
+          : JSON.stringify(v);
+
+    return [
+      {
+        name: 'id',
+        before: show(before['id']),
+        after: show(after.id),
+        status: 'same',
+      },
+      {
+        name: 'title',
+        before: show(before['title']),
+        after: show(after.title),
+        status: 'same',
+      },
+      {
+        name: 'author',
+        before: show(before['author']),
+        after: show(after.author),
+        status: typeof before['author'] === 'string' ? 'migrated' : 'same',
+      },
+      {
+        name: 'body',
+        before: show(before['body']),
+        after: show(after.body),
+        status: 'same',
+      },
+      {
+        name: 'summary',
+        before: show(before['summary']),
+        after: show(after.summary),
+        status: before['summary'] === undefined ? 'derived' : 'same',
+      },
+    ];
+  }
+
+  protected async readAsV2(): Promise<Omit<RemoteResult, 'id'>> {
+    trace(
+      'step',
+      'remote/read',
+      `get("${DRAFT_KEY}") as v${DraftSchemaV2.version}`,
+      this.guarded,
+    );
     const result = await this.store.get(DRAFT_KEY);
 
     if (!result.ok) {
-      this.readOut.set({
+      const outcome = {
         ok: false,
         headline: `Failed — ${result.reason}`,
         detail:
           result.reason === 'invalid'
             ? 'Nothing has been written yet. Write a v1 record on the host first.'
             : result.message,
-      });
+      };
+      this.readOut.set(outcome);
       this.migrated.set(null);
-      return;
+      return outcome;
     }
 
-    this.readOut.set({
+    const raw = JSON.stringify(result.value, null, 2);
+    const outcome = {
       ok: true,
       headline: result.migratedFrom
         ? `Migrated v${result.migratedFrom} → v${DraftSchemaV2.version}`
@@ -203,11 +356,30 @@ export class Editor {
       detail: result.migratedFrom
         ? 'The bare author string became a structured value and summary was derived from the body — at the boundary, once, instead of defensively in every consumer.'
         : 'No migration was needed.',
-    });
-    this.migrated.set(JSON.stringify(result.value, null, 2));
+    };
+    this.readOut.set(outcome);
+    this.migrated.set(raw);
+
+    return {
+      ...outcome,
+      foundVersion: result.migratedFrom ?? DraftSchemaV2.version,
+      expectedVersion: DraftSchemaV2.version,
+      fields: result.migratedFrom
+        ? this.describeMigration(result.value)
+        : undefined,
+      raw,
+    };
   }
 
-  protected async writeV2(): Promise<void> {
+  protected async writeV2(): Promise<Omit<RemoteResult, 'id'>> {
+    trace(
+      'step',
+      'remote/write',
+      this.guarded
+        ? 'set() — wrapping as { v: 2, payload }'
+        : 'set() — writing a bare object, no version recorded',
+      this.guarded,
+    );
     const record: DraftV2 = {
       id: 'demo-1',
       title: 'Third Sunday of Advent',
@@ -216,12 +388,24 @@ export class Editor {
       summary: 'Gaudete Sunday.',
     };
     await this.store.set(DRAFT_KEY, record);
-    this.writeOut.set({
+
+    const raw =
+      globalThis.localStorage?.getItem(this.store.keyFor(DRAFT_KEY)) ?? '';
+    const outcome = {
       ok: true,
-      headline: 'Written as v2',
-      detail:
-        'Envelope { v: 2 }. The host will refuse this rather than mangle it.',
-    });
+      headline: this.guarded ? 'Written as v2' : 'Written with no envelope',
+      detail: this.guarded
+        ? 'Envelope { v: 2 }. The host will refuse this rather than mangle it.'
+        : 'No version recorded. The host has no way to tell this is not its own v1 — which is exactly how it ends up rendering undefined.',
+    };
+    this.writeOut.set(outcome);
+
+    return {
+      ...outcome,
+      foundVersion: this.guarded ? DraftSchemaV2.version : undefined,
+      expectedVersion: DraftSchemaV2.version,
+      raw: raw ? JSON.stringify(JSON.parse(raw), null, 2) : undefined,
+    };
   }
 
   /**
@@ -229,39 +413,43 @@ export class Editor {
    * schema, and it tells us which step the user was on. Then the payload,
    * with *this* build's schema, which is where 0.1's shape becomes 0.2's.
    */
-  protected async readDraft(): Promise<void> {
+  protected async readDraft(): Promise<Omit<RemoteResult, 'id'>> {
+    trace('step', 'remote/draft', 'unwrapping the run envelope', this.guarded);
     const run = await this.runStore.get(wizardV2.id);
 
     if (!run.ok) {
-      this.draftOut.set({
+      const outcome = {
         ok: false,
         headline: `No draft — ${run.reason}`,
         detail:
           run.reason === 'invalid'
             ? 'Nothing parked yet. Type into the wizard on the host first.'
             : run.message,
-      });
+      };
+      this.draftOut.set(outcome);
       this.draftData.set(null);
-      return;
+      return outcome;
     }
 
     const payload = WizardDataSchemaV2.read(run.value.data);
 
     if (!payload.ok) {
-      this.draftOut.set({
+      const outcome = {
         ok: false,
         headline: `Payload refused — ${payload.reason}`,
         detail:
           payload.reason === 'ahead'
             ? 'The draft was written by a build newer than this one. It is left untouched rather than opened at a shape this build would misread.'
             : payload.message,
-      });
+      };
+      this.draftOut.set(outcome);
       this.draftData.set(null);
-      return;
+      return outcome;
     }
 
     const data = payload.value as WizardDataV2;
-    this.draftOut.set({
+    const raw = JSON.stringify(data, null, 2);
+    const outcome = {
       ok: true,
       headline: payload.migratedFrom
         ? `Parked on "${run.value.current}" · payload migrated v${payload.migratedFrom} → v${WizardDataSchemaV2.version}`
@@ -269,7 +457,15 @@ export class Editor {
       detail: payload.migratedFrom
         ? 'The host wrote this under 0.1, which had no summary field. It opens here with one, without the host ever knowing 0.2 exists.'
         : 'No migration was needed.',
-    });
-    this.draftData.set(JSON.stringify(data, null, 2));
+    };
+    this.draftOut.set(outcome);
+    this.draftData.set(raw);
+
+    return {
+      ...outcome,
+      foundVersion: payload.migratedFrom ?? WizardDataSchemaV2.version,
+      expectedVersion: WizardDataSchemaV2.version,
+      raw,
+    };
   }
 }

@@ -52,14 +52,6 @@ h1 {
   font-weight: 700;
 }
 
-nav {
-  display: flex;
-  gap: 1rem;
-  margin-top: 0.9rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
 nav a {
   color: #1e3a5f;
   text-decoration: none;
@@ -67,6 +59,37 @@ nav a {
 
 nav a:hover {
   text-decoration: underline;
+}
+
+/* --- tab strip -------------------------------------------------------------
+   Basics (default) vs. Portfolio. Both share the protections switch and
+   trace panel below — the toggle is a property of the library, not of either
+   tab's content. */
+
+nav.tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1.3rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+nav.tabs a {
+  padding: 0.55rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #5b6779;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+nav.tabs a:hover {
+  color: #1e3a5f;
+  text-decoration: none;
+}
+
+nav.tabs a.active {
+  color: #1e3a5f;
+  border-bottom-color: #1e3a5f;
 }
 
 .alert {
@@ -101,4 +124,71 @@ nav a:hover {
   display: block;
   margin-top: 0.25rem;
   line-height: 1.5;
+}
+
+/* --- the before/after switch ---------------------------------------------- */
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1.1rem;
+  background: #e7f6ec;
+  border: 1px solid #a7d8b8;
+}
+
+.switch.off {
+  background: #fdecec;
+  border-color: #f0b4b4;
+}
+
+.switch strong {
+  display: block;
+  font-size: 0.82rem;
+  color: #14532d;
+}
+
+.switch.off strong {
+  color: #7f1d1d;
+}
+
+.switch span {
+  display: block;
+  font-size: 0.74rem;
+  color: #3f6b4f;
+  margin-top: 0.15rem;
+  line-height: 1.5;
+}
+
+.switch.off span {
+  color: #8a4a4a;
+}
+
+.switch button {
+  margin-left: auto;
+  flex: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  font-weight: 700;
+  font-size: 0.74rem;
+  cursor: pointer;
+  background: #14532d;
+  color: #fff;
+}
+
+.switch.off button {
+  background: #7f1d1d;
+}
+
+@media (max-width: 560px) {
+  .switch {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .switch button {
+    margin-left: 0;
+  }
 }

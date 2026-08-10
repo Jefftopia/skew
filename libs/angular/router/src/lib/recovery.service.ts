@@ -5,6 +5,7 @@ import {
   type SkewStatus,
   type VersionProbe,
   createVersionProbe,
+  isSkewDisabled,
   moduleWasRemoved,
 } from '@skew/core';
 import {
@@ -63,6 +64,11 @@ export class SkewRecoveryService {
   private listen(): void {
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationError && isChunkLoadFailure(event.error)) {
+        // Not public API — see `disabled.ts` in @skew/core. The NavigationError
+        // is left to propagate untouched: no retry, no manifest probe, no
+        // classification, no decision. Whatever the application does next is
+        // whatever it would have done without this package installed.
+        if (isSkewDisabled()) return;
         void this.handle(event.error, event.url);
       }
     });
