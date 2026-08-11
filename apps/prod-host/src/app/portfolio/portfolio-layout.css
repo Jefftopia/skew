@@ -268,3 +268,54 @@
 .impact-list .nav.down {
   color: #7f1d1d;
 }
+
+/* --- manual breach trigger ------------------------------------------------ */
+
+.breach-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid #d8dee9;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.7rem 0.95rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.breach-bar > div {
+  flex: 1;
+  min-width: 18rem;
+}
+
+.breach-bar strong {
+  display: block;
+  font-size: 0.82rem;
+  color: #16202e;
+}
+
+.breach-bar span {
+  display: block;
+  font-size: 0.75rem;
+  color: #5b6779;
+  line-height: 1.5;
+  margin-top: 0.15rem;
+  max-width: 62ch;
+}
+
+.breach-bar button {
+  flex: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  font-weight: 700;
+  font-size: 0.76rem;
+  cursor: pointer;
+  background: #7f1d1d;
+  color: #fff;
+}
+
+.breach-bar button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

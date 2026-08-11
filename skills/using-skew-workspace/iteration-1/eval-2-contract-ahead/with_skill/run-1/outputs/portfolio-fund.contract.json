@@ -1,0 +1,50 @@
+{
+  "skewContract": "1",
+  "name": "portfolio-fund",
+  "current": 2,
+  "steps": [
+    {
+      "from": 1,
+      "to": 2,
+      "description": "rename currency to baseCurrency; move flat cashPct into liquidity; add liquidity.hqlaPct defaulting to 0",
+      "ops": [
+        { "rename": { "from": "currency", "to": "baseCurrency" } },
+        { "move": { "from": "cashPct", "to": "liquidity.cashPct" } },
+        { "default": { "path": "liquidity.hqlaPct", "value": 0 } }
+      ]
+    }
+  ],
+  "schemas": {
+    "1": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PortfolioFund v1",
+      "type": "object",
+      "required": ["id", "name", "currency", "cashPct"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "cashPct": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "2": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PortfolioFund v2",
+      "type": "object",
+      "required": ["id", "name", "baseCurrency", "liquidity"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "baseCurrency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "liquidity": {
+          "type": "object",
+          "required": ["cashPct", "hqlaPct"],
+          "properties": {
+            "cashPct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "hqlaPct": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        }
+      }
+    }
+  }
+}

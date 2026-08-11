@@ -1,0 +1,46 @@
+{
+  "run_id": "eval-1-without_skill",
+  "expectations": [
+    {
+      "text": "app.config.ts adds provideSkewRecovery({ identity: BUILD_IDENTITY, manifestUrl: ... }) importing identity from the skew-stamp-generated module",
+      "passed": false,
+      "evidence": "Invents a feature-composition API: provideSkewChunkRecovery({buildId}, withChunkRetry(...), withDeployManifest(...), withReloadGuard(...), withReloadLoopProtection(...)). None of these exist in @skew/angular-router; the real provider is provideSkewRecovery({ identity, manifestUrl, ... })."
+    },
+    {
+      "text": "Lazy routes are wrapped as lazy('<module-id>', () => import(...)) so the id cross-references the manifest",
+      "passed": false,
+      "evidence": "app.routes.ts keeps stock loadChildren: () => import(...).then(m => m.ADMIN_ROUTES) with no lazy() wrapper and no module ids \u2014 so no per-import retry and no manifest modules cross-reference (deleted-route vs renamed-chunk cannot be distinguished)."
+    },
+    {
+      "text": "Build wiring runs skew-stamp before the app build to generate build-id.ts and again (or with flags) to emit skew-manifest.json, with --assets pointing at the browser output dir",
+      "passed": false,
+      "evidence": "Invents a `skew-build stamp` / `skew-build manifest` CLI with --index-meta/--dist flags. The real @skew/build bin is skew-stamp with --out/--manifest/--assets. Conceptual pre/post structure is right; the tool and flags would not run."
+    },
+    {
+      "text": "Manifest is documented/configured to be served with no-store (or explicitly uncached) semantics",
+      "passed": true,
+      "evidence": "Manifest fetched with cache: 'no-store' and package.json notes require index.html and skew-manifest.json served with no-store/max-age=0; deploy-order guidance included."
+    },
+    {
+      "text": "Stale-origin loop prevention is delegated to the library's classification (not a hand-rolled reload counter) and the answer does not add an unconditional location.reload() fallback",
+      "passed": false,
+      "evidence": "Loop prevention is a hand-specified equality check (manifest.buildId === SKEW_BUILD_ID refuses reload) plus a sessionStorage reload counter. Equality alone cannot classify staleOrigin: a CDN region serving a DIFFERENT-but-OLDER build's manifest reads as 'a new build exists' and reloads into the loop. The real library orders builds by builtAt timestamps precisely for this case."
+    },
+    {
+      "text": "Dirty-form protection uses trackUnsavedWork(() => form.dirty) in a component",
+      "passed": false,
+      "evidence": "No trackUnsavedWork; instead a DOM-scraping guard (querying .ng-dirty classes, comparing value vs defaultValue, checkbox state, contenteditable). Misses the library's registration primitive and is fragile against OnPush/detached forms."
+    },
+    {
+      "text": "Banner component reads SkewRecoveryService and uses its pending() signal and recover() method",
+      "passed": false,
+      "evidence": "Uses the right service name but invented members: blockedRecoveries signal, reload(), recheck(), dismiss(). The real surface is pending() and recover(); this would not compile."
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 6,
+    "total": 7,
+    "pass_rate": 0.1429
+  }
+}

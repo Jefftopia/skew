@@ -1,0 +1,46 @@
+{
+  "run_id": "eval-1-with_skill",
+  "expectations": [
+    {
+      "text": "app.config.ts adds provideSkewRecovery({ identity: BUILD_IDENTITY, manifestUrl: ... }) importing identity from the skew-stamp-generated module",
+      "passed": true,
+      "evidence": "app.config.ts:16-52 \u2014 provideSkewRecovery({ identity: BUILD_IDENTITY, manifestUrl: '/skew-manifest.json', ... }) with BUILD_IDENTITY imported from './generated/build-id'."
+    },
+    {
+      "text": "Lazy routes are wrapped as lazy('<module-id>', () => import(...)) so the id cross-references the manifest",
+      "passed": true,
+      "evidence": "app.routes.ts:23,27 \u2014 lazy('admin.routes', () => import('./admin/admin.routes')) and lazy('editor.routes', ...), with comments explaining the manifest cross-reference and id stability."
+    },
+    {
+      "text": "Build wiring runs skew-stamp before the app build to generate build-id.ts and again (or with flags) to emit skew-manifest.json, with --assets pointing at the browser output dir",
+      "passed": true,
+      "evidence": "package.json \u2014 predev/prebuild run `skew-stamp --out src/generated/build-id.ts`; postbuild adds `--manifest dist/bulletin-app/browser/skew-manifest.json --assets dist/bulletin-app/browser`. Matches the real CLI flags exactly."
+    },
+    {
+      "text": "Manifest is documented/configured to be served with no-store (or explicitly uncached) semantics",
+      "passed": true,
+      "evidence": "manifest-cache-headers.snippet.txt provides Firebase Hosting and nginx configs: no-store for skew-manifest.json, no-cache for index.html, immutable for hashed chunks \u2014 and explains why a cached manifest breaks the probe."
+    },
+    {
+      "text": "Stale-origin loop prevention is delegated to the library's classification (not a hand-rolled reload counter) and the answer does not add an unconditional location.reload() fallback",
+      "passed": true,
+      "evidence": "No location.reload() anywhere; app.config.ts comments delegate staleOrigin/unreachable refusal to the library's probe and cap auto-recoveries via maxRecoveries: 1. The banner's recover() re-runs classification in the service."
+    },
+    {
+      "text": "Dirty-form protection uses trackUnsavedWork(() => form.dirty) in a component",
+      "passed": true,
+      "evidence": "editor-shell.component.ts \u2014 trackUnsavedWork(() => this.form.dirty) registered in the constructor, with markAsPristine() after save to unblock recovery."
+    },
+    {
+      "text": "Banner component reads SkewRecoveryService and uses its pending() signal and recover() method",
+      "passed": true,
+      "evidence": "update-banner.component.ts:28,37,72 \u2014 @if (recovery.pending()) template guard and (click)=\"recovery.recover()\" on inject(SkewRecoveryService)."
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.0
+  }
+}

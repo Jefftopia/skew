@@ -246,7 +246,7 @@ describe('SkewRecoveryService', () => {
     });
 
     it('passes a populated context to a custom strategy', async () => {
-      const strategy = vi.fn((_context: StaleChunkContext) => 'notify' as const);
+      const strategy = vi.fn<(context: StaleChunkContext) => 'notify'>(() => 'notify');
       const h = setup({
         strategy,
         manifest: { buildId: 'server-2', builtAt: '2026-08-02T00:00:00Z' },

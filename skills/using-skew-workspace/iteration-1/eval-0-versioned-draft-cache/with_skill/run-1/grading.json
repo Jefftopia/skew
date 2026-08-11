@@ -1,0 +1,41 @@
+{
+  "run_id": "eval-0-with_skill",
+  "expectations": [
+    {
+      "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @skew/core API",
+      "passed": true,
+      "evidence": "weekly-content.schema.ts:69-80 \u2014 versioned<WeeklyContentV1>('weekly-content').next<WeeklyContentV2>('rename themeQuote...', fn); no .build(); matches the real fluent API exactly."
+    },
+    {
+      "text": "Migration steps close over frozen snapshot interfaces (V1/V2 declared in the schema file), not the live application WeeklyContent type",
+      "passed": true,
+      "evidence": "Private WeeklyContentV1/WeeklyContentV2 interfaces with explicit 'FROZEN SNAPSHOTS' comments; the live model is only mentioned as needing structural compatibility, never imported. WeeklyContentDraft is an alias of the V2 snapshot."
+    },
+    {
+      "text": "Storage uses createVersionedStore with webStorageDriver('local') and passes buildId",
+      "passed": true,
+      "evidence": "draft-store.ts:44-48 \u2014 createVersionedStore(WeeklyContentSchema, { driver: webStorageDriver('local'), buildId: BUILD_ID, onReadFailure })."
+    },
+    {
+      "text": "Read path branches on the discriminated result: checks result.ok and switches on result.reason covering 'ahead', 'gap', 'invalid', and 'threw'",
+      "passed": true,
+      "evidence": "draft-store.ts:79-110 \u2014 checks result.ok, then switch(result.reason) with explicit cases for 'ahead', 'invalid', and 'gap'/'threw'; uses real result fields (result.value, result.migratedFrom)."
+    },
+    {
+      "text": "'ahead' is handled distinctly from 'invalid' \u2014 newer-build drafts are refetched or left untouched, never discarded or treated as corrupt",
+      "passed": true,
+      "evidence": "'ahead' returns status 'newer-build' with the draft explicitly LEFT IN STORAGE and doc-comment telling callers to refetch from server; only 'invalid' discards. deleteDraft() docs warn never to call it on an ahead read."
+    },
+    {
+      "text": "No JSON.parse(raw) as WeeklyContent style unchecked cast remains in the read path",
+      "passed": true,
+      "evidence": "All reads go through store.get()/store.peek(); no JSON.parse or type assertion casts anywhere in the read path."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  }
+}

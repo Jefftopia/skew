@@ -1,4 +1,4 @@
-import { versioned } from '@skew/core';
+import { MigrationContext, registerSchema, versioned, versionedList } from '@skew/core';
 
 /**
  * The remote's view of the same portfolio contract — a near-copy of the
@@ -72,12 +72,14 @@ export interface FundV2 {
  * replaces the guess with the truth, and a plausible-looking guess would make
  * that gap invisible instead of visible.
  */
-function migrateFundV1ToV2(v1: FundV1): FundV2 {
+function migrateFundV1ToV2(v1: FundV1, ctx: MigrationContext): FundV2 {
   return {
     id: v1.id,
     name: v1.name,
     baseCurrency: v1.currency,
-    nav: { amount: v1.nav, asOf: new Date().toISOString() },
+    // The clock comes from the context, never from `new Date()` inside the
+    // migration — same input, same output, or replays and tests both lie.
+    nav: { amount: v1.nav, asOf: ctx.now().toISOString() },
     liquidity: {
       cashPct: v1.cashPct,
       hqlaPct: 0, // derived — unknown until reconciled against the server
@@ -94,17 +96,62 @@ function migrateFundV1ToV2(v1: FundV1): FundV2 {
   };
 }
 
+/**
+ * The reverse projection — what a v1-only reader should see of a v2 record.
+ * Lossy on purpose: the fields it discards are exactly the ones v1 cannot
+ * carry, and `lossy` in the step below names them so no reader mistakes the
+ * projection for the whole record.
+ */
+function migrateFundV2ToV1(v2: FundV2): FundV1 {
+  return {
+    id: v2.id,
+    name: v2.name,
+    currency: v2.baseCurrency,
+    nav: v2.nav.amount,
+    cashPct: v2.liquidity.cashPct,
+    holdings: v2.holdings.map((h) => ({
+      ticker: h.ticker,
+      name: h.name,
+      weightPct: h.weightPct,
+      marketValue: h.marketValue.amount,
+    })),
+  };
+}
+
+const FUND_V2_GUESSED_FIELDS = [
+  'nav.asOf',
+  'liquidity.hqlaPct',
+  'liquidity.redemptionCoverDays',
+  'classification',
+  'holdings[].liquidityTier',
+] as const;
+
 export const FundSchemaV2 = versioned<FundV1>('portfolio-fund').next<FundV2>(
   'promote scalars to structure; add liquidity and classification fields v1 never carried',
-  migrateFundV1ToV2,
+  {
+    up: migrateFundV1ToV2,
+    down: migrateFundV2ToV1,
+    // Going up these are guesses; going down they are the price of the
+    // projection. Same list, two directions, both worth surfacing.
+    derives: FUND_V2_GUESSED_FIELDS,
+    lossy: FUND_V2_GUESSED_FIELDS,
+  },
 );
 
-/** The list envelope the host actually holds — an array of `FundV1`. */
-export const FundListSchemaV2 = versioned<FundV1[]>('portfolio-funds').next<
-  FundV2[]
->('migrate every fund in the list the same way as a single fund', (list) =>
-  list.map(migrateFundV1ToV2),
-);
+/**
+ * Contribute this build's steps to the page-wide registry. This is the
+ * federation dividend: the HOST is a v1-only build, but both bundles share
+ * one `@skew/core` instance, so once this (newer) bundle has loaded, the
+ * host's own `read()` can migrate a v2 fund *down* through the step
+ * registered here — its `ahead` dead end becomes an honest, lossy projection.
+ */
+registerSchema(FundSchemaV2);
+
+/**
+ * The list envelope the host actually holds — an array of `FundV1`. Derived
+ * from the single-fund schema, so the two chains cannot drift apart.
+ */
+export const FundListSchemaV2 = versionedList(FundSchemaV2, 'portfolio-funds');
 
 // --- orders --------------------------------------------------------------
 
@@ -134,19 +181,25 @@ export interface OrderV2 {
  * `breachRef` cannot be recovered once the original breach context is gone;
  * rather than inventing a plausible-looking reference, this is left as
  * `'unknown'` and the UI says so.
+ *
+ * The idempotency key is derived from `ctx.seed` — the outbox passes the
+ * queued entry's stable id — never from the clock. A clock-derived key mints
+ * a *new* identity on every retry, which is the one property an idempotency
+ * key must not have: a flaky network plus a retry loop would submit the same
+ * order as many times as it took to "succeed".
  */
 export const OrderSchemaV2 = versioned<OrderV1>(
   'portfolio-order',
 ).next<OrderV2>(
   'wrap amount in a currency, and add the fields v1 never required',
-  (v1) => ({
+  (v1, ctx) => ({
     fundId: v1.fundId,
     action: v1.action,
     ticker: v1.ticker,
     amount: { value: v1.amount, currency: 'USD' },
     note: v1.note,
     breachRef: 'unknown',
-    idempotencyKey: `migrated-${v1.fundId}-${Date.now()}`,
+    idempotencyKey: `migrated-${v1.fundId}-${ctx.seed ?? 'unseeded'}`,
   }),
 );
 
@@ -181,16 +234,19 @@ export interface LiquidityBreachV1 {
     description: string;
     amount: number;
   };
+  /** The instrument the event is about — always held by every fund. */
+  ticker: string;
   impacted: Array<{
     fundId: string;
     fundName: string;
+    weightPct: number;
     cashPctBefore: number;
     cashPctAfter: number;
     thresholdPct: number;
   }>;
   suggestedAction: {
     kind: 'raise-cash' | 'sell-holding' | 'defer-redemption';
-    ticker?: string;
+    ticker: string;
     amount: number;
     rationale: string;
   };

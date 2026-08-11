@@ -12,6 +12,8 @@ export default [
         'error',
         {
           ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
+          // vitest is imported only by spec files, which never ship.
+          ignoredDependencies: ['vitest'],
         },
       ],
     },

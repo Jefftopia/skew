@@ -25,7 +25,9 @@ export type RemoteAction =
   | 'write-v2-record'
   | 'read-record-as-v2'
   | 'read-parked-draft'
-  | 'clear-record';
+  | 'clear-record'
+  /** Ask the remote to share its migration chain via the page registry. */
+  | 'register-schema';
 
 export interface RemoteCommand {
   readonly id: string;

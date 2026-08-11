@@ -1,5 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router, RouterOutlet } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { API_BASE } from './contracts';
 import { PortfolioLive } from './portfolio-live';
 import { PortfolioPage } from './portfolio-page';
 import { DrawerShell } from '../shell/drawer-shell';
@@ -24,6 +27,20 @@ import { TickerTypeahead, type TickerOption } from './ticker-typeahead';
   imports: [RouterOutlet, DrawerShell, PortfolioPage, TickerTypeahead],
   styleUrl: './portfolio-layout.css',
   template: `
+    <div class="breach-bar">
+      <div>
+        <strong>Liquidity events fire only when you ask.</strong>
+        <span>
+          Each one targets <code>TBILL-3M</code> — the one instrument every fund
+          holds — so a single press shows up across the whole book at once, in
+          the list, in every drill-down, and in the open panel.
+        </span>
+      </div>
+      <button (click)="fireBreach()" [disabled]="firing()">
+        {{ firing() ? 'Firing…' : 'Fire a liquidity breach' }}
+      </button>
+    </div>
+
     <div class="ticker-bar">
       <div class="ticker-search">
         <host-ticker-typeahead
@@ -145,6 +162,30 @@ export class PortfolioLayout {
   private readonly router = inject(Router);
 
   protected readonly drawerOpen = signal(false);
+  protected readonly firing = signal(false);
+
+  private readonly http = inject(HttpClient);
+
+  /**
+   * Asks the API to emit one breach to every connected client.
+   *
+   * The stream has no timer any more — see `events.controller.ts`. An event
+   * that arrives on its own schedule makes it impossible to tell whether what
+   * you just saw was caused by what you just did, which is a poor property for
+   * a demo about cause and effect.
+   */
+  protected async fireBreach(): Promise<void> {
+    this.firing.set(true);
+    try {
+      await firstValueFrom(
+        this.http.post(`${API_BASE}/events/liquidity/trigger`, {}),
+      );
+    } catch {
+      // The SSE panel already shows a connection problem; nothing to add.
+    } finally {
+      this.firing.set(false);
+    }
+  }
 
   protected pin(option: TickerOption): void {
     this.live.focusedTicker.set(option.ticker);

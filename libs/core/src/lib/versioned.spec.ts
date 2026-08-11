@@ -90,8 +90,8 @@ describe('versioned()', () => {
 
     it('honours assumeLegacyVersion for mid-stream adoption', () => {
       const midStream = versioned<V1>('x', { assumeLegacyVersion: 2 })
-        .next<V2>((p) => p as unknown as V2)
-        .next<V3>((p) => ({ ...p, orderOfWorship: { setting: '', hymns: [] } }));
+        .next<V2>('rename', (p) => p as unknown as V2)
+        .next<V3>('add orderOfWorship', (p) => ({ ...p, orderOfWorship: { setting: '', hymns: [] } }));
 
       // Bare data is now assumed to already be v2, so only the last step runs.
       const result = midStream.read({ id: 'd', scriptureOfWeek: { text: 'x' } });
@@ -119,7 +119,7 @@ describe('versioned()', () => {
     it('reports a gap rather than skipping a missing step', () => {
       // A schema that jumped to v3 without declaring v2 cannot be built via the
       // fluent API, so simulate a corrupted step list.
-      const broken = versioned<V1>('broken').next<V2>((p) => p as unknown as V2);
+      const broken = versioned<V1>('broken').next<V2>('rename', (p) => p as unknown as V2);
       (broken.steps as unknown as unknown[]).length = 0; // drop the declared step
 
       const result = broken.read({ v: 1, payload: { id: 'f' } });
@@ -181,7 +181,7 @@ describe('versioned()', () => {
 
   it('does not mutate the source schema when extended', () => {
     const base = versioned<V1>('immutability');
-    const extended = base.next<V2>((p) => p as unknown as V2);
+    const extended = base.next<V2>('rename', (p) => p as unknown as V2);
 
     expect(base.version).toBe(1);
     expect(extended.version).toBe(2);

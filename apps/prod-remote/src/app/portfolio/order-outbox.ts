@@ -94,7 +94,12 @@ async function runOrderMutation(
     true,
   );
 
-  const migrated = OrderSchemaV2.read(firstEnvelope);
+  // The entry's id seeds the migration's derived idempotency key: the same
+  // queued order migrates to the same key on every retry, so the server can
+  // deduplicate. (A clock-seeded key would mint a fresh identity per attempt.)
+  const migrated = OrderSchemaV2.read(firstEnvelope, {
+    context: { now: () => new Date(), seed: entry.id },
+  });
   if (!migrated.ok) {
     throw new Error(
       `could not migrate queued order after version-skew: ${migrated.reason}`,

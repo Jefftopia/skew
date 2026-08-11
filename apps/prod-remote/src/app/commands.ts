@@ -22,7 +22,14 @@ export type RemoteAction =
   | 'write-v2-record'
   | 'read-record-as-v2'
   | 'read-parked-draft'
-  | 'clear-record';
+  | 'clear-record'
+  /**
+   * Contribute this build's migration chain — including its down direction —
+   * to the page-wide schema registry, so the older host can read the v2
+   * record it refused a step ago. The host names the intent; how much this
+   * build knows (and therefore shares) is this build's business.
+   */
+  | 'register-schema';
 
 export interface RemoteCommand {
   readonly id: string;

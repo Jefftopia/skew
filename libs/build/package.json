@@ -6,7 +6,10 @@
   "type": "module",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
-  "bin": { "skew-stamp": "./src/bin/skew-stamp.js" },
+  "bin": {
+    "skew-stamp": "./src/bin/skew-stamp.js",
+    "skew-contract": "./src/bin/skew-contract.js"
+  },
   "exports": {
     ".": { "types": "./src/index.d.ts", "default": "./src/index.js" },
     "./package.json": "./package.json"

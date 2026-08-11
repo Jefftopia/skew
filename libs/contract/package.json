@@ -1,0 +1,27 @@
+{
+  "name": "@skew/contract",
+  "version": "0.0.1",
+  "description": "Data-driven schema migrations: publish a contract document from your API, resolve it at runtime, and migrate in both directions without shipping new client code.",
+  "keywords": [
+    "version-skew",
+    "migration",
+    "schema-versioning",
+    "api-contract",
+    "lens"
+  ],
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "@skew/core": "0.0.1"
+  }
+}

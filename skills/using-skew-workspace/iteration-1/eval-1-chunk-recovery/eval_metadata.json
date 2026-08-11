@@ -1,0 +1,14 @@
+{
+  "eval_id": 1,
+  "eval_name": "chunk-recovery",
+  "prompt": "Our Angular standalone app gets ChunkLoadError spikes right after every deploy — users stuck on a broken route until they manually refresh, and we had one incident where a CDN region kept serving the old index.html and users got into a reload loop. We want to adopt @skew/angular-router and @skew/build. Show me the changes: app.config.ts providers, our routes file (lazy children for 'admin' -> ./admin/admin.routes and 'editor' -> ./editor/editor.routes), the npm scripts / build wiring to stamp build identity and emit the manifest, and a small banner component for when automatic recovery isn't safe. Hard requirements: never auto-reload into a loop when the origin itself is stale, and never reload over a form the user has half filled in.",
+  "assertions": [
+    "app.config.ts adds provideSkewRecovery({ identity: BUILD_IDENTITY, manifestUrl: ... }) importing identity from the skew-stamp-generated module",
+    "Lazy routes are wrapped as lazy('<module-id>', () => import(...)) so the id cross-references the manifest",
+    "Build wiring runs skew-stamp before the app build to generate build-id.ts and again (or with flags) to emit skew-manifest.json, with --assets pointing at the browser output dir",
+    "Manifest is documented/configured to be served with no-store (or explicitly uncached) semantics",
+    "Stale-origin loop prevention is delegated to the library's classification (not a hand-rolled reload counter) and the answer does not add an unconditional location.reload() fallback",
+    "Dirty-form protection uses trackUnsavedWork(() => form.dirty) in a component",
+    "Banner component reads SkewRecoveryService and uses its pending() signal and recover() method"
+  ]
+}

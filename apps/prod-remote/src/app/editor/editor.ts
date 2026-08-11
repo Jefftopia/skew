@@ -1,9 +1,6 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
-import {
-  createVersionedStore,
-  isSkewDisabled,
-  webStorageDriver,
-} from '@skew/core';
+import { isSkewDisabled, registerSchema } from '@skew/core';
+import { rawAt, storeOn } from '../shared-store';
 import {
   listenForCommands,
   type FieldChange,
@@ -202,10 +199,15 @@ export class Editor {
   protected readonly draftOut = signal<Outcome | null>(null);
   protected readonly draftData = signal<string | null>(null);
 
-  /** This build knows the schema one version further along than the host. */
-  private readonly store = createVersionedStore(DraftSchemaV2, {
-    driver: webStorageDriver('local'),
-  });
+  /**
+   * This build knows the schema one version further along than the host.
+   * Built per call so the host's driver toggle (localStorage ↔ IndexedDB)
+   * applies here too — if it did not, the two builds would be reading
+   * different stores and every scenario would report an empty one.
+   */
+  private get store() {
+    return storeOn(DraftSchemaV2);
+  }
 
   /**
    * The parked run, read directly rather than through `injectWorkflow`.
@@ -215,9 +217,9 @@ export class Editor {
    * there first. Reading the draft is what this build does on any page load
    * where it is the only one running.
    */
-  private readonly runStore = createVersionedStore(runSchema, {
-    driver: webStorageDriver('local'),
-  });
+  private get runStore() {
+    return storeOn(runSchema);
+  }
 
   /** Mirrors the host's switch — the flag lives in the shared `@skew/core`. */
   private get guarded(): boolean {
@@ -253,6 +255,27 @@ export class Editor {
           headline: 'Cleared',
           detail: 'The shared record was removed.',
         };
+      case 'register-schema': {
+        // Contribute this build's chain — up AND down — to the registry both
+        // bundles reach through the one shared @skew/core instance. From this
+        // moment the v1-only host can downgrade a v2 record it could only
+        // refuse before. Idempotent; a second registration of the same chain
+        // is a no-op.
+        registerSchema(DraftSchemaV2);
+        trace(
+          'ok',
+          'editor',
+          'registered skew-demo-draft v1 ↔ v2 with the shared registry',
+          true,
+        );
+        return {
+          ok: true,
+          headline: 'Chain registered',
+          detail:
+            'This build contributed its v1 ↔ v2 steps (including the down direction) to the page-wide registry.',
+          expectedVersion: DraftSchemaV2.version,
+        };
+      }
       default:
         return {
           ok: false,
@@ -271,12 +294,10 @@ export class Editor {
    * placeholder because v1 never carried the field) — collapsing those two
    * into "it worked" is what makes a guess look like a report.
    */
-  private describeMigration(after: DraftV2): FieldChange[] {
+  private async describeMigration(after: DraftV2): Promise<FieldChange[]> {
     let before: Partial<Record<string, unknown>> = {};
     try {
-      const raw = globalThis.localStorage?.getItem(
-        this.store.keyFor(DRAFT_KEY),
-      );
+      const raw = await rawAt(this.store.keyFor(DRAFT_KEY));
       const parsed = raw ? JSON.parse(raw) : null;
       before = (parsed?.payload ?? parsed ?? {}) as Record<string, unknown>;
     } catch {
@@ -365,7 +386,7 @@ export class Editor {
       foundVersion: result.migratedFrom ?? DraftSchemaV2.version,
       expectedVersion: DraftSchemaV2.version,
       fields: result.migratedFrom
-        ? this.describeMigration(result.value)
+        ? await this.describeMigration(result.value)
         : undefined,
       raw,
     };
@@ -389,8 +410,7 @@ export class Editor {
     };
     await this.store.set(DRAFT_KEY, record);
 
-    const raw =
-      globalThis.localStorage?.getItem(this.store.keyFor(DRAFT_KEY)) ?? '';
+    const raw = (await rawAt(this.store.keyFor(DRAFT_KEY))) ?? '';
     const outcome = {
       ok: true,
       headline: this.guarded ? 'Written as v2' : 'Written with no envelope',

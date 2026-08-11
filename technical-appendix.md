@@ -22,6 +22,17 @@ Identity is required to compare builds and understand skew.
 - **`@defer` interception**: Angular's compiler-generated `@defer` blocks currently lack a global error interception hook.
 - **Guard introspection**: The router does not expose whether a `CanDeactivate` guard would block, which requires components with unsaved work to manually opt-in (e.g., `trackUnsavedWork`).
 
+## Bidirectional Steps, the Registry, and Contracts
+
+- **Down-migrations are opt-in per step, never synthesized.** A step declared as `{ up, down }` (or as ops, where the inverse is computed) can travel both ways; a step declared as a bare function cannot, and `read()` refuses `ahead` exactly as before. The design rule: a lossy projection is acceptable only when it is *labeled* — hence `downgradedFrom` and `lossyPaths` on the result rather than a silent success.
+- **Determinism via `MigrationContext`.** Migrations receive `{ now(), seed? }` instead of reaching for `new Date()`/`Math.random()`. This came out of two real defects in the demo itself: an `asOf` stamp that made the same read produce different bytes, and a clock-derived idempotency key that minted a fresh identity per retry — the one property an idempotency key must not have.
+- **The registry is module-level, not DI.** In a federated page the boundary between host and remote must not require cooperation; both sides reach the same registry through the one shared `@skew/core` instance. Registration is explicit (`registerSchema`) because tests declare throwaway schemas by the dozen and unrelated contracts can collide on short names.
+- **Step fingerprints hash descriptions and ops, never function text.** Two builds minify the same source differently, so `Function.toString()` equality would report false conflicts between builds that agree. The description is the human-owned identity of a code step — which is why `next()` now requires one.
+- **The lens op set is closed and non-Turing-complete.** Contract documents are fetched from the network; nothing in them is executed, only interpreted. Semantic transforms stay as named `code` steps a consumer must ship — absent, they degrade as `gap`, loudly. The op interpreter prunes intermediate objects its own inverses empty (so a v1 projection never contains a `liquidity: {}` that v1 never had).
+- **Why contract resolution cures `ahead`.** An origin is always at least as new as the newest data it serves, so the party that produced the too-new payload can always explain it. `readResolving` fetches the document only after an actual `ahead`, registers what it learned, and re-reads — one HTTP request instead of a client redeploy.
+- **HTTP carries versions in headers/URLs/media types; storage keeps the body envelope.** `envelopeFromResponse` normalizes either into the same read path, so servers adopt Skew with one header instead of reshaping response bodies.
+- **`@nx/js:tsc` builds use a `bundler`-resolution build tsconfig** (`libs/contract/tsconfig.build.json`): Nx rewrites cross-lib paths to `dist/` directories, and nodenext ESM resolution refuses directory imports. Editor/typecheck configs keep `nodenext`, so the `.js`-specifier discipline still holds where humans write code.
+
 ## Data Normalization & Workflows
 
 - **`@skew/angular-data`**: Angular's `resource()` API is excellent for reads but acts as a per-call cache lacking shared identity or mutation primitives (optimistic updates, rollbacks, durability). Skew's `query()` and `mutation()` provide these missing primitives alongside tag-based invalidation.

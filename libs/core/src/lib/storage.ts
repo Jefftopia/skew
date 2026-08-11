@@ -231,7 +231,9 @@ export function indexedDbDriver(options: IndexedDbDriverOptions = {}): StorageDr
     remove: async (key) => {
       try {
         await run('readwrite', (store) => store.delete(key));
-      } catch {}
+      } catch {
+        // A failed cache delete is a smaller problem than the throw would be.
+      }
     },
     keys: async () => {
       try {

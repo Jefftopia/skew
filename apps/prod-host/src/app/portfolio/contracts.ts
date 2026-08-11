@@ -1,4 +1,5 @@
 import { versioned } from '@skew/core';
+import { createContractResolver, wellKnownContractUrl } from '@skew/contract';
 
 /**
  * The host's view of the portfolio contract — v1 only. It has never heard of
@@ -62,16 +63,19 @@ export interface LiquidityBreachV1 {
     description: string;
     amount: number;
   };
+  /** The instrument the event is about — always held by every fund. */
+  ticker: string;
   impacted: Array<{
     fundId: string;
     fundName: string;
+    weightPct: number;
     cashPctBefore: number;
     cashPctAfter: number;
     thresholdPct: number;
   }>;
   suggestedAction: {
     kind: 'raise-cash' | 'sell-holding' | 'defer-redemption';
-    ticker?: string;
+    ticker: string;
     amount: number;
     rationale: string;
   };
@@ -120,3 +124,19 @@ export const API_BASE = isDirectMode() ? 'http://localhost:3333/api' : '/api';
 export const WS_TICKER_URL = isDirectMode()
   ? 'ws://localhost:3333/ws/ticker'
   : `ws://${globalThis.location?.host}/ws/ticker`;
+
+/**
+ * Where the API publishes the fund contract document. This build understands
+ * v1 and nothing newer — that ignorance is still the point — but it *does*
+ * know where the contract lives. The day a response arrives from the future,
+ * the resolver fetches this document, learns the newer steps (including their
+ * down direction), and this host reads an honest projection instead of
+ * dead-ending at `ahead`. No redeploy of this app involved.
+ */
+export const FUND_CONTRACT_URL = wellKnownContractUrl(API_BASE, 'portfolio-fund');
+
+export const fundContractResolver = createContractResolver({
+  // The API publishes the *item* contract; this host reads the collection
+  // through its own list schema. The mapping lifts one to the other.
+  lists: { 'portfolio-fund': 'portfolio-funds' },
+});

@@ -1,0 +1,51 @@
+{
+  "run_id": "eval-2-without_skill",
+  "expectations": [
+    {
+      "text": "Contract JSON has skewContract: \"1\", name, current: 2, and a steps array with from/to numbers",
+      "passed": false,
+      "evidence": "Document uses an invented format: latest/versions/migrations with lens: [{op: 'rename', ...}] entries, hand-annotated lossyPaths, and ad-hoc shape maps instead of skewContract/current/steps with { \"rename\": {...} } ops and JSON Schemas. The real interpreter would reject it, and lossyPaths are computed in the real system, not hand-declared."
+    },
+    {
+      "text": "Every op in the document comes from the closed whitelist (rename, move, wrap, hoist, map, default, drop, convert, const) \u2014 no executable code in the document",
+      "passed": true,
+      "evidence": "Op names used (rename, move, default) are all whitelist ops and the document carries no executable content \u2014 though encoded in a nonstandard {op: ...} shape."
+    },
+    {
+      "text": "The step uses rename for currency->baseCurrency, move for cashPct->liquidity.cashPct, and default for liquidity.hqlaPct = 0",
+      "passed": true,
+      "evidence": "The 1->2 migration lens contains exactly rename currency->baseCurrency, move cashPct->liquidity.cashPct, default liquidity.hqlaPct = 0."
+    },
+    {
+      "text": "Controller serves GET .well-known/skew/contracts/:name with an ETag derived from contractFingerprint(doc) and returns 304 when if-none-match matches",
+      "passed": false,
+      "evidence": "Serves the right well-known path with 304 handling, but the ETag is a hand-rolled sha256 over the serialized bytes rather than contractFingerprint(doc) \u2014 so it will not line up with the fingerprints clients use for pinnedFingerprints, and byte-level reserialization changes the tag while the contract is semantically unchanged."
+    },
+    {
+      "text": "Controller sets cache-control no-cache (revalidate) rather than long-lived caching or no header",
+      "passed": false,
+      "evidence": "@Header('Cache-Control', 'public, max-age=300, stale-while-revalidate=86400') \u2014 after appending a step, clients may keep curing 'ahead' with a five-minute-stale contract (and up to a day stale-while-revalidate); the endpoint exists precisely to be revalidated per use."
+    },
+    {
+      "text": "Client pins its schema with versionedFromContract<FundV1>(contract, { at: 1 }) or equivalent pinned construction",
+      "passed": false,
+      "evidence": "versionedFromContract<PortfolioFundV1>(pinnedContract, { pinned: 1 }) \u2014 right function, invented option name ({ pinned } instead of { at }); would not compile against @skew/contract."
+    },
+    {
+      "text": "Client reads via createContractResolver().readResolving(...) against the well-known URL so 'ahead' data is cured by fetching the contract",
+      "passed": true,
+      "evidence": "createContractResolver(config) + await resolver.readResolving(schema, envelope) \u2014 the resolver/readResolving mechanism and ahead-curing intent are present, though the call omits the per-read contract URL argument of the real signature and pre-wraps the body via an awaited envelopeFromResponse(res)."
+    },
+    {
+      "text": "Loss is surfaced: code inspects/reports downgradedFrom and lossyPaths rather than silently returning the projection",
+      "passed": true,
+      "evidence": "Branches on result.downgradedFrom !== undefined and reports `downgraded v2 -> v1; dropped: liquidity.hqlaPct` from result.lossyPaths."
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 4,
+    "total": 8,
+    "pass_rate": 0.5
+  }
+}

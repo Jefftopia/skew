@@ -336,11 +336,14 @@ export class FundDetail {
         true,
       );
     } else {
+      // The schema now reports provenance directly: derivedPaths is the
+      // library's own list of which fields below are guesses, not a list this
+      // component maintains by hand.
       trace(
         'ok',
         'fund-detail',
         handed.migratedFrom
-          ? `migrated v${handed.migratedFrom} → v2`
+          ? `migrated v${handed.migratedFrom} → v2 · guessed: ${handed.derivedPaths.join(', ') || '(nothing)'}`
           : 'already v2',
         true,
       );

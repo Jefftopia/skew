@@ -1,0 +1,184 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+
+/**
+ * `skew-contract gen` — frozen types from a contract document.
+ *
+ * The hardest rule in schema versioning to keep by hand is "never edit a past
+ * version's interface". Generating the interfaces from the contract document
+ * retires the discipline: the document is the source of truth, each version's
+ * shape is emitted as a frozen snapshot, and regenerating is the only way the
+ * file changes.
+ *
+ * This module deliberately duck-types the document rather than importing
+ * `@skew/contract`: it runs at build time, needs only the document's shape,
+ * and `@skew/build` stays dependency-free.
+ */
+
+interface ContractDocLike {
+  readonly skewContract: string;
+  readonly name: string;
+  readonly current: number;
+  readonly steps: readonly { readonly to: number; readonly description: string }[];
+  readonly schemas?: Readonly<Record<string, unknown>>;
+}
+
+export interface ContractGenOptions {
+  /** Overrides the type-name prefix derived from the contract name. */
+  readonly typePrefix?: string;
+  /** Name for the exported document const. Defaults to `<camelName>Contract`. */
+  readonly constName?: string;
+}
+
+/** Validates just enough shape to generate from; full validation is runtime's job. */
+function assertDocLike(raw: unknown): ContractDocLike {
+  const fail = (message: string): never => {
+    throw new TypeError(`skew-contract gen: ${message}`);
+  };
+  if (typeof raw !== 'object' || raw === null) fail('document must be an object');
+  const doc = raw as Record<string, unknown>;
+  if (doc['skewContract'] !== '1') fail('document must declare skewContract: "1"');
+  if (typeof doc['name'] !== 'string' || doc['name'].length === 0) fail('document needs a name');
+  if (!Number.isInteger(doc['current'])) fail('document needs an integer current version');
+  if (!Array.isArray(doc['steps'])) fail('document needs a steps array');
+  return raw as ContractDocLike;
+}
+
+export function pascalCase(name: string): string {
+  return name
+    .split(/[^a-zA-Z0-9]+/)
+    .filter((part) => part.length > 0)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+}
+
+function camelCase(name: string): string {
+  const pascal = pascalCase(name);
+  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+}
+
+const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+/** Renders a (subset of) JSON Schema as a TypeScript type expression. */
+function tsType(schema: unknown, indent: string): string {
+  if (typeof schema !== 'object' || schema === null) return 'unknown';
+  const node = schema as Record<string, unknown>;
+
+  if (Array.isArray(node['enum'])) {
+    return (node['enum'] as unknown[]).map((v) => JSON.stringify(v)).join(' | ');
+  }
+
+  const variants = (node['oneOf'] ?? node['anyOf']) as unknown[] | undefined;
+  if (Array.isArray(variants)) {
+    return variants.map((v) => tsType(v, indent)).join(' | ');
+  }
+
+  const type = node['type'];
+  if (Array.isArray(type)) {
+    return (type as unknown[]).map((t) => tsType({ ...node, type: t }, indent)).join(' | ');
+  }
+
+  switch (type) {
+    case 'string':
+      return 'string';
+    case 'number':
+    case 'integer':
+      return 'number';
+    case 'boolean':
+      return 'boolean';
+    case 'null':
+      return 'null';
+    case 'array':
+      return `${wrapForArray(tsType(node['items'], indent))}[]`;
+    case 'object':
+    case undefined: {
+      const properties = node['properties'];
+      if (typeof properties !== 'object' || properties === null) {
+        return type === 'object' ? 'Record<string, unknown>' : 'unknown';
+      }
+      const required = new Set(Array.isArray(node['required']) ? (node['required'] as string[]) : []);
+      const inner = indent + '  ';
+      const lines = Object.entries(properties as Record<string, unknown>).map(([key, value]) => {
+        const safeKey = IDENTIFIER.test(key) ? key : JSON.stringify(key);
+        const optional = required.size > 0 && !required.has(key) ? '?' : '';
+        return `${inner}${safeKey}${optional}: ${tsType(value, inner)};`;
+      });
+      return `{\n${lines.join('\n')}\n${indent}}`;
+    }
+    default:
+      return 'unknown';
+  }
+}
+
+function wrapForArray(rendered: string): string {
+  // A top-level union needs parentheses before `[]`; an object literal does
+  // not, even when one of its members is a union.
+  return rendered.startsWith('{') || !rendered.includes('|') ? rendered : `(${rendered})`;
+}
+
+/**
+ * Renders the generated module: one frozen interface per documented version,
+ * a `Current` alias, and the document itself as a typed const.
+ */
+export function generateContractModule(rawDoc: unknown, options: ContractGenOptions = {}): string {
+  const doc = assertDocLike(rawDoc);
+  const prefix = options.typePrefix ?? pascalCase(doc.name);
+  const constName = options.constName ?? `${camelCase(doc.name)}Contract`;
+
+  const sections: string[] = [];
+  sections.push(
+    `/**`,
+    ` * GENERATED by skew-contract gen from contract "${doc.name}" — do not edit.`,
+    ` *`,
+    ` * Each version below is a frozen snapshot of a shape that shipped. Editing`,
+    ` * one changes what every old migration means; regenerate from the contract`,
+    ` * document instead.`,
+    ` */`,
+    ``,
+  );
+
+  const schemas = doc.schemas ?? {};
+  const documentedVersions = Object.keys(schemas)
+    .map((key) => Number(key))
+    .filter((v) => Number.isInteger(v) && v >= 1)
+    .sort((a, b) => a - b);
+
+  for (const versionNumber of documentedVersions) {
+    const schema = (schemas as Record<string, unknown>)[String(versionNumber)];
+    const step = doc.steps.find((s) => s.to === versionNumber);
+    if (step) sections.push(`/** v${versionNumber} — ${step.description} */`);
+    else sections.push(`/** v${versionNumber} — the base shape. */`);
+    sections.push(`export interface ${prefix}V${versionNumber} ${tsType(schema, '')}`, ``);
+  }
+
+  const currentVersion = documentedVersions.includes(doc.current) ? doc.current : null;
+  if (currentVersion !== null) {
+    sections.push(
+      `/** The shape this contract currently serves. */`,
+      `export type ${prefix} = ${prefix}V${currentVersion};`,
+      ``,
+    );
+  }
+
+  sections.push(
+    `/** The contract document, verbatim. Feed it to \`versionedFromContract\`. */`,
+    `export const ${constName} = ${JSON.stringify(rawDoc, null, 2)} as const;`,
+    ``,
+  );
+
+  return sections.join('\n');
+}
+
+export interface ContractGenFileOptions extends ContractGenOptions {
+  readonly in: string;
+  readonly out: string;
+}
+
+/** Reads a contract JSON file and writes the generated module beside your source. */
+export function generateContractFile(options: ContractGenFileOptions): { name: string; out: string } {
+  const raw: unknown = JSON.parse(readFileSync(options.in, 'utf8'));
+  const rendered = generateContractModule(raw, options);
+  mkdirSync(dirname(options.out), { recursive: true });
+  writeFileSync(options.out, rendered);
+  return { name: (raw as { name: string }).name, out: options.out };
+}

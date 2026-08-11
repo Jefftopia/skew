@@ -7,8 +7,11 @@ Work **phase by phase**. Every phase ends with a **CHECKPOINT** — a command to
 output to expect. Do not start a phase until the previous checkpoint passes. If a checkpoint
 fails, fix it before continuing; do not carry a broken step forward.
 
-> **Amended after execution.** Two things below no longer match the running app, per later
-> feedback: the SSE breach delay is now 3s–15s (§7 originally specified 5s–180s), and the
+> **Amended after execution.** Several things below no longer match the running app, per later
+> feedback. The SSE stream has **no timer at all** — it fires only when the UI asks it to
+> (§7 originally specified a 5s–180s random interval), and every breach targets the one
+> ticker all funds hold. The book was slimmed from eight funds to **five**, and the ticker
+> universe to **twenty**. The
 > Basics tab's `Editor` load (§9's Checkpoint 7 discussion of `/basics/editor`) is no longer
 > routed — it's fetched with `loadRemoteModule()` + `lazy()` and mounted inline on the page
 > with `NgComponentOutlet`, no route at all. The router-based redeploy/recovery scenario this

@@ -1,0 +1,41 @@
+{
+  "run_id": "eval-0-without_skill",
+  "expectations": [
+    {
+      "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @skew/core API",
+      "passed": false,
+      "evidence": "weekly-content.schema.ts:93-99 invents an object-config API: versioned<WeeklyContent>({ name, version, steps, validate }) with a hand-built MigrationStep[] array. The real API is a fluent versioned<V1>(name).next<V2>() chain; this would not compile against @skew/core."
+    },
+    {
+      "text": "Migration steps close over frozen snapshot interfaces (V1/V2 declared in the schema file), not the live application WeeklyContent type",
+      "passed": false,
+      "evidence": "The up step's return type is the exported WeeklyContent \u2014 the same interface application code consumes as the live model (\"the only shape application code sees\"). Editing the live model would silently change what the v1->v2 migration claims to produce, the exact hazard frozen snapshots exist to prevent. Only V1 is a private snapshot."
+    },
+    {
+      "text": "Storage uses createVersionedStore with webStorageDriver('local') and passes buildId",
+      "passed": false,
+      "evidence": "draft-store.ts hand-rolls localStorage access (storage(), keyFor(), JSON.stringify of a custom {b, e} wrapper) instead of createVersionedStore/webStorageDriver; buildId is stored in a bespoke record field rather than passed to the store."
+    },
+    {
+      "text": "Read path branches on the discriminated result: checks result.ok and switches on result.reason covering 'ahead', 'gap', 'invalid', and 'threw'",
+      "passed": false,
+      "evidence": "Uses invented result fields: switch(result.status) with 'ok'/'ahead' cases and result.from (real API: result.ok boolean, result.reason, result.migratedFrom). The default branch collapses gap/threw/invalid together and clears the entry \u2014 a migration-chain bug (gap/threw) destroys the user's draft instead of being reported with the draft kept."
+    },
+    {
+      "text": "'ahead' is handled distinctly from 'invalid' \u2014 newer-build drafts are refetched or left untouched, never discarded or treated as corrupt",
+      "passed": true,
+      "evidence": "draft-store.ts:175-182 and 208-215 \u2014 a cheap version probe plus an 'ahead' case both return a typed 'ahead' status with storage explicitly left untouched and the writer's build id reported."
+    },
+    {
+      "text": "No JSON.parse(raw) as WeeklyContent style unchecked cast remains in the read path",
+      "passed": true,
+      "evidence": "JSON.parse result is treated as unknown, normalized, passed through schema.read(), and reverified with the isWeeklyContent runtime validator; no unchecked 'as WeeklyContent' cast on raw storage data."
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 4,
+    "total": 6,
+    "pass_rate": 0.3333
+  }
+}

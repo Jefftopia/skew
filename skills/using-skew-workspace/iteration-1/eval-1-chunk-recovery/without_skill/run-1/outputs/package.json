@@ -1,0 +1,51 @@
+{
+  "name": "bulletin-app",
+  "version": "1.4.0",
+  "//": [
+    "Build identity + manifest wiring for @skew/build.",
+    "",
+    "prebuild  — `skew-build stamp` derives a buildId (git SHA + UTC timestamp,",
+    "            e.g. 'a053212-20260810T143012Z') and writes it to",
+    "            src/app/skew-build-id.generated.ts so the bundle knows its own",
+    "            identity, and mirrors it into a <meta name=\"skew-build-id\">",
+    "            tag via the index HTML transform so the served index.html can",
+    "            be identified without executing JS.",
+    "postbuild — `skew-build manifest` scans the built output and emits",
+    "            skew-manifest.json ALONGSIDE index.html: { buildId, builtAt,",
+    "            chunks: { <name>: <hashed filename> } }. The runtime fetches",
+    "            it with cache:'no-store' to decide whether the origin has a",
+    "            newer build than the bundle currently running.",
+    "",
+    "Deploy/CDN rules that make the runtime checks trustworthy:",
+    "  1. Upload order: hashed chunk files FIRST, then index.html and",
+    "     skew-manifest.json together, LAST. The manifest must never claim a",
+    "     build whose chunks aren't fully uploaded yet.",
+    "  2. Cache headers: hashed chunks -> immutable, 1y.",
+    "     index.html AND skew-manifest.json -> no-store (or max-age=0,",
+    "     must-revalidate). The manifest is the staleness oracle; if a CDN",
+    "     region caches it stale, it reports the OLD buildId and the runtime",
+    "     correctly refuses to auto-reload there (banner instead of a loop) —",
+    "     which is exactly the incident behavior we want.",
+    "  3. Keep the previous deploy's chunks on the origin for a grace window",
+    "     if you can; recovery then becomes a non-event for most users."
+  ],
+  "scripts": {
+    "prebuild": "skew-build stamp --out src/app/skew-build-id.generated.ts --index-meta skew-build-id",
+    "build": "ng build --configuration production",
+    "postbuild": "skew-build manifest --dist dist/bulletin-app/browser --out dist/bulletin-app/browser/skew-manifest.json",
+    "start": "skew-build stamp --dev --out src/app/skew-build-id.generated.ts && ng serve",
+    "deploy": "npm run build && npm run deploy:assets && npm run deploy:entry",
+    "deploy:assets": "echo 'upload dist/**/*.{js,css,woff2,map} (hashed, immutable) to CDN first'",
+    "deploy:entry": "echo 'then upload index.html + skew-manifest.json together, Cache-Control: no-store'"
+  },
+  "dependencies": {
+    "@angular/common": "^18.2.0",
+    "@angular/core": "^18.2.0",
+    "@angular/router": "^18.2.0",
+    "@skew/angular-router": "^1.0.0"
+  },
+  "devDependencies": {
+    "@angular/cli": "^18.2.0",
+    "@skew/build": "^1.0.0"
+  }
+}

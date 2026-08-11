@@ -1,0 +1,47 @@
+{
+  "$schema": "https://skew.dev/schemas/contract-document/v1.json",
+  "name": "portfolio-fund",
+  "latest": 2,
+  "versions": [
+    {
+      "version": 1,
+      "fingerprint": "pf-v1",
+      "shape": {
+        "id": "string",
+        "name": "string",
+        "currency": "string",
+        "cashPct": "number",
+        "navPerShare": "number",
+        "asOf": "string"
+      }
+    },
+    {
+      "version": 2,
+      "fingerprint": "pf-v2",
+      "shape": {
+        "id": "string",
+        "name": "string",
+        "baseCurrency": "string",
+        "liquidity": {
+          "cashPct": "number",
+          "hqlaPct": "number"
+        },
+        "navPerShare": "number",
+        "asOf": "string"
+      }
+    }
+  ],
+  "migrations": [
+    {
+      "from": 1,
+      "to": 2,
+      "lens": [
+        { "op": "rename", "from": "currency", "to": "baseCurrency" },
+        { "op": "move", "from": "cashPct", "to": "liquidity.cashPct" },
+        { "op": "default", "path": "liquidity.hqlaPct", "value": 0 }
+      ],
+      "lossyPaths": ["liquidity.hqlaPct"],
+      "notes": "rename and move invert cleanly on the down direction; the hqlaPct default is dropped when downgrading, so a v1 reader loses liquidity.hqlaPct."
+    }
+  ]
+}

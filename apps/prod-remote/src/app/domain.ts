@@ -41,13 +41,31 @@ export interface DraftV2 {
 
 export const DraftSchemaV2 = versioned<DraftV1>(
   'skew-demo-draft',
-).next<DraftV2>('structure the author and derive a summary', (v1) => ({
-  id: v1.id,
-  title: v1.title,
-  author: { name: v1.author, email: '' },
-  body: v1.body,
-  summary: v1.body.slice(0, 60),
-}));
+).next<DraftV2>('structure the author and derive a summary', {
+  up: (v1) => ({
+    id: v1.id,
+    title: v1.title,
+    author: { name: v1.author, email: '' },
+    body: v1.body,
+    summary: v1.body.slice(0, 60),
+  }),
+  /**
+   * The projection back onto v1 — what a v1-only reader should see of a v2
+   * record. It exists here, in the newer build, because the newer build is
+   * the only party that *can* know it. It does nothing at all until this
+   * build shares it (`registerSchema`, driven by walkthrough step 5): until
+   * then the host's read of a v2 record refuses with `ahead`, exactly as
+   * steps 3–4 demonstrate.
+   */
+  down: (v2) => ({
+    id: v2.id,
+    title: v2.title,
+    author: v2.author.name,
+    body: v2.body,
+  }),
+  derives: ['author.email', 'summary'],
+  lossy: ['author.email', 'summary'],
+});
 
 interface WizardData {
   title: string;

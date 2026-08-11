@@ -1,0 +1,51 @@
+{
+  "run_id": "eval-2-with_skill",
+  "expectations": [
+    {
+      "text": "Contract JSON has skewContract: \"1\", name, current: 2, and a steps array with from/to numbers",
+      "passed": true,
+      "evidence": "portfolio-fund.contract.json \u2014 skewContract: \"1\", name: portfolio-fund, current: 2, steps: [{from: 1, to: 2, description, ops}], plus JSON Schemas under schemas.1/schemas.2. Matches the real document format."
+    },
+    {
+      "text": "Every op in the document comes from the closed whitelist (rename, move, wrap, hoist, map, default, drop, convert, const) \u2014 no executable code in the document",
+      "passed": true,
+      "evidence": "Only rename/move/default ops, encoded in the real { \"rename\": { from, to } } shape; no code steps, no executable content."
+    },
+    {
+      "text": "The step uses rename for currency->baseCurrency, move for cashPct->liquidity.cashPct, and default for liquidity.hqlaPct = 0",
+      "passed": true,
+      "evidence": "Exactly those three ops in order: rename currency->baseCurrency, move cashPct->liquidity.cashPct, default liquidity.hqlaPct = 0."
+    },
+    {
+      "text": "Controller serves GET .well-known/skew/contracts/:name with an ETag derived from contractFingerprint(doc) and returns 304 when if-none-match matches",
+      "passed": true,
+      "evidence": "skew-contracts.controller.ts:43-67 \u2014 @Controller('.well-known/skew/contracts'), etag = `\"${contractFingerprint(doc)}\"`, bodyless 304 on if-none-match match, 404 for unknown names."
+    },
+    {
+      "text": "Controller sets cache-control no-cache (revalidate) rather than long-lived caching or no header",
+      "passed": true,
+      "evidence": "res.setHeader('cache-control', 'no-cache') with a comment explaining why neither max-age nor no-store is correct here."
+    },
+    {
+      "text": "Client pins its schema with versionedFromContract<FundV1>(contract, { at: 1 }) or equivalent pinned construction",
+      "passed": true,
+      "evidence": "read-fund-v1.client.ts:41-42 \u2014 versionedFromContract<FundV1>(PORTFOLIO_FUND_CONTRACT, { at: 1 }), with frozen FundV1 imported from the generated contract module."
+    },
+    {
+      "text": "Client reads via createContractResolver().readResolving(...) against the well-known URL so 'ahead' data is cured by fetching the contract",
+      "passed": true,
+      "evidence": "createContractResolver() + resolver.readResolving(FundSchemaV1, body, contractUrl), with URL discovery via the skew-contract response header falling back to wellKnownContractUrl(API_BASE, 'portfolio-fund')."
+    },
+    {
+      "text": "Loss is surfaced: code inspects/reports downgradedFrom and lossyPaths rather than silently returning the projection",
+      "passed": true,
+      "evidence": "On result.downgradedFrom the client logs the downgrade and returns { fund, downgraded: true, lost: result.lossyPaths }; comments identify liquidity.hqlaPct as the only lossy path and warn against round-tripping the projection into a write."
+    }
+  ],
+  "summary": {
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "pass_rate": 1.0
+  }
+}

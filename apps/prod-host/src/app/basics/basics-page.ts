@@ -7,6 +7,8 @@ import { loadRemote } from '../load-remote';
 import { DrawerShell } from '../shell/drawer-shell';
 import { BoundaryInspector } from '../boundary/boundary-inspector';
 import { Walkthrough } from './walkthrough';
+import { StorePanel } from '../store-panel';
+import { RemoteControls } from '../remote-controls';
 
 /**
  * The Basics tab: a guided round trip on the left, the live remote on the
@@ -21,13 +23,21 @@ import { Walkthrough } from './walkthrough';
  */
 @Component({
   selector: 'host-basics-page',
-  imports: [NgComponentOutlet, DrawerShell, BoundaryInspector, Walkthrough],
+  imports: [
+    NgComponentOutlet,
+    DrawerShell,
+    BoundaryInspector,
+    Walkthrough,
+    StorePanel,
+    RemoteControls,
+  ],
   styleUrls: ['../cards.css', './basics-page.css'],
   template: `
     <host-drawer-shell [open]="true" title="apps/prod-remote · ./Editor">
       <!-- ── host pane ── -->
       <host-boundary-inspector />
       <host-walkthrough />
+      <host-store-panel />
 
       <div class="card side-note">
         <h3>A draft caught mid-wizard</h3>
@@ -57,24 +67,11 @@ import { Walkthrough } from './walkthrough';
         </div>
       </div>
 
-      <div class="card side-note">
-        <h3>Break the fetch itself</h3>
-        <p>
-          Everything above assumes the remote loaded. Redeploy it while this tab
-          is open and the file names this page is holding stop existing —
-          <code>lazy()</code> retries once, then gives up with the module's
-          logical id attached rather than an anonymous network error.
-        </p>
-        <pre>npm run demo:prod:redeploy-remote</pre>
-        <button (click)="loadEditorInline()" [disabled]="remoteLoading()">
-          {{ remoteLoading() ? 'Fetching…' : 'Re-fetch the remote' }}
-        </button>
-        @if (remoteLoadError(); as e) {
-          <div class="verdict bad">
-            <strong>Remote failed to load</strong>{{ e }}
-          </div>
-        }
-      </div>
+      <host-remote-controls
+        [refetching]="remoteLoading()"
+        [loadError]="remoteLoadError()"
+        (refetch)="loadEditorInline()"
+      />
 
       <!-- ── remote pane ── -->
       <div drawer>

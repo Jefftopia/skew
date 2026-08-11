@@ -30,22 +30,42 @@ interface SeedTicker {
 }
 
 /**
- * One entry per distinct ticker across the whole mock book — reused across
- * funds on purpose (see `mock-data.ts`), so a single ticker's move shows up
- * in more than one fund's drill-down.
+ * The tradeable universe: twenty names, every one of which appears in the
+ * fund book or is selectable in the order form's typeahead.
+ *
+ * Deliberately small. Everything held by a fund must have a price here or the
+ * ticker feed would go quiet on exactly the holdings the drill-down is about;
+ * the handful that no fund holds exist so the typeahead has something to
+ * filter that is not already on screen.
  */
 export const TICKER_UNIVERSE: readonly SeedTicker[] = [
+  // Held across the book — TBILL-3M is in every fund (see UNIVERSAL_TICKER).
+  { ticker: 'TBILL-3M', name: 'US Treasury Bill 3M', startPrice: 99.42 },
   { ticker: 'AAPL', name: 'Apple Inc.', startPrice: 227.5 },
   { ticker: 'MSFT', name: 'Microsoft Corp.', startPrice: 441.2 },
   { ticker: 'NVDA', name: 'NVIDIA Corp.', startPrice: 128.4 },
   { ticker: 'AMZN', name: 'Amazon.com Inc.', startPrice: 198.7 },
-  { ticker: 'GOOGL', name: 'Alphabet Inc. Class A', startPrice: 174.3 },
-  { ticker: 'META', name: 'Meta Platforms Inc.', startPrice: 592.1 },
   { ticker: 'JPM', name: 'JPMorgan Chase & Co.', startPrice: 231.6 },
+  { ticker: 'EMB-BRZ25', name: 'Brazil Sovereign 2025', startPrice: 96.8 },
+  { ticker: 'EMB-MEX28', name: 'Mexico Sovereign 2028', startPrice: 94.1 },
+  { ticker: 'EMB-IDN27', name: 'Indonesia Sovereign 2027', startPrice: 97.3 },
+  { ticker: 'IG-JPM29', name: 'JPMorgan Chase 4.5% 2029', startPrice: 101.2 },
+  { ticker: 'IG-MSFT30', name: 'Microsoft Corp 4.2% 2030', startPrice: 100.6 },
+  {
+    ticker: 'IG-VZ28',
+    name: 'Verizon Communications 4.8% 2028',
+    startPrice: 99.1,
+  },
   { ticker: 'REIT-AVB', name: 'AvalonBay Communities', startPrice: 214.9 },
   { ticker: 'REIT-PLD', name: 'Prologis Inc.', startPrice: 118.3 },
   { ticker: 'REIT-SPG', name: 'Simon Property Group', startPrice: 172.6 },
+
+  // Not held by any fund — tradeable, so the typeahead can offer them.
+  { ticker: 'GOOGL', name: 'Alphabet Inc. Class A', startPrice: 174.3 },
+  { ticker: 'META', name: 'Meta Platforms Inc.', startPrice: 592.1 },
   { ticker: 'REIT-O', name: 'Realty Income Corp.', startPrice: 58.2 },
+  { ticker: 'TBILL-6M', name: 'US Treasury Bill 6M', startPrice: 98.71 },
+  { ticker: 'GILT-2031', name: 'UK Treasury Gilt 2031', startPrice: 92.4 },
 ];
 
 /**

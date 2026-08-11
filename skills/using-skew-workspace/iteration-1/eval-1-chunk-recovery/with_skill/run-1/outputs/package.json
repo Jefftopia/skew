@@ -1,0 +1,33 @@
+{
+  "//": [
+    "Snippet — merge the scripts and devDependencies into your existing package.json.",
+    "skew-stamp runs three times, deliberately:",
+    "  1. predev / prebuild: generate src/generated/build-id.ts (BUILD_IDENTITY,",
+    "     BUILD_ID, BUILT_AT) so it exists BEFORE ng serve / ng build compiles.",
+    "     The id defaults to the git SHA (or SKEW_BUILD_ID in CI); builtAt",
+    "     defaults to now. builtAt is required for staleOrigin detection —",
+    "     timestamps are what let the probe tell 'origin is OLDER than me,",
+    "     reloading would loop' apart from 'origin is newer, reload is safe'.",
+    "  2. postbuild: run again with --manifest + --assets pointing at the",
+    "     browser output dir, so dist/.../skew-manifest.json lists the actual",
+    "     hashed chunk files in its modules map. That map is what lets recovery",
+    "     distinguish a renamed chunk (reload) from a deleted route (fallback).",
+    "Either commit src/generated/ or add it to .gitignore — both work, but CI",
+    "must run the stamp before build either way (the pre/post scripts do).",
+    "Adjust dist/bulletin-app/browser to your outputPath from angular.json."
+  ],
+  "scripts": {
+    "predev": "skew-stamp --out src/generated/build-id.ts",
+    "dev": "ng serve",
+    "prebuild": "skew-stamp --out src/generated/build-id.ts",
+    "build": "ng build",
+    "postbuild": "skew-stamp --out src/generated/build-id.ts --manifest dist/bulletin-app/browser/skew-manifest.json --assets dist/bulletin-app/browser"
+  },
+  "dependencies": {
+    "@skew/angular-router": "^1.0.0",
+    "@skew/core": "^1.0.0"
+  },
+  "devDependencies": {
+    "@skew/build": "^1.0.0"
+  }
+}

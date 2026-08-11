@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
-import { createVersionedStore, webStorageDriver } from '@skew/core';
+import { resetSchemaRegistry } from '@skew/core';
+import { SharedStore } from '../shared-store';
 import { DRAFT_KEY, DraftSchemaV1, type DraftV1 } from '../domain';
 import { Lab } from '../lab';
 import { BUILD_IDENTITY } from '../app.config';
@@ -24,7 +25,7 @@ const HOST_PARTY = {
 };
 
 /**
- * The four-step round trip, driven from one list.
+ * The five-step round trip, driven from one list.
  *
  * The demo used to be four independent cards that each said, in effect, "now
  * go do the other half of this in the other application." That is a fine
@@ -51,12 +52,13 @@ const HOST_PARTY = {
         <p>
           The host writes a draft it understands; the remote reads it and
           migrates it forward. Then the remote writes one, and the host — which
-          has never heard of the newer shape — has to decide what to do with it.
-          Watch the diagram above after each step.
+          has never heard of the newer shape — has to decide what to do with
+          it. Finally the remote shares what it knows, and the refusal turns
+          into an honest projection. Watch the diagram above after each step.
         </p>
         <div class="story-actions">
           <button class="run" (click)="runAll()" [disabled]="busy()">
-            {{ busy() ? 'Running…' : 'Run all four' }}
+            {{ busy() ? 'Running…' : 'Run all five' }}
           </button>
           <button class="run secondary" (click)="reset()" [disabled]="busy()">
             Reset
@@ -108,10 +110,16 @@ export class Walkthrough {
   protected readonly busy = signal(false);
   protected readonly cursor = signal(1);
 
-  /** This build knows v1 and only v1. */
-  private readonly store = createVersionedStore(DraftSchemaV1, {
-    driver: webStorageDriver('local'),
-  });
+  private readonly shared = inject(SharedStore);
+
+  /**
+   * This build knows v1 and only v1. Built per call rather than held, so the
+   * driver toggle in the store panel takes effect immediately instead of on
+   * the next reload.
+   */
+  private get store() {
+    return this.shared.store(DraftSchemaV1);
+  }
 
   protected readonly steps: Step[] = [
     {
@@ -146,9 +154,18 @@ export class Walkthrough {
       where: 'host',
       title: 'The host tries to read it',
       blurb:
-        'Data from the future. There is nothing to migrate *down* to. Try this once with protections on and once with them off — the difference is the whole argument.',
+        'Data from the future. This build, on its own, has no way down — the fields v2 added were never sent to it. Try this once with protections on and once with them off — the difference is the whole argument.',
       cta: 'Read as v1',
       run: () => this.hostRead(),
+    },
+    {
+      n: 5,
+      where: 'host',
+      title: 'Borrow the remote’s knowledge',
+      blurb:
+        'Both builds share one @skew/core instance. The remote registers its chain — including the way *down* — and the exact read that refused in step 4 now returns an honest, lossy projection that names what it dropped.',
+      cta: 'Register & re-read',
+      run: () => this.hostReadViaRegistry(),
     },
   ];
 
@@ -196,6 +213,14 @@ export class Walkthrough {
     try {
       await this.store.remove(DRAFT_KEY);
       await sendToRemote('clear-record');
+      // Step 5 teaches the page the remote's chain, and the registry
+      // remembers for the life of the tab — so without this, step 4 would
+      // downgrade instead of refuse on the second run-through. Resetting
+      // drops *all* page-learned steps (a re-visit to the Portfolio tab's
+      // remote re-registers its own), which is exactly the pristine
+      // "two strangers" state the walkthrough starts from.
+      resetSchemaRegistry();
+      this.shared.touched();
       this.states.set({});
       this.summaries.set({});
       this.cursor.set(1);
@@ -218,8 +243,8 @@ export class Walkthrough {
 
     // Read the bytes back rather than reconstructing them — the inspector
     // should show what is genuinely on disk, not what we believe we wrote.
-    const bytes =
-      globalThis.localStorage?.getItem(this.store.keyFor(DRAFT_KEY)) ?? '';
+    this.shared.touched();
+    const bytes = (await this.shared.rawAt(this.store.keyFor(DRAFT_KEY))) ?? '';
     const guarded = this.lab.guarded();
 
     this.lab.write(
@@ -302,7 +327,7 @@ export class Walkthrough {
           understands: 2,
         },
         to: HOST_PARTY,
-        envelopeVersion: this.envelopeVersionOnDisk(),
+        envelopeVersion: await this.envelopeVersionOnDisk(),
         verdict: 'corrupted',
         unprotected: !guarded,
         headline: 'TypeError, far from the cause',
@@ -331,6 +356,139 @@ export class Walkthrough {
       ok: true,
       summary: `Read cleanly — author.toUpperCase() = "${label}".`,
     };
+  }
+
+  /**
+   * Step 5: ask the remote to register its chain, then run the exact read
+   * that refused in step 4.
+   *
+   * Nothing about the host's code changes between the two steps — same
+   * schema, same `get`, same key. What changed is the page: the registry now
+   * holds a v1 → v2 step with a down direction, contributed by the only
+   * party that could know it. The result is `ok` with `downgradedFrom: 2`,
+   * and `lossyPaths` naming the fields the projection had to drop.
+   */
+  private async hostReadViaRegistry(): Promise<{
+    ok: boolean;
+    summary: string;
+  }> {
+    const registration = await sendToRemote('register-schema');
+    if (!registration.ok) {
+      return {
+        ok: false,
+        summary: `The remote could not register its chain: ${registration.detail}`,
+      };
+    }
+    this.lab.write('ok', 'walkthrough', `remote: ${registration.headline}`);
+
+    const result = await this.store.get(DRAFT_KEY);
+    if (!result.ok) {
+      return {
+        ok: false,
+        summary: `Read still failed (${result.reason}). Run step 3 first so there is a v2 record to downgrade.`,
+      };
+    }
+
+    const raw = JSON.stringify(result.value, null, 2);
+
+    if (!result.downgradedFrom) {
+      return {
+        ok: true,
+        summary: `The record was already v1 (nothing to downgrade). Run steps 3 and 4, then this one.`,
+      };
+    }
+
+    this.lab.write(
+      'ok',
+      'walkthrough',
+      `host downgraded v${result.downgradedFrom} → v1 via the registry; lost: ${result.lossyPaths.join(', ')}`,
+    );
+
+    this.crossings.set({
+      from: {
+        label: 'Remote — newer build',
+        build: 'prod-remote',
+        understands: result.downgradedFrom,
+      },
+      to: HOST_PARTY,
+      envelopeVersion: result.downgradedFrom,
+      verdict: 'migrated',
+      unprotected: !this.lab.guarded(),
+      headline: `Downgraded v${result.downgradedFrom} → v1 — via the shared registry`,
+      detail:
+        'The same read that refused a step ago. The host still knows only v1; the down-migration ran from the step the remote just registered. The projection is honest about its cost — the fields below marked "lost" are what v1 cannot carry.',
+      fields: await this.describeDowngrade(
+        result.value as unknown as Record<string, unknown>,
+        result.lossyPaths,
+      ),
+      raw,
+    });
+
+    return {
+      ok: true,
+      summary:
+        `Downgraded v${result.downgradedFrom} → v1; lost ${result.lossyPaths.join(', ')}. ` +
+        'Run step 4 again — the page now knows the way down, and the refusal is gone until Reset.',
+    };
+  }
+
+  /**
+   * The projection, field by field: what v1 kept, and what it had to drop.
+   * "Before" comes from the bytes genuinely on disk, not from a
+   * reconstruction.
+   */
+  private async describeDowngrade(
+    projected: Record<string, unknown>,
+    lossyPaths: readonly string[],
+  ): Promise<FieldChange[]> {
+    let before: Record<string, unknown> = {};
+    try {
+      const bytes = await this.shared.rawAt(this.store.keyFor(DRAFT_KEY));
+      const parsed = bytes ? JSON.parse(bytes) : null;
+      before = (parsed?.payload ?? {}) as Record<string, unknown>;
+    } catch {
+      /* the table degrades to em-dashes rather than breaking the read */
+    }
+
+    const describe = (v: unknown): string =>
+      v === undefined
+        ? '—'
+        : typeof v === 'object' && v !== null
+          ? JSON.stringify(v)
+          : String(v);
+
+    const atPath = (source: Record<string, unknown>, path: string): unknown =>
+      path
+        .split('.')
+        .reduce<unknown>(
+          (acc, key) =>
+            typeof acc === 'object' && acc !== null
+              ? (acc as Record<string, unknown>)[key]
+              : undefined,
+          source,
+        );
+
+    const rows: FieldChange[] = Object.keys(projected).map((name) => {
+      const was = describe(before[name]);
+      const now = describe(projected[name]);
+      return {
+        name,
+        before: was,
+        after: now,
+        status: was === now ? 'same' : 'migrated',
+      };
+    });
+
+    for (const path of lossyPaths) {
+      rows.push({
+        name: path,
+        before: describe(atPath(before, path)),
+        after: '— (v1 cannot carry it)',
+        status: 'lost',
+      });
+    }
+
+    return rows;
   }
 
   /**
@@ -408,6 +566,9 @@ export class Walkthrough {
     direction: 'host-to-remote' | 'none',
   ): Promise<{ ok: boolean; summary: string }> {
     const result: RemoteResult = await sendToRemote(action);
+    // The remote just wrote through its own copy of the store module; nothing
+    // in this bundle observed it, so nudge the panel by hand.
+    this.shared.touched();
     this.lab.write(
       result.ok ? 'ok' : 'warn',
       'walkthrough',

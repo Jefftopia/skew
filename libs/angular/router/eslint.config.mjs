@@ -15,7 +15,11 @@ export default [
                 {
                     ignoredFiles: [
                         "{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}"
-                    ]
+                    ],
+                    // Imported only by spec files, which never ship — they
+                    // belong to the workspace's devDependencies, not to this
+                    // package's peer surface.
+                    ignoredDependencies: ["vitest", "rxjs"]
                 }
             ]
         },

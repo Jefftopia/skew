@@ -11,7 +11,7 @@
 <p align="center">
   <img alt="Angular 22" src="https://img.shields.io/badge/Angular-22-DD0031?style=flat-square" />
   <img alt="TypeScript 6.0" src="https://img.shields.io/badge/TypeScript-6.0-3178C6?style=flat-square" />
-  <img alt="189 tests passing" src="https://img.shields.io/badge/tests-189%20passing-2EA043?style=flat-square" />
+  <img alt="312 tests passing" src="https://img.shields.io/badge/tests-312%20passing-2EA043?style=flat-square" />
   <img alt="zero core dependencies" src="https://img.shields.io/badge/core%20deps-0-8FBFE0?style=flat-square" />
   <img alt="MIT" src="https://img.shields.io/badge/license-MIT-1E3A5F?style=flat-square" />
 </p>
@@ -97,14 +97,15 @@ That's the whole idea. Everything else is applying it in a specific place.
 
 ## Packages
 
-| Package                                               | What it does                                                                                | Status       |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------ |
-| **[`@skew/core`](libs/core)**                         | Envelopes, migration chains, build identity, skew detection. No dependencies, no framework. | **52 tests** |
-| **[`@skew/angular-core`](libs/angular/core)**         | First-class Angular DI and Signal wrappers for `@skew/core`.                                | **0 tests**  |
-| **[`@skew/build`](libs/build)**                       | `skew-stamp` — generates build identity and the manifest.                                   | **11 tests** |
-| **[`@skew/angular-router`](libs/angular/router)**     | Recovers from stale chunks without bricking the tab.                                        | **34 tests** |
-| **[`@skew/angular-data`](libs/angular/data)**         | Normalized entity store, tag invalidation, durable mutation outbox.                         | **50 tests** |
-| **[`@skew/angular-workflow`](libs/angular/workflow)** | Durable multi-step flows surviving refresh, deploy, and device.                             | **42 tests** |
+| Package                                               | What it does                                                                                             | Status        |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------- |
+| **[`@skew/core`](libs/core)**                         | Envelopes, bidirectional migration chains, lens ops, the shared registry, build identity. No deps.       | **107 tests** |
+| **[`@skew/contract`](libs/contract)**                 | Contract documents: publish migrations as data, resolve them at runtime, cure `ahead` without a deploy.  | **57 tests**  |
+| **[`@skew/angular-core`](libs/angular/core)**         | First-class Angular DI and Signal wrappers for `@skew/core`.                                             | **0 tests**   |
+| **[`@skew/build`](libs/build)**                       | `skew-stamp` — build identity and the manifest; `skew-contract gen` — frozen types from a contract.      | **22 tests**  |
+| **[`@skew/angular-router`](libs/angular/router)**     | Recovers from stale chunks without bricking the tab.                                                     | **34 tests**  |
+| **[`@skew/angular-data`](libs/angular/data)**         | Normalized entity store, tag invalidation, durable mutation outbox.                                      | **50 tests**  |
+| **[`@skew/angular-workflow`](libs/angular/workflow)** | Durable multi-step flows surviving refresh, deploy, and device.                                          | **42 tests**  |
 
 > **Adoption rule.** Every package depends on `@skew/core` and never on a sibling. Take one, take three, take none of the Angular ones. Nothing is load-bearing for anything else.
 
@@ -132,7 +133,7 @@ Each step is typed against the previous version, so a migration that doesn't pro
 
 ### Runtime validation (Zod / Valibot)
 
-Skew handles the envelope (`{ v, payload }`) and the migration chain, but it deliberately avoids shipping a payload validator so the core stays dependency-free. If you want to prove the payload actually matches the interface, bring your own validator (like Zod or Valibot) via the `validate` option. It runs *after* all migrations complete:
+Skew handles the envelope (`{ v, payload }`) and the migration chain, but it deliberately avoids shipping a payload validator so the core stays dependency-free. If you want to prove the payload actually matches the interface, bring your own validator (like Zod or Valibot) via the `validate` option. It runs _after_ all migrations complete:
 
 ```ts
 import { z } from 'zod';
@@ -141,11 +142,11 @@ import { versioned } from '@skew/core';
 const WeeklyContentV3Schema = z.object({
   id: z.string(),
   scriptureOfWeek: z.string(),
-  orderOfWorship: z.object({ setting: z.string(), hymns: z.array(z.string()) })
+  orderOfWorship: z.object({ setting: z.string(), hymns: z.array(z.string()) }),
 });
 
 export const WeeklyContent = versioned<V1>('weekly-content', {
-  validate: (val): val is V3 => WeeklyContentV3Schema.safeParse(val).success
+  validate: (val): val is V3 => WeeklyContentV3Schema.safeParse(val).success,
 })
   .next<V2>(/* ... */)
   .next<V3>(/* ... */);
@@ -159,7 +160,7 @@ If validation fails, `.read()` returns `reason: 'invalid'` rather than throwing,
 if (!result.ok) {
   switch (result.reason) {
     case 'ahead':
-      return refetch(); // written by a NEWER build
+      return refetch(); // written by a NEWER build, and no down-path is known
     case 'gap':
       return reportBug(); // a migration step is missing
     case 'invalid':
@@ -170,7 +171,11 @@ if (!result.ok) {
 }
 ```
 
-**Why `ahead` gets its own case.** Data from the future _cannot_ be migrated downward — the information isn't there. Collapsing that into `null` means every caller guesses, and the guess is always "discard it," which destroys perfectly good data. This happens more than you'd expect: a colleague saves from the new deploy while your tab is stale; a phone updates before the laptop does.
+**Why `ahead` gets its own case.** Data from the future can't be _guessed_ downward — the fields the newer build added were never sent to you, and collapsing that into `null` means every caller guesses, and the guess is always "discard it," which destroys perfectly good data. This happens more than you'd expect: a colleague saves from the new deploy while your tab is stale; a phone updates before the laptop does.
+
+But `ahead` is a diagnosis, not always a dead end. Renames and structural promotions _are_ honestly invertible, and Skew now has three ways to travel down them — a step's declared `down` migration, a step contributed by a newer bundle in the same page ([the shared registry](#the-shared-registry--when-both-builds-are-on-the-same-page)), or a step resolved from the API's published [contract document](#contracts-as-data--migrations-without-a-deploy). When a down-path exists, `read()` returns `ok` with `downgradedFrom` set and every discarded field named in `lossyPaths` — a projection that admits to being one. When none exists, you get `ahead`, exactly as before.
+
+**Guesses are labeled.** Whenever a migration fills a field the writer never recorded — a default, a placeholder, a clock-derived stamp — the result's `derivedPaths` names it. "It migrated" was never one fact; now the API says so.
 
 ### Storage that doesn't lie to you
 
@@ -198,7 +203,7 @@ const now = drafts.peek('2026-12-06'); // sync — no flash of empty state
 
 ## Handling version skew in API responses — a step-by-step workflow
 
-Everything above applies to data that outlives the code that wrote it, wherever it's stored. This is the same idea aimed at one specific boundary: a response body from an API your build didn't ship. 
+Everything above applies to data that outlives the code that wrote it, wherever it's stored. This is the same idea aimed at one specific boundary: a response body from an API your build didn't ship.
 
 **Why this matters in a federated app:** Suppose a Module Federation Host consumes v1 of a fund API, but a newly deployed Remote consumes v2. Both run on the same page. The user fetches data in the Host (v1), clicks a button that opens the Remote, and hands that cached data across the boundary. If the Remote blindly casts it with `as FundV2`, the app crashes when trying to render fields that don't exist. Skew catches this mismatch and forces the Remote to cleanly migrate or reject the payload.
 
@@ -264,7 +269,7 @@ if (!result.ok) {
 }
 ```
 
-`ahead` is the one worth sitting with. It means the server is newer than you are, which happens constantly and isn't a bug: a colleague's tab redeployed before yours, a phone updated before the laptop did. There is no shape to migrate _down_ to — the fields the newer contract added simply were never sent to you — so the honest move is to refuse and say so, not to guess.
+`ahead` is the one worth sitting with. It means the server is newer than you are, which happens constantly and isn't a bug: a colleague's tab redeployed before yours, a phone updated before the laptop did. Guessing a downward shape would silently discard data, so with no down-path the honest move is to refuse and say so. But when a down-path *is* known — declared on the step, contributed by a newer bundle via [the registry](#the-shared-registry--when-both-builds-are-on-the-same-page), or resolved from [the published contract](#contracts-as-data--migrations-without-a-deploy) — the read succeeds as an explicitly lossy projection instead, with `downgradedFrom` set and the discarded fields named in `lossyPaths`.
 
 ### Step 4 — When the contract changes, extend the schema; never edit the base type
 
@@ -352,6 +357,76 @@ Two things have to be true for this to work, and both are easy to get wrong:
 ### Step 8 — Prove the failure you're preventing actually exists
 
 Every step above is a claim about what would go wrong without it. Don't take the claim on faith — this repo ships an undocumented kill switch (`setSkewDisabled()` / `provideSkewDisabled()`, in [`libs/core/src/lib/disabled.ts`](libs/core/src/lib/disabled.ts)) specifically so you can turn every protection off and watch the same code fail on its own merits: envelopes stop being written, `.read()` stops checking versions, migrations stop running. It is exported but not part of the public API — no legitimate reason to ship it — and exists only so a before/after comparison has an actual "before" to look at instead of a hypothetical one. The Basics tab of the production demo (below) has a switch wired to it; flipping it and re-running any scenario is the fastest way to convince yourself — or a reviewer — that a step here is load-bearing rather than decorative.
+
+---
+
+## The shared registry — when both builds are on the same page
+
+Everything above treats the two disagreeing parties as strangers. In a federated page they are not: the host built against v1 and the remote built against v2 are loaded into the **same JavaScript runtime**, sharing one `@skew/core` instance via `sharedMappings`. The remote's bundle contains exactly the migration knowledge the host lacks — so let it say so:
+
+```ts
+// apps/prod-remote — the NEWER party declares both directions and shares them
+export const FundSchemaV2 = versioned<FundV1>('portfolio-fund').next<FundV2>(
+  'promote scalars to structure; add fields v1 never carried',
+  { up: migrateFundV1ToV2, down: migrateFundV2ToV1, derives: [...], lossy: [...] },
+);
+registerSchema(FundSchemaV2);
+```
+
+From the moment that bundle loads, the host's plain `versioned<FundV1>('portfolio-fund').read()` can migrate a v2 record **down** through the registered step — `ahead` becomes `ok` with `downgradedFrom: 2` and the discarded fields named. The host cooperates with nothing: no DI, no imports, no knowledge that the remote exists. Registration is explicit on purpose — sharing a contract across bundles is an act, not an ambient side effect.
+
+The registry also does the thing nothing else in the system can: **detect two builds that disagree about what a version means.** Every step carries a content fingerprint (ops steps hash their ops; code steps hash their required description — never `Function.toString()`, which minifies differently per build). Two registrations that agree are idempotent; two that diverge keep the first and fire a diagnostic (`setRegistryConflictHandler`) naming both. Same name + same version + different meaning is silent corruption everywhere except that one callback — wire it to telemetry.
+
+The newer party can also be polite at write time: `schema.write(value, { as: 1 })` down-migrates before writing, so a reader known to be older receives an envelope it can read natively. Reader-makes-right going up, writer-makes-right going down.
+
+---
+
+## Contracts as data — migrations without a deploy
+
+The registry needs the newer bundle to be present. The API's contract document removes even that requirement, because of one asymmetry worth staring at: **an origin is always at least as new as the newest data it serves.** So the origin that produced the too-new response can also publish the knowledge that explains it:
+
+```
+GET /api/.well-known/skew/contracts/portfolio-fund
+```
+
+```jsonc
+{
+  "skewContract": "1",
+  "name": "portfolio-fund",
+  "current": 2,
+  "steps": [{
+    "from": 1, "to": 2,
+    "description": "promote scalars to structure; add liquidity fields v1 never carried",
+    "ops": [
+      { "rename": { "from": "currency", "to": "baseCurrency" } },
+      { "wrap": { "path": "nav", "key": "amount", "also": { "asOf": { "$now": true } } } },
+      { "move": { "from": "cashPct", "to": "liquidity.cashPct" } },
+      { "default": { "path": "liquidity.hqlaPct", "value": 0 } }
+    ]
+  }]
+}
+```
+
+Nothing in it is executable. Ops are interpreted against a closed whitelist, and each op knows its inverse — declaring the up migration **buys the down migration**, with derived and lossy paths computed instead of hand-annotated. Steps the op set cannot express (semantic transforms) are named `"code"` steps: consumers that ship the named implementation run it; consumers that don't degrade loudly with `gap`, never with a guess. The escape hatch existing is what keeps the op set honest about its limits.
+
+The client side is one call:
+
+```ts
+// apps/prod-host — a v1-only build, curing ahead at runtime
+const result = await fundContractResolver.readResolving(FundListSchemaV1, body, FUND_CONTRACT_URL);
+```
+
+`readResolving` reads exactly as `.read()` would; only on `ahead` does it fetch the contract, feed the newly learned steps into the shared registry, and read again. The failure that used to require redeploying the client now costs one HTTP request — cached, ETag-revalidated, and pinnable by content fingerprint for pipelines that want to refuse a moved contract.
+
+**The server consumes its own document.** In `apps/api`, the canonical fund record is v2 and `/api/v1/funds` is the same document's *down* direction run over it ([`fund-contract.ts`](apps/api/src/app/portfolio/fund-contract.ts)). The endpoint, the published document, and every client migration share one definition — the three copies that used to be able to drift now literally cannot. Both fund endpoints advertise the document via the `Skew-Contract` header; `@skew/core`'s `envelopeFromResponse` also reads versions from headers, media types, or URLs, so adopting Skew against an API that will not reshape its bodies costs the server one header, not an envelope.
+
+And because hand-frozen snapshot interfaces are the discipline everyone eventually fumbles, they can be generated instead:
+
+```sh
+skew-contract gen --in contracts/portfolio-fund.json --out src/generated/portfolio-fund.contract.ts
+```
+
+— one frozen interface per documented version, plus the document as a typed const, regenerated rather than edited.
 
 ---
 
@@ -532,6 +607,10 @@ Flip the protections off and run step 4 again: the read _succeeds_, hands back a
 
 The switch is `provideSkewDisabled()` / `setSkewDisabled()`. It is **exported but deliberately undocumented** — no legitimate production use, and the failures it re-enables are the silent kind. It exists because a before/after that only ever runs the "after" is not a comparison. The source explains itself; `libs/core/src/lib/disabled.ts` is the place to start.
 
+Below the steps, a **shared-store panel** shows the thing both panes are actually arguing about: the literal key, the bytes currently in it, and whether those bytes carry an envelope. Neither build calls the other — they read and write one key in one browser store, and that is the entire channel between them. A driver toggle swaps `localStorage` for **IndexedDB** in one click; nothing about the versioning story changes, which is the point, and the panel notes that `peek()` starts returning `null` because IndexedDB is asynchronous. The choice is written to `sessionStorage` so the remote follows it too — if it did not, the two builds would be reading different stores and every scenario would report an empty one.
+
+**Redeploying the remote no longer means finding a terminal.** A button posts to `/api/admin/redeploy-remote`, which runs the same `tools/deploy-demo.mjs` the npm script does — a genuine rebuild with new content hashes. One caveat the UI states plainly: the editor already in the drawer will _not_ break, because Native Federation resolves a remote once and caches the module for the life of the tab. Code already in memory cannot 404. The failure lands on the first load of a chunk after a redeploy, which is why the recovery scenario lives on the Portfolio tab — redeploy, then open a fund you have not opened yet.
+
 There is still a plain chronological record — an **Activity** disclosure, collapsed, at the top of the page. It is closed by default on purpose: "show me everything in order" is a real need when something misbehaves, and a bad first thing to put in front of someone who is trying to understand a concept.
 
 ---
@@ -605,9 +684,15 @@ This is the case most codebases get wrong, because the alternative looks harmles
 return JSON.parse(raw) as Draft; // an assertion, not a check
 ```
 
-Data from the future can't be migrated downward — the information isn't there. Collapsing that into `null` means every caller guesses, and the guess is always "discard it". Instead you get `reason: 'ahead'` with `found` and `expected`, and you decide.
+Data from the future can't be *guessed* downward — the fields v2 added were never sent. Collapsing that into `null` means every caller guesses, and the guess is always "discard it". Instead you get `reason: 'ahead'` with `found` and `expected`, and you decide.
 
 It happens more than you'd expect: a colleague saves from the new deploy while your tab is stale; a phone updates before the laptop does.
+
+#### 4½ · …and then the refusal is cured
+
+Walkthrough step 5 (**Register & re-read**) is the payoff: the remote registers its chain — including the down direction — with the page-wide registry, and the *exact read that just refused* returns an honest projection instead. The Boundary Inspector shows `Downgraded v2 → v1 — via the shared registry`, with `author.email` and `summary` marked **LOST**: the projection admits what v1 cannot carry. Run step 4 again afterwards — the page now knows the way down, until **Reset** clears what it learned.
+
+The API-boundary twin of the same cure lives on the **Portfolio** tab: the card **"Data from the future — cured by the contract"** fetches `/api/v2/funds`, shows the plain read refusing with `ahead`, then reads the same bytes through `readResolving` — which fetches the contract the API publishes at `/.well-known/skew/contracts/portfolio-fund` and projects all five funds down to v1, listing every dropped path. Same dead end, cured without a redeploy and without the remote's help.
 
 #### 5 · A workflow that grew a step
 
@@ -665,6 +750,7 @@ Deploying the host again (`npm run demo:prod:deploy-host`) also clears it: the b
 | 1, 2     | `@skew/angular-router`       | `recovery.service.spec.ts` — _"reloads at the attempted URL, not the current one"_, _"does not reload when the origin is older than us — that would loop"_, _"persists across the reload it is counting"_ |
 | 1        | `@skew/angular-router`       | `lazy.spec.ts` — retry and attribution                                                                                                                                                                    |
 | 3, 4     | `@skew/core`                 | `versioned.spec.ts` — _"refuses to migrate data from a newer build rather than silently dropping fields"_; `storage.spec.ts`                                                                              |
+| 4½       | `@skew/core` + `@skew/contract` | `registry.spec.ts` — _"lets an older bundle read newer data through a step the newer bundle contributed"_; `resolver.spec.ts` — _"turns ahead into an honest downgrade by resolving the contract"_      |
 | 1, 2     | `@skew/core` + `@skew/build` | `identity.spec.ts` — _"reports a stale origin when the origin is older — the reload-loop case"_; `stamp.spec.ts`                                                                                          |
 | 5        | `@skew/angular-workflow`     | `engine.spec.ts`, `workflow.spec.ts`                                                                                                                                                                      |
 | all, off | the protections switch       | `disabled.spec.ts` — asserts the failure modes it re-enables                                                                                                                                              |
@@ -695,11 +781,11 @@ npm run api              # NestJS, port 3333
 npm run demo:prod        # or demo:prod:same-origin — either works
 ```
 
-`apps/api` is a small NestJS app serving mock funds, holdings, a liquidity-breach SSE stream, and a live price WebSocket — nothing persisted beyond memory, restart it to reset. It serves **two live versions of the same fund contract at once**, `/api/v1/funds` and `/api/v2/funds`, the way a real API does mid-migration: v1 is what the host still understands (scalar `nav`, scalar `currency`), v2 is what the remote understands (`nav` promoted to `{ amount, asOf }`, plus `liquidity` and `classification` fields v1 never had).
+`apps/api` is a small NestJS app serving mock funds, holdings, an on-demand liquidity-breach SSE stream, and a live price WebSocket — nothing persisted beyond memory, restart it to reset. The book is deliberately small (five funds, twenty tickers): an earlier version had enough data that studying it came before studying the thing it was demonstrating. It serves **two live versions of the same fund contract at once**, `/api/v1/funds` and `/api/v2/funds`, the way a real API does mid-migration: v1 is what the host still understands (scalar `nav`, scalar `currency`), v2 is what the remote understands (`nav` promoted to `{ amount, asOf }`, plus `liquidity` and `classification` fields v1 never had).
 
 **On the Portfolio tab (host):** a fund list pinned to v1 on purpose — expand a row to browse its holdings inline, or open one to bring up the remote beside it. Above the list, a **ticker typeahead**: search the tradeable universe (`GET /api/v1/tickers`), pin a symbol with the keyboard or the mouse, and the strip narrows to it while a drill-down card shows which funds hold it and what this tick did to each one's NAV. Every ticker is offered for every fund — mandate eligibility is realistic and would bury the part that teaches something.
 
-The strip itself is a plain `WebSocket` (`ws://…/ws/ticker`, ~1 tick/sec) owned by `PortfolioLive`, provided once on the `portfolio` route rather than by either page under it — which is what lets it keep running while you open, switch, and close funds. An SSE listener (`EventSource` on `/api/events/liquidity`) for randomly-timed liquidity breaches — no sooner than 3s apart, no later than 15s — pushes a toast in the corner the instant one arrives; `POST /api/events/liquidity/trigger` fires one on demand.
+The strip itself is a plain `WebSocket` (`ws://…/ws/ticker`, ~1 tick/sec) owned by `PortfolioLive`, provided once on the `portfolio` route rather than by either page under it — which is what lets it keep running while you open, switch, and close funds. An SSE listener (`EventSource` on `/api/events/liquidity`) for liquidity breaches pushes a toast in the corner the instant one arrives. **The stream has no timer — it fires only when you press the button.** It used to emit on a random interval, which made it impossible to tell whether what you just saw was caused by what you just did; for a demo about cause and effect across a boundary, an event you did not trigger is noise wearing the costume of a feature. Every breach targets `TBILL-3M`, the one instrument all five funds hold, so a single press lights up the whole book at once rather than two funds you may not have open.
 
 **Clicking a fund** hands its v1 record to the remote via `sessionStorage` — the same mechanism `Editor` already uses — and navigates to `/portfolio/fund/:id`, resolved to the remote's `./FundDetail`. That route renders into an outlet _inside a drawer beside the fund list_, not over it: the list never disappears, picking a different fund swaps the drawer's context in place (same component, new route param), and the × closes it back to `/portfolio`.
 

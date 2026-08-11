@@ -1,0 +1,389 @@
+{
+  "metadata": {
+    "skill_name": "using-skew",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-08-11T00:58:47Z",
+    "evals_run": [
+      0,
+      1,
+      2
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 0,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 147.7,
+        "tokens": 49480,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @skew/core API",
+          "passed": true,
+          "evidence": "weekly-content.schema.ts:69-80 \u2014 versioned<WeeklyContentV1>('weekly-content').next<WeeklyContentV2>('rename themeQuote...', fn); no .build(); matches the real fluent API exactly."
+        },
+        {
+          "text": "Migration steps close over frozen snapshot interfaces (V1/V2 declared in the schema file), not the live application WeeklyContent type",
+          "passed": true,
+          "evidence": "Private WeeklyContentV1/WeeklyContentV2 interfaces with explicit 'FROZEN SNAPSHOTS' comments; the live model is only mentioned as needing structural compatibility, never imported. WeeklyContentDraft is an alias of the V2 snapshot."
+        },
+        {
+          "text": "Storage uses createVersionedStore with webStorageDriver('local') and passes buildId",
+          "passed": true,
+          "evidence": "draft-store.ts:44-48 \u2014 createVersionedStore(WeeklyContentSchema, { driver: webStorageDriver('local'), buildId: BUILD_ID, onReadFailure })."
+        },
+        {
+          "text": "Read path branches on the discriminated result: checks result.ok and switches on result.reason covering 'ahead', 'gap', 'invalid', and 'threw'",
+          "passed": true,
+          "evidence": "draft-store.ts:79-110 \u2014 checks result.ok, then switch(result.reason) with explicit cases for 'ahead', 'invalid', and 'gap'/'threw'; uses real result fields (result.value, result.migratedFrom)."
+        },
+        {
+          "text": "'ahead' is handled distinctly from 'invalid' \u2014 newer-build drafts are refetched or left untouched, never discarded or treated as corrupt",
+          "passed": true,
+          "evidence": "'ahead' returns status 'newer-build' with the draft explicitly LEFT IN STORAGE and doc-comment telling callers to refetch from server; only 'invalid' discards. deleteDraft() docs warn never to call it on an ahead read."
+        },
+        {
+          "text": "No JSON.parse(raw) as WeeklyContent style unchecked cast remains in the read path",
+          "passed": true,
+          "evidence": "All reads go through store.get()/store.peek(); no JSON.parse or type assertion casts anywhere in the read path."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 130.0,
+        "tokens": 49777,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "app.config.ts adds provideSkewRecovery({ identity: BUILD_IDENTITY, manifestUrl: ... }) importing identity from the skew-stamp-generated module",
+          "passed": true,
+          "evidence": "app.config.ts:16-52 \u2014 provideSkewRecovery({ identity: BUILD_IDENTITY, manifestUrl: '/skew-manifest.json', ... }) with BUILD_IDENTITY imported from './generated/build-id'."
+        },
+        {
+          "text": "Lazy routes are wrapped as lazy('<module-id>', () => import(...)) so the id cross-references the manifest",
+          "passed": true,
+          "evidence": "app.routes.ts:23,27 \u2014 lazy('admin.routes', () => import('./admin/admin.routes')) and lazy('editor.routes', ...), with comments explaining the manifest cross-reference and id stability."
+        },
+        {
+          "text": "Build wiring runs skew-stamp before the app build to generate build-id.ts and again (or with flags) to emit skew-manifest.json, with --assets pointing at the browser output dir",
+          "passed": true,
+          "evidence": "package.json \u2014 predev/prebuild run `skew-stamp --out src/generated/build-id.ts`; postbuild adds `--manifest dist/bulletin-app/browser/skew-manifest.json --assets dist/bulletin-app/browser`. Matches the real CLI flags exactly."
+        },
+        {
+          "text": "Manifest is documented/configured to be served with no-store (or explicitly uncached) semantics",
+          "passed": true,
+          "evidence": "manifest-cache-headers.snippet.txt provides Firebase Hosting and nginx configs: no-store for skew-manifest.json, no-cache for index.html, immutable for hashed chunks \u2014 and explains why a cached manifest breaks the probe."
+        },
+        {
+          "text": "Stale-origin loop prevention is delegated to the library's classification (not a hand-rolled reload counter) and the answer does not add an unconditional location.reload() fallback",
+          "passed": true,
+          "evidence": "No location.reload() anywhere; app.config.ts comments delegate staleOrigin/unreachable refusal to the library's probe and cap auto-recoveries via maxRecoveries: 1. The banner's recover() re-runs classification in the service."
+        },
+        {
+          "text": "Dirty-form protection uses trackUnsavedWork(() => form.dirty) in a component",
+          "passed": true,
+          "evidence": "editor-shell.component.ts \u2014 trackUnsavedWork(() => this.form.dirty) registered in the constructor, with markAsPristine() after save to unblock recovery."
+        },
+        {
+          "text": "Banner component reads SkewRecoveryService and uses its pending() signal and recover() method",
+          "passed": true,
+          "evidence": "update-banner.component.ts:28,37,72 \u2014 @if (recovery.pending()) template guard and (click)=\"recovery.recover()\" on inject(SkewRecoveryService)."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 144.9,
+        "tokens": 49714,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Contract JSON has skewContract: \"1\", name, current: 2, and a steps array with from/to numbers",
+          "passed": true,
+          "evidence": "portfolio-fund.contract.json \u2014 skewContract: \"1\", name: portfolio-fund, current: 2, steps: [{from: 1, to: 2, description, ops}], plus JSON Schemas under schemas.1/schemas.2. Matches the real document format."
+        },
+        {
+          "text": "Every op in the document comes from the closed whitelist (rename, move, wrap, hoist, map, default, drop, convert, const) \u2014 no executable code in the document",
+          "passed": true,
+          "evidence": "Only rename/move/default ops, encoded in the real { \"rename\": { from, to } } shape; no code steps, no executable content."
+        },
+        {
+          "text": "The step uses rename for currency->baseCurrency, move for cashPct->liquidity.cashPct, and default for liquidity.hqlaPct = 0",
+          "passed": true,
+          "evidence": "Exactly those three ops in order: rename currency->baseCurrency, move cashPct->liquidity.cashPct, default liquidity.hqlaPct = 0."
+        },
+        {
+          "text": "Controller serves GET .well-known/skew/contracts/:name with an ETag derived from contractFingerprint(doc) and returns 304 when if-none-match matches",
+          "passed": true,
+          "evidence": "skew-contracts.controller.ts:43-67 \u2014 @Controller('.well-known/skew/contracts'), etag = `\"${contractFingerprint(doc)}\"`, bodyless 304 on if-none-match match, 404 for unknown names."
+        },
+        {
+          "text": "Controller sets cache-control no-cache (revalidate) rather than long-lived caching or no header",
+          "passed": true,
+          "evidence": "res.setHeader('cache-control', 'no-cache') with a comment explaining why neither max-age nor no-store is correct here."
+        },
+        {
+          "text": "Client pins its schema with versionedFromContract<FundV1>(contract, { at: 1 }) or equivalent pinned construction",
+          "passed": true,
+          "evidence": "read-fund-v1.client.ts:41-42 \u2014 versionedFromContract<FundV1>(PORTFOLIO_FUND_CONTRACT, { at: 1 }), with frozen FundV1 imported from the generated contract module."
+        },
+        {
+          "text": "Client reads via createContractResolver().readResolving(...) against the well-known URL so 'ahead' data is cured by fetching the contract",
+          "passed": true,
+          "evidence": "createContractResolver() + resolver.readResolving(FundSchemaV1, body, contractUrl), with URL discovery via the skew-contract response header falling back to wellKnownContractUrl(API_BASE, 'portfolio-fund')."
+        },
+        {
+          "text": "Loss is surfaced: code inspects/reports downgradedFrom and lossyPaths rather than silently returning the projection",
+          "passed": true,
+          "evidence": "On result.downgradedFrom the client logs the downgrade and returns { fund, downgraded: true, lost: result.lossyPaths }; comments identify liquidity.hqlaPct as the only lossy path and warn against round-tripping the projection into a write."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 0,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.3333,
+        "passed": 2,
+        "failed": 4,
+        "total": 6,
+        "time_seconds": 127.2,
+        "tokens": 38889,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @skew/core API",
+          "passed": false,
+          "evidence": "weekly-content.schema.ts:93-99 invents an object-config API: versioned<WeeklyContent>({ name, version, steps, validate }) with a hand-built MigrationStep[] array. The real API is a fluent versioned<V1>(name).next<V2>() chain; this would not compile against @skew/core."
+        },
+        {
+          "text": "Migration steps close over frozen snapshot interfaces (V1/V2 declared in the schema file), not the live application WeeklyContent type",
+          "passed": false,
+          "evidence": "The up step's return type is the exported WeeklyContent \u2014 the same interface application code consumes as the live model (\"the only shape application code sees\"). Editing the live model would silently change what the v1->v2 migration claims to produce, the exact hazard frozen snapshots exist to prevent. Only V1 is a private snapshot."
+        },
+        {
+          "text": "Storage uses createVersionedStore with webStorageDriver('local') and passes buildId",
+          "passed": false,
+          "evidence": "draft-store.ts hand-rolls localStorage access (storage(), keyFor(), JSON.stringify of a custom {b, e} wrapper) instead of createVersionedStore/webStorageDriver; buildId is stored in a bespoke record field rather than passed to the store."
+        },
+        {
+          "text": "Read path branches on the discriminated result: checks result.ok and switches on result.reason covering 'ahead', 'gap', 'invalid', and 'threw'",
+          "passed": false,
+          "evidence": "Uses invented result fields: switch(result.status) with 'ok'/'ahead' cases and result.from (real API: result.ok boolean, result.reason, result.migratedFrom). The default branch collapses gap/threw/invalid together and clears the entry \u2014 a migration-chain bug (gap/threw) destroys the user's draft instead of being reported with the draft kept."
+        },
+        {
+          "text": "'ahead' is handled distinctly from 'invalid' \u2014 newer-build drafts are refetched or left untouched, never discarded or treated as corrupt",
+          "passed": true,
+          "evidence": "draft-store.ts:175-182 and 208-215 \u2014 a cheap version probe plus an 'ahead' case both return a typed 'ahead' status with storage explicitly left untouched and the writer's build id reported."
+        },
+        {
+          "text": "No JSON.parse(raw) as WeeklyContent style unchecked cast remains in the read path",
+          "passed": true,
+          "evidence": "JSON.parse result is treated as unknown, normalized, passed through schema.read(), and reverified with the isWeeklyContent runtime validator; no unchecked 'as WeeklyContent' cast on raw storage data."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.1429,
+        "passed": 1,
+        "failed": 6,
+        "total": 7,
+        "time_seconds": 150.6,
+        "tokens": 40158,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "app.config.ts adds provideSkewRecovery({ identity: BUILD_IDENTITY, manifestUrl: ... }) importing identity from the skew-stamp-generated module",
+          "passed": false,
+          "evidence": "Invents a feature-composition API: provideSkewChunkRecovery({buildId}, withChunkRetry(...), withDeployManifest(...), withReloadGuard(...), withReloadLoopProtection(...)). None of these exist in @skew/angular-router; the real provider is provideSkewRecovery({ identity, manifestUrl, ... })."
+        },
+        {
+          "text": "Lazy routes are wrapped as lazy('<module-id>', () => import(...)) so the id cross-references the manifest",
+          "passed": false,
+          "evidence": "app.routes.ts keeps stock loadChildren: () => import(...).then(m => m.ADMIN_ROUTES) with no lazy() wrapper and no module ids \u2014 so no per-import retry and no manifest modules cross-reference (deleted-route vs renamed-chunk cannot be distinguished)."
+        },
+        {
+          "text": "Build wiring runs skew-stamp before the app build to generate build-id.ts and again (or with flags) to emit skew-manifest.json, with --assets pointing at the browser output dir",
+          "passed": false,
+          "evidence": "Invents a `skew-build stamp` / `skew-build manifest` CLI with --index-meta/--dist flags. The real @skew/build bin is skew-stamp with --out/--manifest/--assets. Conceptual pre/post structure is right; the tool and flags would not run."
+        },
+        {
+          "text": "Manifest is documented/configured to be served with no-store (or explicitly uncached) semantics",
+          "passed": true,
+          "evidence": "Manifest fetched with cache: 'no-store' and package.json notes require index.html and skew-manifest.json served with no-store/max-age=0; deploy-order guidance included."
+        },
+        {
+          "text": "Stale-origin loop prevention is delegated to the library's classification (not a hand-rolled reload counter) and the answer does not add an unconditional location.reload() fallback",
+          "passed": false,
+          "evidence": "Loop prevention is a hand-specified equality check (manifest.buildId === SKEW_BUILD_ID refuses reload) plus a sessionStorage reload counter. Equality alone cannot classify staleOrigin: a CDN region serving a DIFFERENT-but-OLDER build's manifest reads as 'a new build exists' and reloads into the loop. The real library orders builds by builtAt timestamps precisely for this case."
+        },
+        {
+          "text": "Dirty-form protection uses trackUnsavedWork(() => form.dirty) in a component",
+          "passed": false,
+          "evidence": "No trackUnsavedWork; instead a DOM-scraping guard (querying .ng-dirty classes, comparing value vs defaultValue, checkbox state, contenteditable). Misses the library's registration primitive and is fragile against OnPush/detached forms."
+        },
+        {
+          "text": "Banner component reads SkewRecoveryService and uses its pending() signal and recover() method",
+          "passed": false,
+          "evidence": "Uses the right service name but invented members: blockedRecoveries signal, reload(), recheck(), dismiss(). The real surface is pending() and recover(); this would not compile."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.5,
+        "passed": 4,
+        "failed": 4,
+        "total": 8,
+        "time_seconds": 94.5,
+        "tokens": 36295,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Contract JSON has skewContract: \"1\", name, current: 2, and a steps array with from/to numbers",
+          "passed": false,
+          "evidence": "Document uses an invented format: latest/versions/migrations with lens: [{op: 'rename', ...}] entries, hand-annotated lossyPaths, and ad-hoc shape maps instead of skewContract/current/steps with { \"rename\": {...} } ops and JSON Schemas. The real interpreter would reject it, and lossyPaths are computed in the real system, not hand-declared."
+        },
+        {
+          "text": "Every op in the document comes from the closed whitelist (rename, move, wrap, hoist, map, default, drop, convert, const) \u2014 no executable code in the document",
+          "passed": true,
+          "evidence": "Op names used (rename, move, default) are all whitelist ops and the document carries no executable content \u2014 though encoded in a nonstandard {op: ...} shape."
+        },
+        {
+          "text": "The step uses rename for currency->baseCurrency, move for cashPct->liquidity.cashPct, and default for liquidity.hqlaPct = 0",
+          "passed": true,
+          "evidence": "The 1->2 migration lens contains exactly rename currency->baseCurrency, move cashPct->liquidity.cashPct, default liquidity.hqlaPct = 0."
+        },
+        {
+          "text": "Controller serves GET .well-known/skew/contracts/:name with an ETag derived from contractFingerprint(doc) and returns 304 when if-none-match matches",
+          "passed": false,
+          "evidence": "Serves the right well-known path with 304 handling, but the ETag is a hand-rolled sha256 over the serialized bytes rather than contractFingerprint(doc) \u2014 so it will not line up with the fingerprints clients use for pinnedFingerprints, and byte-level reserialization changes the tag while the contract is semantically unchanged."
+        },
+        {
+          "text": "Controller sets cache-control no-cache (revalidate) rather than long-lived caching or no header",
+          "passed": false,
+          "evidence": "@Header('Cache-Control', 'public, max-age=300, stale-while-revalidate=86400') \u2014 after appending a step, clients may keep curing 'ahead' with a five-minute-stale contract (and up to a day stale-while-revalidate); the endpoint exists precisely to be revalidated per use."
+        },
+        {
+          "text": "Client pins its schema with versionedFromContract<FundV1>(contract, { at: 1 }) or equivalent pinned construction",
+          "passed": false,
+          "evidence": "versionedFromContract<PortfolioFundV1>(pinnedContract, { pinned: 1 }) \u2014 right function, invented option name ({ pinned } instead of { at }); would not compile against @skew/contract."
+        },
+        {
+          "text": "Client reads via createContractResolver().readResolving(...) against the well-known URL so 'ahead' data is cured by fetching the contract",
+          "passed": true,
+          "evidence": "createContractResolver(config) + await resolver.readResolving(schema, envelope) \u2014 the resolver/readResolving mechanism and ahead-curing intent are present, though the call omits the per-read contract URL argument of the real signature and pre-wraps the body via an awaited envelopeFromResponse(res)."
+        },
+        {
+          "text": "Loss is surfaced: code inspects/reports downgradedFrom and lossyPaths rather than silently returning the projection",
+          "passed": true,
+          "evidence": "Branches on result.downgradedFrom !== undefined and reports `downgraded v2 -> v1; dropped: liquidity.hqlaPct` from result.lossyPaths."
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 140.8667,
+        "stddev": 9.5144,
+        "min": 130.0,
+        "max": 147.7
+      },
+      "tokens": {
+        "mean": 49657.0,
+        "stddev": 156.4896,
+        "min": 49480,
+        "max": 49777
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.3254,
+        "stddev": 0.1787,
+        "min": 0.1429,
+        "max": 0.5
+      },
+      "time_seconds": {
+        "mean": 124.1,
+        "stddev": 28.1782,
+        "min": 94.5,
+        "max": 150.6
+      },
+      "tokens": {
+        "mean": 38447.3333,
+        "stddev": 1969.0085,
+        "min": 36295,
+        "max": 40158
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.67",
+      "time_seconds": "+16.8",
+      "tokens": "+11210"
+    }
+  },
+  "notes": [
+    "Baseline contamination (makes the delta CONSERVATIVE): subagents inherit this project's persistent memory, which names several real APIs from the Aug 2026 Skew work (registerSchema, lossyPaths, downgradedFrom, versionedFromContract, readResolving, envelopeFromResponse). The baselines used exactly those names correctly while inventing everything the memory doesn't mention. A true cold-start baseline (fresh machine, no memory) would score lower than 32.5%.",
+    "Failure pattern: baselines consistently get the CONCEPTS right (preserve 'ahead' data, no-store manifest, label lossy downgrades) but invent API surfaces that would not compile \u2014 versioned({name,version,steps}), provideSkewChunkRecovery(withChunkRetry(...)), skew-build CLI, { pinned: 1 }. The skill's measured value is API fidelity, not conceptual framing.",
+    "Two baseline behaviors are actively dangerous, not just wrong: eval-0 baseline CLEARS drafts on migration-chain failures (a shipped migration bug would destroy user drafts), and eval-1 baseline's buildId-equality check would auto-reload into the loop when a stale CDN region serves a different-but-OLDER build (the exact incident in the prompt). Both are failures the skill's rules section explicitly prevents.",
+    "Possibly non-discriminating assertions: \"'ahead' not discarded\" (eval-0) and \"loss surfaced\" / \"rename+move+default op choice\" (eval-2) passed in baseline runs too \u2014 the prompts and project memory leak enough concept for these. Keep them (they guard real regressions) but don't expect them to separate configurations.",
+    "Cost: with_skill averaged ~49.7k tokens vs ~38.4k baseline (+29%) and roughly comparable wall time (141s vs 124s avg) \u2014 the overhead of reading SKILL.md plus 1-2 reference files. Single run per configuration, so time/token stddevs are not meaningful."
+  ]
+}

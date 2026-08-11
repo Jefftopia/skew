@@ -1,0 +1,40 @@
+# Serving wiring for /skew-manifest.json — REQUIRED, not optional.
+#
+# The manifest is the probe's ground truth about what the origin is serving
+# right now. If a CDN or the browser caches it, the probe compares against a
+# stale snapshot and every guarantee above it (staleOrigin loop refusal,
+# staleClient detection) silently breaks. Serve it with Cache-Control:
+# no-store from the SAME origin/CDN path as index.html, so it reflects the
+# same edge that served the (possibly stale) HTML.
+#
+# While you're here: index.html itself should be no-cache (revalidate every
+# time) — the reload-loop incident was a region caching index.html too long.
+# Hashed chunk files stay immutable/long-cache as usual.
+
+## Firebase Hosting (firebase.json)
+{
+  "hosting": {
+    "headers": [
+      {
+        "source": "/skew-manifest.json",
+        "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+      },
+      {
+        "source": "/index.html",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "**/*.@(js|css)",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      }
+    ]
+  }
+}
+
+## nginx equivalent
+location = /skew-manifest.json {
+  add_header Cache-Control "no-store";
+}
+location = /index.html {
+  add_header Cache-Control "no-cache";
+}
