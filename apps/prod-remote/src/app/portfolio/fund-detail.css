@@ -144,3 +144,26 @@
 .pending-hint {
   color: #8a6a2f;
 }
+
+/* The full-record comparison, folded away by default: the shortlist above
+   answers the common question, and this answers the sceptical one. */
+.recon-diff {
+  margin-top: 0.9rem;
+}
+
+.recon-diff > summary {
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #1e3a5f;
+  padding: 0.3rem 0;
+}
+
+.recon-diff > summary:hover {
+  text-decoration: underline;
+}
+
+.recon-diff remote-json-diff {
+  display: block;
+  margin-top: 0.5rem;
+}

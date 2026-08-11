@@ -69,10 +69,10 @@ import { installSkewDevtoolsHook } from '../skew-devtools-hook';
               <td>
                 @if (!event.ok) {
                   <strong>{{ event.reason }}</strong>
-                } @else if (event.migratedFrom != null) {
+                } @else if (event.migratedFrom !== null) {
                   ↑ migrated from v{{ event.migratedFrom
                   }}{{ paths('derived', event.derivedPaths) }}
-                } @else if (event.downgradedFrom != null) {
+                } @else if (event.downgradedFrom !== null) {
                   ↓ downgraded from v{{ event.downgradedFrom
                   }}{{ paths('lost', event.lossyPaths) }}
                 } @else {
@@ -186,8 +186,8 @@ export class SkewDevtools implements OnDestroy {
       (event) =>
         !event.ok ||
         event.kind === 'write' ||
-        event.migratedFrom != null ||
-        event.downgradedFrom != null,
+        event.migratedFrom !== null ||
+        event.downgradedFrom !== null,
     );
   });
 

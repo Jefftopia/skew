@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, afterNextRender, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   NavigationEnd,
@@ -15,6 +15,9 @@ import { originIsRolledBack } from './origin';
 import { Lab } from './lab';
 import { ActivityFeed } from './activity-feed';
 import { SkewDevtools } from './skew-devtools';
+import { Tour } from './tour/tour';
+import { TourAnchor } from './tour/tour-anchor';
+import { TourOverlay } from './tour/tour-overlay';
 
 @Component({
   selector: 'host-root',
@@ -24,18 +27,30 @@ import { SkewDevtools } from './skew-devtools';
     RouterLinkActive,
     ActivityFeed,
     SkewDevtools,
+    TourAnchor,
+    TourOverlay,
   ],
   styleUrl: './app.css',
   template: `
     <header>
       <div class="badge">HOST · independently deployed</div>
-      <h1>Skew — two builds, one page</h1>
+      <div class="title-row">
+        <h1>Skew — two builds, one page</h1>
+        <!--
+          Always available, never modal-on-every-visit. The moment someone
+          actually wants a tour is usually after they have clicked around and
+          got lost, which a first-run-only modal is guaranteed to miss.
+        -->
+        <button class="tour-btn" (click)="tour.start()">
+          {{ tour.autoStartAllowed() ? 'Take the tour' : 'Tour this tab' }}
+        </button>
+      </div>
       <p class="sub">
         This app was built and deployed on its own. It knows the remote only as
         a URL, resolved at runtime. Everything below is a production bundle;
         nothing is simulated.
       </p>
-      <p class="id">
+      <p class="id" hostTourAnchor="build-identity">
         build <code>{{ build.buildId }}</code> · stamped {{ build.builtAt }}
         @if (rolledBack) {
           <span class="warn">· probing the ROLLBACK manifest</span>
@@ -51,7 +66,7 @@ import { SkewDevtools } from './skew-devtools';
       three-way reconciliation view. Both tabs share the protections switch
       below, because both are demonstrating the same library.
     -->
-    <nav class="tabs">
+    <nav class="tabs" hostTourAnchor="tabs">
       <a routerLink="/basics" routerLinkActive="active">Basics</a>
       <a routerLink="/portfolio" routerLinkActive="active">Portfolio</a>
     </nav>
@@ -63,7 +78,7 @@ import { SkewDevtools } from './skew-devtools';
       packages inert, so every scenario below runs the plain code you would
       have written instead. The failures are produced, not depicted.
     -->
-    <div class="switch" [class.off]="!lab.guarded()">
+    <div class="switch" [class.off]="!lab.guarded()" hostTourAnchor="protections">
       <div>
         <strong>{{
           lab.guarded() ? 'Protections ON' : 'Protections OFF'
@@ -88,7 +103,7 @@ import { SkewDevtools } from './skew-devtools';
       federation resolves — so it sees every read and write on the page, from
       this build AND the remote's, because both share one @skew/core instance.
     -->
-    <host-skew-devtools />
+    <host-skew-devtools hostTourAnchor="devtools" />
 
     @if (skew.pending(); as pending) {
       <div class="alert">
@@ -110,15 +125,28 @@ import { SkewDevtools } from './skew-devtools';
     }
 
     <router-outlet />
+
+    <host-tour-overlay />
   `,
 })
 export class App {
   protected readonly lab = inject(Lab);
   protected readonly skew = inject(SkewRecoveryService);
+  protected readonly tour = inject(Tour);
   protected readonly build = BUILD_IDENTITY;
   protected readonly rolledBack = originIsRolledBack();
 
   constructor() {
+    /**
+     * First-run only, and only after the first render — the opening step is
+     * centered and needs no anchor, but starting before the shell exists
+     * would spotlight a page that is still empty.
+     *
+     * `startIfUnseen` consults the stored preference; finishing or skipping
+     * the tour writes it, so this fires at most once per browser.
+     */
+    afterNextRender(() => this.tour.startIfUnseen());
+
     /**
      * Traces the navigation itself, independently of `@skew`.
      *

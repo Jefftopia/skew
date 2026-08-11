@@ -1,0 +1,258 @@
+/*
+ * The tour layer. Everything here is position:fixed and lives above the app;
+ * the host element itself is a zero-size anchor so it can be dropped anywhere
+ * in the template without affecting layout.
+ */
+:host {
+  display: contents;
+}
+
+.scrim {
+  position: fixed;
+  background: rgba(11, 22, 38, 0.58);
+  z-index: 900;
+  animation: fade 0.18s ease-out;
+}
+
+.scrim.pass-through {
+  /* See the template: a waiting step is usually asking the user to click
+     something, so the dimming stays and the blocking does not. */
+  pointer-events: none;
+}
+
+.ring {
+  position: fixed;
+  z-index: 901;
+  border-radius: 10px;
+  /* No background: the element underneath shows through and stays usable. */
+  box-shadow:
+    0 0 0 2px #2f6fb3,
+    0 0 0 6px rgba(47, 111, 179, 0.28),
+    0 10px 34px rgba(11, 22, 38, 0.3);
+  pointer-events: none;
+  /*
+   * Deliberately no transition on position or size. The ring is re-measured
+   * every frame so it tracks its element through scrolling, drawer opening,
+   * and async content arriving — and a CSS transition on top/left turns that
+   * tracking into visible lag, with the ring trailing the thing it is
+   * supposed to be pointing at. Snapping to truth beats easing toward it.
+   */
+  animation: fade 0.18s ease-out;
+}
+
+.callout {
+  position: fixed;
+  z-index: 902;
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.95rem 1.05rem 0.8rem;
+  box-shadow:
+    0 18px 44px rgba(11, 22, 38, 0.28),
+    0 2px 6px rgba(11, 22, 38, 0.12);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: #16202e;
+  /* A step whose card is taller than the window scrolls inside itself; the
+     alternative is buttons that cannot be reached on a short laptop screen. */
+  max-height: calc(100vh - 28px);
+  overflow-y: auto;
+  animation: pop 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  /* Same reasoning as .ring: the callout is positioned from a live rect. */
+}
+
+.callout:focus {
+  outline: none;
+}
+
+.callout:focus-visible {
+  outline: 2px solid #2f6fb3;
+  outline-offset: 3px;
+}
+
+/* The caret: a rotated square tucked under the card's edge. */
+.caret {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  transform: rotate(45deg);
+  border-radius: 2px;
+  margin-left: -7px;
+  margin-top: -7px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.count {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: #fff;
+  background: #1e3a5f;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+.count i {
+  font-style: normal;
+  opacity: 0.55;
+  margin: 0 0.1rem;
+}
+
+.x {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: #8b96a6;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.x:hover {
+  color: #16202e;
+  background: #eef2f7;
+}
+
+h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #4a5567;
+}
+
+.hint {
+  margin-top: 0.5rem;
+  padding: 0.42rem 0.55rem;
+  background: #f0f6fc;
+  border-left: 3px solid #2f6fb3;
+  border-radius: 0 6px 6px 0;
+  color: #1e3a5f;
+  font-size: 0.76rem;
+}
+
+.pending {
+  margin-top: 0.5rem;
+  font-size: 0.74rem;
+  color: #8b96a6;
+  font-style: italic;
+}
+
+.dots {
+  display: flex;
+  gap: 4px;
+  margin: 0.75rem 0 0.6rem;
+}
+
+.dot {
+  flex: 1;
+  height: 3px;
+  min-width: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #dbe3ec;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dot:hover {
+  background: #b9c6d6;
+}
+
+.dot.on {
+  background: #2f6fb3;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.actions button {
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 7px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.go {
+  background: #1e3a5f;
+  color: #fff;
+}
+
+.go:hover {
+  background: #16304f;
+}
+
+.ghost {
+  background: #fff;
+  border-color: #d6dfea;
+  color: #1e3a5f;
+}
+
+.ghost:hover {
+  background: #f4f7fa;
+}
+
+.skip {
+  background: transparent;
+  color: #8b96a6;
+  padding-left: 0;
+}
+
+.skip:hover {
+  color: #16202e;
+  text-decoration: underline;
+}
+
+.foot {
+  margin-top: 0.5rem;
+  font-size: 0.68rem;
+  color: #a8b2c0;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim,
+  .callout,
+  .ring {
+    animation: none;
+  }
+}

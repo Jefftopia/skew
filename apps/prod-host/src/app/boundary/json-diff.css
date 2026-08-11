@@ -1,0 +1,166 @@
+:host {
+  display: block;
+}
+
+.diff {
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.diff-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.4rem 0.65rem;
+  background: #f4f7fa;
+  border-bottom: 1px solid #dbe3ec;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.side.before {
+  color: #9f1239;
+}
+
+.side.after {
+  color: #14532d;
+}
+
+.counts {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+}
+
+.counts .plus {
+  color: #14532d;
+}
+
+.counts .minus {
+  color: #9f1239;
+}
+
+.chip {
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chip.derived {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.chip.lost {
+  background: #fee2e2;
+  color: #9f1239;
+}
+
+.diff-body {
+  margin: 0;
+  padding: 0.35rem 0;
+  max-height: 22rem;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  background: #fff;
+}
+
+.row {
+  display: block;
+  white-space: pre;
+  padding-right: 0.6rem;
+}
+
+.gutter {
+  display: inline-block;
+  width: 1.5rem;
+  padding-left: 0.5rem;
+  color: #a8b2c0;
+  user-select: none;
+}
+
+/*
+ * Tints rather than solid fills: the text has to stay comfortably readable,
+ * since the whole point is that someone reads the values, not just the
+ * shape of the change.
+ */
+.row.add {
+  background: #ecfdf3;
+}
+
+.row.add .gutter,
+.row.add .text {
+  color: #14532d;
+}
+
+.row.del {
+  background: #fef2f2;
+}
+
+.row.del .gutter,
+.row.del .text {
+  color: #9f1239;
+}
+
+/* A guessed value is not the same claim as a migrated one — say so in the
+   line itself, not only in a legend underneath. */
+.row.derived {
+  background: #fffbeb;
+  box-shadow: inset 3px 0 0 #f59e0b;
+}
+
+.row.derived .gutter,
+.row.derived .text {
+  color: #92400e;
+}
+
+.row.lost {
+  box-shadow: inset 3px 0 0 #e11d48;
+}
+
+.badge {
+  margin-left: 0.7rem;
+  padding: 0.02rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  vertical-align: 0.08em;
+}
+
+.row.derived .badge {
+  background: #fde68a;
+  color: #92400e;
+}
+
+.row.lost .badge {
+  background: #fecdd3;
+  color: #9f1239;
+}
+
+.legend {
+  margin: 0;
+  padding: 0.4rem 0.65rem;
+  border-top: 1px solid #eef2f7;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: #5b6779;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+
+.legend strong {
+  color: #16202e;
+}

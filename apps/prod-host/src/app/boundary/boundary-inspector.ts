@@ -1,5 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { CrossingStore, type Verdict } from './crossing';
+import { JsonDiff } from './json-diff';
 
 const ICON: Record<Verdict, string> = {
   migrated: '✓',
@@ -25,6 +26,7 @@ const ICON: Record<Verdict, string> = {
  */
 @Component({
   selector: 'host-boundary-inspector',
+  imports: [JsonDiff],
   styleUrl: './boundary-inspector.css',
   template: `
     <div class="inspector">
@@ -111,6 +113,26 @@ const ICON: Record<Verdict, string> = {
           </div>
         }
 
+        <!--
+          The record itself, as a diff. Open by default when there is one:
+          the table above says what happened to each field, but "show me the
+          actual JSON" is the next question every time, and hiding it behind a
+          disclosure makes people ask it twice.
+        -->
+        @if (c.before !== undefined && c.after !== undefined) {
+          <div class="diff-wrap">
+            <p class="fields-caption">the payload, before and after the cast</p>
+            <host-json-diff
+              [before]="c.before"
+              [after]="c.after"
+              [derivedPaths]="c.derivedPaths ?? []"
+              [lossyPaths]="c.lossyPaths ?? []"
+              [beforeLabel]="diffLabels().before"
+              [afterLabel]="diffLabels().after"
+            />
+          </div>
+        }
+
         @if (c.raw) {
           <details>
             <summary>Show the raw payload the reader received</summary>
@@ -133,6 +155,20 @@ export class BoundaryInspector {
   protected readonly hasDerived = computed(() =>
     (this.crossing()?.fields ?? []).some((f) => f.status === 'derived'),
   );
+
+  /**
+   * Names the two sides in the reader's terms — "v1 (on disk)" beats
+   * "before" when the entire lesson is which version each side is.
+   */
+  protected readonly diffLabels = computed(() => {
+    const c = this.crossing();
+    const found = c?.envelopeVersion;
+    const reader = c?.to.understands;
+    return {
+      before: found ? `v${found} · as written` : 'as written',
+      after: reader ? `v${reader} · as read` : 'as read',
+    };
+  });
 
   protected icon(v: Verdict): string {
     return ICON[v];

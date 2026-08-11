@@ -114,6 +114,7 @@ produces — and TypeScript cannot warn you, because the code still compiles.
 | **[`@skew/core`](libs/core)**                         | Envelopes, migration chains, versioned storage, build identity, the shared schema registry. No deps.    |
 | **[`@skew/contract`](libs/contract)**                 | Migration history published as a document the API serves; clients resolve it at runtime.                |
 | **[`@skew/build`](libs/build)**                       | `skew-stamp` (build identity + manifest) and `skew-contract gen` (frozen types from a contract).        |
+| **[`@skew/studio`](libs/studio)**                     | Inspection tooling: structural payload diffs that mark guessed and discarded values. Framework-free.    |
 | **[`@skew/angular-core`](libs/angular/core)**         | Angular DI and signal wrappers for versioned stores.                                                    |
 | **[`@skew/angular-router`](libs/angular/router)**     | Chunk-load recovery for lazy routes, without reload loops or lost work.                                 |
 | **[`@skew/angular-data`](libs/angular/data)**         | Normalized entity store, tag invalidation, and a durable mutation outbox.                               |

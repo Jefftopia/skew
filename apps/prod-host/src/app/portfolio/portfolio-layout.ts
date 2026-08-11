@@ -7,6 +7,7 @@ import { PortfolioLive } from './portfolio-live';
 import { PortfolioPage } from './portfolio-page';
 import { DrawerShell } from '../shell/drawer-shell';
 import { TickerTypeahead, type TickerOption } from './ticker-typeahead';
+import { TourAnchor } from '../tour/tour-anchor';
 
 /**
  * The Portfolio tab's shell.
@@ -24,10 +25,16 @@ import { TickerTypeahead, type TickerOption } from './ticker-typeahead';
  */
 @Component({
   selector: 'host-portfolio-layout',
-  imports: [RouterOutlet, DrawerShell, PortfolioPage, TickerTypeahead],
+  imports: [
+    RouterOutlet,
+    DrawerShell,
+    PortfolioPage,
+    TickerTypeahead,
+    TourAnchor,
+  ],
   styleUrl: './portfolio-layout.css',
   template: `
-    <div class="breach-bar">
+    <div class="breach-bar" hostTourAnchor="breach-bar">
       <div>
         <strong>Liquidity events fire only when you ask.</strong>
         <span>
@@ -41,7 +48,7 @@ import { TickerTypeahead, type TickerOption } from './ticker-typeahead';
       </button>
     </div>
 
-    <div class="ticker-bar">
+    <div class="ticker-bar" hostTourAnchor="ticker-bar">
       <div class="ticker-search">
         <host-ticker-typeahead
           placeholder="Pin a ticker…"

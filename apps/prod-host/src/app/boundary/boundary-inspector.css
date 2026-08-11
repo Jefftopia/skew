@@ -290,3 +290,7 @@ details pre {
   overflow-x: auto;
   color: #16202e;
 }
+
+.diff-wrap {
+  margin-top: 0.9rem;
+}

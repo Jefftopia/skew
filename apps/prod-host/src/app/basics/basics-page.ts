@@ -9,6 +9,7 @@ import { BoundaryInspector } from '../boundary/boundary-inspector';
 import { Walkthrough } from './walkthrough';
 import { StorePanel } from '../store-panel';
 import { RemoteControls } from '../remote-controls';
+import { TourAnchor } from '../tour/tour-anchor';
 
 /**
  * The Basics tab: a guided round trip on the left, the live remote on the
@@ -30,14 +31,15 @@ import { RemoteControls } from '../remote-controls';
     Walkthrough,
     StorePanel,
     RemoteControls,
+    TourAnchor,
   ],
   styleUrls: ['../cards.css', './basics-page.css'],
   template: `
     <host-drawer-shell [open]="true" title="apps/prod-remote · ./Editor">
       <!-- ── host pane ── -->
-      <host-boundary-inspector />
-      <host-walkthrough />
-      <host-store-panel />
+      <host-boundary-inspector hostTourAnchor="boundary-inspector" />
+      <host-walkthrough hostTourAnchor="walkthrough" />
+      <host-store-panel hostTourAnchor="store-panel" />
 
       <div class="card side-note">
         <h3>A draft caught mid-wizard</h3>
@@ -74,7 +76,7 @@ import { RemoteControls } from '../remote-controls';
       />
 
       <!-- ── remote pane ── -->
-      <div drawer>
+      <div drawer hostTourAnchor="remote-pane">
         @if (remoteEditorType(); as C) {
           <ng-container *ngComponentOutlet="C" />
         } @else if (remoteLoadError(); as e) {

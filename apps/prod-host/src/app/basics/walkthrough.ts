@@ -421,6 +421,13 @@ export class Walkthrough {
         result.value as unknown as Record<string, unknown>,
         result.lossyPaths,
       ),
+      // The v2 record still on disk against the v1 projection just produced:
+      // the diff is where "lossy" stops being a word and becomes two struck
+      // lines the reader can point at.
+      before: await this.storedPayload(),
+      after: result.value,
+      derivedPaths: result.derivedPaths,
+      lossyPaths: result.lossyPaths,
       raw,
     });
 
@@ -430,6 +437,17 @@ export class Walkthrough {
         `Downgraded v${result.downgradedFrom} → v1; lost ${result.lossyPaths.join(', ')}. ` +
         'Run step 4 again — the page now knows the way down, and the refusal is gone until Reset.',
     };
+  }
+
+  /** The payload currently on disk, unwrapped from its envelope. */
+  private async storedPayload(): Promise<unknown> {
+    try {
+      const bytes = await this.shared.rawAt(this.store.keyFor(DRAFT_KEY));
+      const parsed = bytes ? JSON.parse(bytes) : null;
+      return parsed?.payload ?? parsed ?? undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   /**
@@ -595,6 +613,10 @@ export class Walkthrough {
         headline: result.headline,
         detail: result.detail,
         fields: result.fields as FieldChange[] | undefined,
+        before: result.before,
+        after: result.after,
+        derivedPaths: result.derivedPaths,
+        lossyPaths: result.lossyPaths,
         raw: result.raw,
       });
     } else {

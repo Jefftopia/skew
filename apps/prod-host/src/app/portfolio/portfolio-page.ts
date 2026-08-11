@@ -14,6 +14,8 @@ import {
   fundContractResolver,
   type FundV1,
 } from './contracts';
+import { TourAnchor } from '../tour/tour-anchor';
+import { JsonDiff } from '../boundary/json-diff';
 
 /**
  * The fund list and breach feed. The ticker no longer lives here — it moved
@@ -23,10 +25,11 @@ import {
  */
 @Component({
   selector: 'host-portfolio-page',
+  imports: [TourAnchor, JsonDiff],
   styleUrls: ['../cards.css', './portfolio.css'],
   template: `
     <div class="dashboard">
-      <section class="panel">
+      <section class="panel" hostTourAnchor="fund-list">
         <h3>Funds — pinned to <code>v1</code></h3>
         <dl class="meta">
           <dt>Tests</dt>
@@ -117,7 +120,7 @@ import {
         }
       </section>
 
-      <section class="panel">
+      <section class="panel" hostTourAnchor="contract-card">
         <h3>Data from the future — cured by the contract</h3>
         <dl class="meta">
           <dt>Tests</dt>
@@ -166,6 +169,15 @@ import {
             build understands. Dropped on the way down:
             <code>{{ f.lossy.join(', ') }}</code>
           </div>
+          @if (f.sampleBefore !== undefined) {
+            <host-json-diff
+              [before]="f.sampleBefore"
+              [after]="f.sampleAfter"
+              [lossyPaths]="f.lossy"
+              [beforeLabel]="'v' + f.downgradedFrom + ' · as the API sent it'"
+              afterLabel="v1 · as this build read it"
+            />
+          }
         }
       </section>
 
@@ -221,6 +233,13 @@ export class PortfolioPage {
     downgradedFrom: number | null;
     lossy: readonly string[];
     fundCount: number;
+    /**
+     * One fund from each side, for the diff. One rather than all five: the
+     * projection is identical in shape for every row, and five copies of the
+     * same change is a wall to scroll past rather than a thing to read.
+     */
+    sampleBefore: unknown;
+    sampleAfter: unknown;
   } | null>(null);
 
   protected readonly breachedFundIds = computed(() => {
@@ -343,11 +362,14 @@ export class PortfolioPage {
         `downgraded v${cured.downgradedFrom} → v1 via the resolved contract; ` +
           `lost: ${cured.lossyPaths.join(', ')}`,
       );
+      const sent = (body as { payload?: unknown[] } | null)?.payload;
       this.future.set({
         refusal,
         downgradedFrom: cured.downgradedFrom,
         lossy: cured.lossyPaths,
         fundCount: cured.value.length,
+        sampleBefore: Array.isArray(sent) ? sent[0] : undefined,
+        sampleAfter: cured.value[0],
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

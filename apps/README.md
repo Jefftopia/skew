@@ -72,6 +72,101 @@ inert (`setSkewDisabled()`, deliberately undocumented, only for this
 comparison) so every scenario can be re-run to watch the unprotected code
 fail on its own merits.
 
+### The guided tour
+
+First visit to the host opens a twelve-step tour: the page dims, a ring and a
+caret point at one thing at a time, and the card explains why that thing is
+there. It walks the header's build identity, the protections switch, the
+Basics round trip, the remote drawer, the shared store key, the devtools
+feed, and the Portfolio tab's contract cure — navigating between routes on
+its own as it goes.
+
+- **Start it whenever** — "Take the tour" (later "Replay the tour") sits
+  beside the title and is always available; it is not a first-run-only modal.
+- **Leave whenever** — Escape, the ×, or "Skip tour". Arrow keys move between
+  steps, and the progress dots jump straight to one.
+- **It remembers** — finishing or skipping writes
+  `skew-demo:tour:v1` to `localStorage`, and it never auto-opens again.
+  Clear that key (or run `localStorage.removeItem('skew-demo:tour:v1')`) to
+  get the first-run behaviour back.
+
+Targets are marked in the templates with the `hostTourAnchor` directive
+(`apps/prod-host/src/app/tour/`), so a step either finds its element or shows
+a "waiting" state — it never silently spotlights the wrong thing. Steps whose
+element belongs to a lazy route wait for it to render.
+
+### The guided tours
+
+Each tab has its own walkthrough, reached from **"Tour this tab"** in the
+header — it starts the tour for the tab you are on. The overlay dims the
+page, rings the one thing being discussed, and explains why it is there.
+Escape, the ×, or "Skip tour" leaves at any point; the progress dots jump
+between steps. It auto-opens once on a first visit and never again, but it
+is never unavailable — the preference lives in `localStorage` under
+`skew-demo:tour:v1`.
+
+- **Basics (10 steps)** — build identity, the protections switch, the
+  Boundary Inspector, the five-step round trip, the remote pane, the shared
+  storage key, and the devtools drawer.
+- **Portfolio (11 steps)** — the v1-pinned fund list, the live ticker and
+  breach feed, the `.well-known` contract cure, then the fund detail: the
+  reconciliation against the authoritative record, the payload diff, the
+  order outbox and its 409, and the offline queue.
+
+Two details worth knowing if you extend them:
+
+- Steps that need you to *do* something (step 6: "click any Detail →")
+  spotlight the control and wait. While a step is waiting for a target that
+  does not exist yet, the scrim stops blocking clicks — a tutorial that says
+  "click Detail" and then swallows the click is worse than no tutorial.
+- Four Portfolio steps target the **remote's** DOM (the fund detail is a
+  separate deployment). The host cannot import the remote's components, and
+  making the remote register anchors with the host's tour service would
+  couple the two builds — the thing this demo argues against. So they agree
+  on a tiny string contract instead: `data-tour="..."` in the remote's
+  template, a CSS selector in the host's step. If the remote drops the
+  attribute the step degrades to its waiting state rather than pointing at
+  the wrong thing.
+
+### The payload diff
+
+Whenever a payload is cast in either direction, the Boundary Inspector shows
+the record itself as a git-style diff underneath the field table — the v1
+bytes on the left, the v2 result on the right, `+`/`−` gutters and all.
+
+It is a *structural* diff rather than a text one: both sides are walked by
+key path, so a promotion (`author` going from a string to
+`{ name, email }`, or `cashPct` moving into `liquidity.cashPct`) reads as
+one change instead of four unrelated line edits.
+
+Lines also carry the migration's own vocabulary, which a plain red/green diff
+would erase:
+
+- **guessed** (amber) — the migration filled this in; the writer never
+  recorded it. These are the `derivedPaths` from the read result.
+- **cannot be carried** (red bar) — the older shape has nowhere to put this,
+  so a downgrade drops it. These are the `lossyPaths`.
+
+The engine is `diffPayloads` from **`@skew/studio`** — the first shipped
+piece of the web debugger, where the same view is the drill-down from a
+trace event. The apps only supply a renderer.
+
+It appears in three places:
+
+- **Basics · Boundary Inspector** — after every walkthrough step that casts
+  a record, in both directions.
+- **Portfolio · the contract card** — press "Fetch v2 & read as v1" and one
+  fund is shown as the API sent it against the v1 projection the contract
+  produced, with all six dropped paths marked.
+- **Portfolio · fund detail** ("Compare the full records") — the most
+  interesting one, because it is not a cast at all: it compares the record
+  *migrated* from the host's v1 against the *authoritative* v2 the server
+  returned. Every line the migration had to guess is marked, so you can see
+  that a fund's HQLA was guessed at `0` when the real figure is `62.5`, and
+  its asset class as `"unknown"` when it is `"Equity"`. The shortlist table
+  above it is hand-picked; this is the whole record, and the guessed values
+  are the ones nobody should act on without confirming.
+
 ### The devtools drawer
 
 Below the activity feed sits **Skew devtools — live schema activity**: one

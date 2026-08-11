@@ -21,6 +21,7 @@
       "@skew/build": ["./libs/build/src/index.ts"],
       "@skew/contract": ["./libs/contract/src/index.ts"],
       "@skew/core": ["./libs/core/src/index.ts"],
+      "@skew/studio": ["./libs/studio/src/index.ts"],
       "@skew/angular-core": ["./libs/angular/core/src/index.ts"]
     }
   },

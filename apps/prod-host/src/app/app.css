@@ -192,3 +192,41 @@ nav.tabs a.active {
     margin-left: 0;
   }
 }
+
+/* --- tour trigger ---------------------------------------------------------
+ * Sits beside the title rather than floating over the page: the tour is an
+ * affordance, not a nag, and a fixed-position "?" bubble would compete with
+ * the alert banner and the drawer for the same corner.
+ */
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title-row h1 {
+  flex: 1;
+  min-width: 16ch;
+}
+
+.tour-btn {
+  flex: none;
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #1e3a5f;
+  background: #fff;
+  border: 1px solid #d6dfea;
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.tour-btn:hover {
+  background: #f0f6fc;
+  border-color: #2f6fb3;
+}

@@ -64,6 +64,7 @@ gives identical output.
 libs/
 ├── core/                     # + trace hook (tiny, dev-guarded)
 ├── studio/                   # @skew/studio
+│   ├── src/lib/payload-diff.ts   # ✅ SHIPPED — structural diff engine
 │   ├── src/lib/protocol.ts   # trace event + introspection wire types
 │   ├── src/lib/introspect.ts # registry -> serializable catalog
 │   ├── src/lib/explain.ts    # pure lens-op replayer with per-op diffs
@@ -126,6 +127,31 @@ inspector right):
 1. **Explore** — schema/contract catalog: version lane per schema
    (v1 → v2 → v3), each step expandable to its ops or its code-step name,
    fingerprints, and computed `lossyPaths`/`derivedPaths` per direction.
+Every one of those tabs drills down into the same thing — **the payload
+diff** — which is the first piece of Studio actually built
+(`@skew/studio`'s `diffPayloads`, already shipped and used by both demo
+apps). Given a before and an after it produces the record as a git-style
+diff, and it is the drill-down target from everywhere: a Live event, a step
+in the Cast timeline, or a version lane in Explore. Two properties make it
+Studio's rather than a generic viewer's:
+
+- **Structural pairing.** Lines pair by key path, not line number, so a
+  promotion (`nav` from a scalar to `{ amount, asOf }`) reads as one change
+  instead of four unrelated edits. A text LCS gets this wrong exactly when
+  it matters most.
+- **It speaks the result's vocabulary.** `derivedPaths` render as *guessed*
+  and `lossyPaths` as *cannot be carried*, rather than as ordinary green and
+  red. This is the difference between "the record changed" and "these three
+  values are the migration's invention and must not be trusted", and it is
+  the whole reason a skew-aware diff beats a generic one.
+
+Path matching handles the two vantage points that always disagree: a list
+read reports `[].liquidity.hqlaPct` while a drill-down shows one element,
+and `holdings[].liquidityTier` has to match every concrete index. Tags
+propagate parent→child only — a subtree dropped whole marks all its lines,
+but a parent whose child alone was lost is *not* marked, because the parent
+survived.
+
 2. **Cast** (the playground): paste JSON or a full envelope (or pick a
    sample generated from the contract's JSON Schema); choose read (up) or
    `write({as})` (down); see a **timeline of the payload at every
@@ -155,6 +181,14 @@ inspector right):
   air-gapped/dev-container setups and adds no supply-chain surface.
 
 ## Phases
+
+0. **✅ Done — the payload diff engine.** `@skew/studio` exists with
+   `diffPayloads` (pure, dependency-free, 15 tests) and is consumed by both
+   demo apps: the host renders it in the Boundary Inspector and the contract
+   card, the remote in the fund detail's reconciliation. Building it against
+   three real call sites first is why it already handles list-vs-element
+   paths and one-directional tag inheritance — neither was obvious from the
+   design, and both were found by wiring it to real migration output.
 
 1. **Trace hook in `@skew/core` + protocol types in `@skew/studio`.**
    Smallest possible core change; unit tests assert zero behavior change

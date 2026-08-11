@@ -388,8 +388,25 @@ export class Editor {
       fields: result.migratedFrom
         ? await this.describeMigration(result.value)
         : undefined,
+      // The stored payload as it actually is on disk, so the host's diff
+      // compares against the bytes rather than a reconstruction of them.
+      before: result.migratedFrom ? await this.storedPayload() : undefined,
+      after: result.migratedFrom ? result.value : undefined,
+      derivedPaths: result.derivedPaths,
+      lossyPaths: result.lossyPaths,
       raw,
     };
+  }
+
+  /** The payload currently on disk, unwrapped from its envelope. */
+  private async storedPayload(): Promise<unknown> {
+    try {
+      const raw = await rawAt(this.store.keyFor(DRAFT_KEY));
+      const parsed = raw ? JSON.parse(raw) : null;
+      return parsed?.payload ?? parsed ?? undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   protected async writeV2(): Promise<Omit<RemoteResult, 'id'>> {

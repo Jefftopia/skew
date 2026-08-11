@@ -22,6 +22,7 @@ import {
 import { isSimulatedOffline, setSimulatedOffline } from './offline';
 import { trace } from '../trace';
 import { TickerTypeahead } from './ticker-typeahead';
+import { JsonDiff } from './json-diff';
 import { BUILD_IDENTITY } from '../../generated/build-id';
 
 interface Outcome {
@@ -56,7 +57,7 @@ interface ReconRow {
  */
 @Component({
   selector: 'remote-fund-detail',
-  imports: [TickerTypeahead],
+  imports: [TickerTypeahead, JsonDiff],
   styleUrls: ['../cards.css', './fund-detail.css'],
   template: `
     <div class="banner">
@@ -103,7 +104,7 @@ interface ReconRow {
         </dl>
 
         @if (reconRows().length > 0) {
-          <table class="recon-table">
+          <table class="recon-table" data-tour="recon">
             <thead>
               <tr>
                 <th>Field</th>
@@ -126,6 +127,24 @@ interface ReconRow {
               }
             </tbody>
           </table>
+
+          <!--
+            The table above is a hand-picked shortlist. This is the whole
+            record, and it is the more honest artifact: every field the
+            migration had to invent shows up here whether or not somebody
+            remembered to add a row for it, and the lines marked "guessed"
+            are the ones a trader must not act on without confirming.
+          -->
+          <details class="recon-diff" data-tour="recon-diff">
+            <summary>Compare the full records</summary>
+            <remote-json-diff
+              [before]="migrated()"
+              [after]="authoritative()"
+              [derivedPaths]="migratedDerived()"
+              beforeLabel="migrated from the host's v1"
+              afterLabel="authoritative · server v2"
+            />
+          </details>
         }
       </div>
 
@@ -150,7 +169,7 @@ interface ReconRow {
           accident.
         </p>
 
-        <form class="order-form" (submit)="$event.preventDefault()">
+        <form class="order-form" data-tour="order-form" (submit)="$event.preventDefault()">
           <label
             >Action
             <select
@@ -192,7 +211,7 @@ interface ReconRow {
           flipping back online flushes the queue. The toggle only gates this
           demo's own POST, but the failure it produces is the real one.
         -->
-        <div class="offline-bar" [class.off]="offline()">
+        <div class="offline-bar" data-tour="offline-bar" [class.off]="offline()">
           <label class="offline-toggle">
             <input
               type="checkbox"
@@ -235,6 +254,12 @@ export class FundDetail {
 
   protected readonly migrated = signal<FundV2 | null>(null);
   protected readonly authoritative = signal<FundV2 | null>(null);
+  /**
+   * Which fields of the migrated record are guesses — taken from the read
+   * result rather than maintained here, so it cannot drift from what the
+   * migration actually did.
+   */
+  protected readonly migratedDerived = signal<readonly string[]>([]);
   protected readonly loadError = signal<Outcome | null>(null);
   protected readonly liveUpdate = signal<string | null>(null);
   protected readonly activeBreach = signal<LiquidityBreachV1 | null>(null);
@@ -327,6 +352,7 @@ export class FundDetail {
     this.loadError.set(null);
     this.migrated.set(null);
     this.authoritative.set(null);
+    this.migratedDerived.set([]);
 
     // 1 — the handed-over record, migrated forward.
     trace(
@@ -380,6 +406,7 @@ export class FundDetail {
         true,
       );
       this.migrated.set(handed.value);
+      this.migratedDerived.set(handed.derivedPaths);
     }
 
     await this.fetchAuthoritative(fundId);

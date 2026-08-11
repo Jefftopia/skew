@@ -35,6 +35,18 @@ export interface Crossing {
   readonly detail: string;
   readonly fields?: readonly FieldChange[];
   readonly raw?: string;
+  /**
+   * The payload on each side of the cast, for the diff view. `before` is read
+   * from the bytes that were genuinely stored or received wherever possible,
+   * rather than reconstructed — a diff whose left-hand side is a guess about
+   * what was there would be worse than no diff at all.
+   */
+  readonly before?: unknown;
+  readonly after?: unknown;
+  /** Paths the migration invented; rendered as guesses rather than data. */
+  readonly derivedPaths?: readonly string[];
+  /** Paths a downgrade discarded because the older shape cannot carry them. */
+  readonly lossyPaths?: readonly string[];
   /** True when this crossing happened with the protections switched off. */
   readonly unprotected: boolean;
 }

@@ -56,6 +56,15 @@ export interface RemoteResult {
   readonly expectedVersion?: number;
   readonly fields?: readonly FieldChange[];
   readonly raw?: string;
+  /**
+   * The payload on each side of the cast, for the host's diff view. Plain
+   * JSON values: they ride a CustomEvent within one page, so no serialization
+   * step stands between the remote's result and what the host renders.
+   */
+  readonly before?: unknown;
+  readonly after?: unknown;
+  readonly derivedPaths?: readonly string[];
+  readonly lossyPaths?: readonly string[];
 }
 
 const REPLY_TIMEOUT_MS = 4_000;
