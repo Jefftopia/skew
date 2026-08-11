@@ -1,5 +1,6 @@
 import type { OutboxEntry, OutboxService } from '@skew/angular-data';
 import { API_BASE, OrderSchemaV2, type OrderV2 } from './contracts';
+import { isSimulatedOffline } from './offline';
 import { trace } from '../trace';
 
 /**
@@ -51,6 +52,20 @@ async function postOrder(envelope: { v: number; payload: unknown }): Promise<{
   ok: boolean;
   body: unknown;
 }> {
+  // The offline half of the outbox story. Throwing the same TypeError a real
+  // dead network produces means the flush fails *exactly* as it would in the
+  // field: the entry stays queued (with its optimistic state kept), the drain
+  // stops, and nothing is lost. Going back online and flushing again is the
+  // whole recovery.
+  if (isSimulatedOffline()) {
+    trace(
+      'warn',
+      'order',
+      'offline — POST never left the device; order stays queued',
+      true,
+    );
+    throw new TypeError('Failed to fetch (simulated offline)');
+  }
   const res = await fetch(`${API_BASE}/v2/orders`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

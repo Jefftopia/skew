@@ -19,6 +19,7 @@ import {
   enqueueOrderV2,
   registerOrderMutation,
 } from './order-outbox';
+import { isSimulatedOffline, setSimulatedOffline } from './offline';
 import { trace } from '../trace';
 import { TickerTypeahead } from './ticker-typeahead';
 import { BUILD_IDENTITY } from '../../generated/build-id';
@@ -185,6 +186,35 @@ interface ReconRow {
           </button>
         </div>
 
+        <!--
+          The offline half of the outbox story. Submitting while "offline"
+          queues the order durably (persistOutbox — it survives a reload);
+          flipping back online flushes the queue. The toggle only gates this
+          demo's own POST, but the failure it produces is the real one.
+        -->
+        <div class="offline-bar" [class.off]="offline()">
+          <label class="offline-toggle">
+            <input
+              type="checkbox"
+              [checked]="offline()"
+              (change)="toggleOffline($any($event.target).checked)"
+            />
+            Simulate offline
+          </label>
+          @if (outboxPending() > 0) {
+            <span class="pending-badge"
+              >{{ outboxPending() }} order(s) waiting to sync</span
+            >
+            <button class="ghost" [disabled]="offline()" (click)="syncNow()">
+              Sync now
+            </button>
+          } @else if (offline()) {
+            <span class="pending-hint"
+              >Orders submitted now will queue and survive a reload.</span
+            >
+          }
+        </div>
+
         @if (orderOutcome(); as o) {
           <div class="verdict" [class.ok]="o.ok" [class.bad]="!o.ok">
             <strong>{{ o.headline }}</strong
@@ -215,6 +245,8 @@ export class FundDetail {
   protected readonly orderTicker = signal('');
   protected readonly orderAmount = signal(0);
   protected readonly orderOutcome = signal<Outcome | null>(null);
+  protected readonly offline = signal(isSimulatedOffline());
+  protected readonly outboxPending = this.outbox.pendingCount;
 
   protected readonly reconRows = computed<ReconRow[]>(() => {
     const m = this.migrated();
@@ -475,6 +507,28 @@ export class FundDetail {
     await this.flushAndReport();
   }
 
+  protected toggleOffline(offline: boolean): void {
+    setSimulatedOffline(offline);
+    this.offline.set(offline);
+    if (offline) {
+      trace(
+        'warn',
+        'order',
+        'simulated offline ON — orders will queue, not send',
+        true,
+      );
+      return;
+    }
+    trace('ok', 'order', 'back online — flushing the queue', true);
+    // Coming back online drains the queue without any further user action —
+    // the outbox's whole promise is that queued intent survives the gap.
+    if (this.outboxPending() > 0) void this.syncNow();
+  }
+
+  protected async syncNow(): Promise<void> {
+    await this.flushAndReport();
+  }
+
   private async flushAndReport(): Promise<void> {
     const result = await this.outbox.flush();
     if (result.sent > 0) {
@@ -484,11 +538,21 @@ export class FundDetail {
         detail: `${result.sent} order(s) sent. Watch the trace panel for the sequence.`,
       });
     } else if (result.remaining > 0) {
-      this.orderOutcome.set({
-        ok: false,
-        headline: 'Order still queued',
-        detail: `${result.remaining} order(s) still pending — see the trace panel and onOutboxError for why.`,
-      });
+      this.orderOutcome.set(
+        this.offline()
+          ? {
+              ok: true,
+              headline: 'Queued — offline',
+              detail:
+                `${result.remaining} order(s) held in the durable outbox. They survive a reload; ` +
+                'flip the offline switch back and they send. Nothing was lost.',
+            }
+          : {
+              ok: false,
+              headline: 'Order still queued',
+              detail: `${result.remaining} order(s) still pending — see the trace panel and onOutboxError for why.`,
+            },
+      );
     }
   }
 }

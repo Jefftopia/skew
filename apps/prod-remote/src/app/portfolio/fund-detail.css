@@ -107,3 +107,40 @@
   font-size: 0.74rem;
   color: #46536a;
 }
+
+/* Offline simulation + durable-outbox status row. */
+.offline-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px dashed #c4cede;
+  border-radius: 10px;
+  font-size: 0.8rem;
+}
+
+.offline-bar.off {
+  border-color: #e0a34a;
+  background: #fdf6ea;
+}
+
+.offline-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.pending-badge {
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  background: #e0a34a;
+  color: #3c2a08;
+  font-weight: 600;
+}
+
+.pending-hint {
+  color: #8a6a2f;
+}

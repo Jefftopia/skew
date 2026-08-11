@@ -14,10 +14,17 @@ import { BUILD_IDENTITY } from './app.config';
 import { originIsRolledBack } from './origin';
 import { Lab } from './lab';
 import { ActivityFeed } from './activity-feed';
+import { SkewDevtools } from './skew-devtools';
 
 @Component({
   selector: 'host-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ActivityFeed],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    ActivityFeed,
+    SkewDevtools,
+  ],
   styleUrl: './app.css',
   template: `
     <header>
@@ -75,6 +82,13 @@ import { ActivityFeed } from './activity-feed';
     </div>
 
     <host-activity-feed />
+
+    <!--
+      The devtools drawer. The hook behind it is installed in main.ts, before
+      federation resolves — so it sees every read and write on the page, from
+      this build AND the remote's, because both share one @skew/core instance.
+    -->
+    <host-skew-devtools />
 
     @if (skew.pending(); as pending) {
       <div class="alert">

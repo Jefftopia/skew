@@ -4,6 +4,7 @@ import { LensOp, compileLens } from './lens.js';
 import { chainFingerprint } from './fingerprint.js';
 import { registryStep } from './registry.js';
 import { isSkewDisabled } from './disabled.js';
+import { emitSkewTrace } from './devtools.js';
 
 /**
  * Anything that crosses a version boundary is wrapped with the version it was
@@ -81,6 +82,33 @@ export interface VersionedOptions<T> {
    * forward from there without a backfill.
    */
   readonly assumeLegacyVersion?: number;
+  /**
+   * The version of the schema's base shape (`TBase`). Defaults to 1.
+   *
+   * Raising the base is how a chain is eventually *cleaned up*. Chains are
+   * append-only at the top and trim-only at the bottom: once telemetry
+   * (`migratedFrom`, ideally with the store's `rewriteOnRead` shrinking the
+   * tail) shows a version no longer arrives, re-declare the schema with the
+   * oldest surviving shape as its base and delete the retired steps:
+   *
+   * ```ts
+   * // before: versioned<V1>('draft').next<V2>(…).next<V3>(…).next<V4>(…)
+   * export const Draft = versioned<V3>('draft', { base: 3 }).next<V4>(…);
+   * ```
+   *
+   * Version numbers are never reused or renumbered — v4 is still v4. Reads of
+   * data below the base fail with `reason: 'retired'` (a policy outcome whose
+   * remedy is discard/refetch/reset), never `gap` (a bug) — unless another
+   * bundle or a resolved contract still supplies the missing steps via the
+   * shared registry, in which case the read simply succeeds.
+   *
+   * Bare (un-enveloped) data is still assumed to be `assumeLegacyVersion`
+   * (default 1), so with a raised base it surfaces as `retired` — the safe
+   * default, since pre-adoption records carry the retired v1 shape. Set
+   * `assumeLegacyVersion: base` only when bare data is known to carry the
+   * base shape.
+   */
+  readonly base?: number;
 }
 
 /** Per-call options for {@link VersionedSchema.read}. */
@@ -149,7 +177,7 @@ export interface WriteOptions {
  */
 export interface VersionedSchema<TCurrent> {
   readonly name: string;
-  /** Current version — 1 plus the number of `next()` steps declared. */
+  /** Current version — the base (default 1) plus the number of `next()` steps declared. */
   readonly version: number;
   /** Declared history, oldest first. Useful for tooling and diagnostics. */
   readonly steps: readonly MigrationStep[];
@@ -199,7 +227,10 @@ export interface VersionedSchema<TCurrent> {
     description: string,
     migrate: (previous: TCurrent, ctx: MigrationContext) => TNext,
   ): VersionedSchema<TNext>;
-  next<TNext>(description: string, spec: CodeStepSpec<TCurrent, TNext>): VersionedSchema<TNext>;
+  next<TNext>(
+    description: string,
+    spec: CodeStepSpec<TCurrent, TNext>,
+  ): VersionedSchema<TNext>;
   next<TNext>(description: string, spec: OpsStepSpec): VersionedSchema<TNext>;
 }
 
@@ -260,13 +291,23 @@ function build<TCurrent>(
   steps: readonly MigrationStep[],
   options: VersionedOptions<any>,
 ): VersionedSchema<TCurrent> {
-  const version = steps.length + 1;
+  const base = options.base ?? 1;
+  if (!Number.isInteger(base) || base < 1) {
+    throw new TypeError(
+      `[${name}] base must be a positive integer, got ${base}`,
+    );
+  }
+  const version = base + steps.length;
   const legacyVersion = options.assumeLegacyVersion ?? 1;
   let fingerprint: string | null = null;
 
+  /** Steps below the base were retired; the local chain starts above it. */
+  const localStep = (to: number): MigrationStep | undefined =>
+    to > base ? steps[to - base - 1] : undefined;
+
   /** Local chain first; the shared registry covers what this build lacks. */
   const stepFor = (to: number): MigrationStep | undefined =>
-    steps[to - 2] ?? registryStep(name, to);
+    localStep(to) ?? registryStep(name, to);
 
   const schema: VersionedSchema<TCurrent> = {
     name,
@@ -277,7 +318,10 @@ function build<TCurrent>(
       return (fingerprint ??= chainFingerprint(name, version, steps));
     },
 
-    write(value: TCurrent, buildIdOrOptions?: string | WriteOptions): VersionedEnvelope<TCurrent> {
+    write(
+      value: TCurrent,
+      buildIdOrOptions?: string | WriteOptions,
+    ): VersionedEnvelope<TCurrent> {
       const opts: WriteOptions =
         typeof buildIdOrOptions === 'string' || buildIdOrOptions === undefined
           ? { buildId: buildIdOrOptions }
@@ -287,17 +331,25 @@ function build<TCurrent>(
 
       if (!Number.isInteger(target) || target < 1 || target > version) {
         throw new TypeError(
-          `[${name}] cannot write at v${target}: this build knows v1 through v${version}`,
+          `[${name}] cannot write at v${target}: this build knows v${base} through v${version}`,
+        );
+      }
+      if (target < base) {
+        throw new TypeError(
+          `[${name}] cannot write at v${target}: versions below v${base} are retired — ` +
+            `this build's chain starts at its base, v${base}`,
         );
       }
 
       let payload: unknown = value;
       for (let from = version; from > target; from--) {
-        const step = steps[from - 2];
+        const step = localStep(from);
         if (!step?.down) {
           throw new TypeError(
             `[${name}] cannot write at v${target}: step v${from - 1} → v${from}` +
-              (step ? ` ("${step.description}") declares no down-migration` : ' is missing'),
+              (step
+                ? ` ("${step.description}") declares no down-migration`
+                : ' is missing'),
           );
         }
         payload = step.down(payload, ctx);
@@ -309,124 +361,38 @@ function build<TCurrent>(
         payload,
       };
       if (opts.buildId !== undefined) envelope.b = opts.buildId;
+      emitSkewTrace({
+        kind: 'write',
+        schema: name,
+        from: version,
+        to: target,
+        ok: true,
+        ts: Date.now(),
+      });
       return envelope as VersionedEnvelope<TCurrent>;
     },
 
     read(raw: unknown, readOptions: ReadOptions = {}): SkewResult<TCurrent> {
-      // Not public API — see `disabled.ts`. Reproduces `raw as TCurrent`: no
-      // envelope check, no version comparison, no migration. Data from a newer
-      // build is handed back as though it were current, which is precisely the
-      // failure this function exists to prevent.
-      if (isSkewDisabled()) return ok(raw as TCurrent);
-
-      if (raw === null || raw === undefined) {
-        return err('invalid', 0, version, `[${name}] no data to read`);
-      }
-
-      const ctx = readOptions.context ?? defaultMigrationContext;
-      const enveloped = isEnvelope(raw);
-      const found = enveloped ? raw.v : (readOptions.assumeVersion ?? legacyVersion);
-      let data: unknown = enveloped ? raw.payload : raw;
-
-      if (enveloped && typeof raw.n === 'string' && raw.n !== name) {
-        return err(
-          'invalid',
-          found,
-          version,
-          `[${name}] envelope belongs to contract "${raw.n}", not "${name}" — ` +
-            `reading it through this schema would migrate the wrong data`,
-        );
-      }
-
-      if (!Number.isInteger(found) || found < 1) {
-        return err('invalid', found, version, `[${name}] envelope carries a non-version: ${found}`);
-      }
-
-      const derivedPaths: string[] = [];
-      const lossyPaths: string[] = [];
-
-      if (found > version) {
-        // Data from the future. It can still be read *if* every intervening
-        // step is known — locally or via the shared registry — and declares a
-        // down-migration; the result is an honest, lossy projection. When any
-        // step is missing or one-way, refuse exactly as before: guessing
-        // would discard data silently.
-        const descending: MigrationStep[] = [];
-        for (let to = version + 1; to <= found; to++) {
-          const step = stepFor(to);
-          if (!step?.down) {
-            return err(
-              'ahead',
-              found,
-              version,
-              `[${name}] data was written by a newer build (v${found}) than this one (v${version})` +
-                (step
-                  ? `, and step v${to - 1} → v${to} ("${step.description}") declares no down-migration. `
-                  : `, and no loaded bundle or resolved contract knows the v${to - 1} → v${to} step. `) +
-                `Refetch, resolve the contract, or update the client — guessing would discard data.`,
-            );
-          }
-          descending.push(step);
-        }
-        for (let i = descending.length - 1; i >= 0; i--) {
-          const step = descending[i] as MigrationStep & { down: NonNullable<MigrationStep['down']> };
-          try {
-            data = step.down(data, ctx);
-          } catch (cause) {
-            return err(
-              'threw',
-              found,
-              version,
-              `[${name}] down-migration from v${step.to} ("${step.description}") failed`,
-              cause,
-            );
-          }
-          if (step.lossy) lossyPaths.push(...step.lossy);
-          if (step.downDerives) derivedPaths.push(...step.downDerives);
-        }
-      }
-
-      if (found < version) {
-        for (let target = found + 1; target <= version; target++) {
-          const step = stepFor(target);
-          if (!step) {
-            return err(
-              'gap',
-              found,
-              version,
-              `[${name}] no migration declared for v${target - 1} → v${target}`,
-            );
-          }
-          try {
-            data = step.up(data, ctx);
-          } catch (cause) {
-            return err(
-              'threw',
-              found,
-              version,
-              `[${name}] migration to v${target} ("${step.description}") failed`,
-              cause,
-            );
-          }
-          if (step.derives) derivedPaths.push(...step.derives);
-        }
-      }
-
-      if (options.validate && !options.validate(data)) {
-        return err(
-          'invalid',
-          found,
-          version,
-          `[${name}] value failed validation after migrating v${found} → v${version}`,
-        );
-      }
-
-      return ok(data as TCurrent, {
-        migratedFrom: found < version ? found : null,
-        downgradedFrom: found > version ? found : null,
-        derivedPaths,
-        lossyPaths,
+      const result = readImpl(raw, readOptions);
+      emitSkewTrace({
+        kind: 'read',
+        schema: name,
+        from: isEnvelope(raw)
+          ? raw.v
+          : (readOptions.assumeVersion ?? legacyVersion),
+        to: version,
+        ok: result.ok,
+        ...(result.ok
+          ? {
+              migratedFrom: result.migratedFrom,
+              downgradedFrom: result.downgradedFrom,
+              derivedPaths: result.derivedPaths,
+              lossyPaths: result.lossyPaths,
+            }
+          : { reason: result.reason }),
+        ts: Date.now(),
       });
+      return result;
     },
 
     next<TNext>(
@@ -446,8 +412,16 @@ function build<TCurrent>(
       let step: MigrationStep;
 
       if (typeof migrateOrSpec === 'function') {
-        step = { to: version + 1, description, up: migrateOrSpec as MigrationStep['up'] };
-      } else if (migrateOrSpec !== null && typeof migrateOrSpec === 'object' && 'ops' in migrateOrSpec) {
+        step = {
+          to: version + 1,
+          description,
+          up: migrateOrSpec as MigrationStep['up'],
+        };
+      } else if (
+        migrateOrSpec !== null &&
+        typeof migrateOrSpec === 'object' &&
+        'ops' in migrateOrSpec
+      ) {
         const lens = compileLens(migrateOrSpec.ops);
         step = {
           to: version + 1,
@@ -459,7 +433,11 @@ function build<TCurrent>(
           lossy: lens.lossyDown,
           ops: migrateOrSpec.ops,
         };
-      } else if (migrateOrSpec !== null && typeof migrateOrSpec === 'object' && typeof migrateOrSpec.up === 'function') {
+      } else if (
+        migrateOrSpec !== null &&
+        typeof migrateOrSpec === 'object' &&
+        typeof migrateOrSpec.up === 'function'
+      ) {
         const spec = migrateOrSpec;
         step = {
           to: version + 1,
@@ -471,12 +449,160 @@ function build<TCurrent>(
           lossy: spec.lossy,
         };
       } else {
-        throw new TypeError(`[${name}] next() requires a migration function, a { up, down? } spec, or { ops }`);
+        throw new TypeError(
+          `[${name}] next() requires a migration function, a { up, down? } spec, or { ops }`,
+        );
       }
 
       return build<TNext>(name, [...steps, step], options);
     },
   };
+
+  function readImpl(
+    raw: unknown,
+    readOptions: ReadOptions,
+  ): SkewResult<TCurrent> {
+    // Not public API — see `disabled.ts`. Reproduces `raw as TCurrent`: no
+    // envelope check, no version comparison, no migration. Data from a newer
+    // build is handed back as though it were current, which is precisely the
+    // failure this function exists to prevent.
+    if (isSkewDisabled()) return ok(raw as TCurrent);
+
+    if (raw === null || raw === undefined) {
+      return err('invalid', 0, version, `[${name}] no data to read`);
+    }
+
+    const ctx = readOptions.context ?? defaultMigrationContext;
+    const enveloped = isEnvelope(raw);
+    const found = enveloped
+      ? raw.v
+      : (readOptions.assumeVersion ?? legacyVersion);
+    let data: unknown = enveloped ? raw.payload : raw;
+
+    if (enveloped && typeof raw.n === 'string' && raw.n !== name) {
+      return err(
+        'invalid',
+        found,
+        version,
+        `[${name}] envelope belongs to contract "${raw.n}", not "${name}" — ` +
+          `reading it through this schema would migrate the wrong data`,
+      );
+    }
+
+    if (!Number.isInteger(found) || found < 1) {
+      return err(
+        'invalid',
+        found,
+        version,
+        `[${name}] envelope carries a non-version: ${found}`,
+      );
+    }
+
+    const derivedPaths: string[] = [];
+    const lossyPaths: string[] = [];
+
+    if (found > version) {
+      // Data from the future. It can still be read *if* every intervening
+      // step is known — locally or via the shared registry — and declares a
+      // down-migration; the result is an honest, lossy projection. When any
+      // step is missing or one-way, refuse exactly as before: guessing
+      // would discard data silently.
+      const descending: MigrationStep[] = [];
+      for (let to = version + 1; to <= found; to++) {
+        const step = stepFor(to);
+        if (!step?.down) {
+          return err(
+            'ahead',
+            found,
+            version,
+            `[${name}] data was written by a newer build (v${found}) than this one (v${version})` +
+              (step
+                ? `, and step v${to - 1} → v${to} ("${step.description}") declares no down-migration. `
+                : `, and no loaded bundle or resolved contract knows the v${to - 1} → v${to} step. `) +
+              `Refetch, resolve the contract, or update the client — guessing would discard data.`,
+          );
+        }
+        descending.push(step);
+      }
+      for (let i = descending.length - 1; i >= 0; i--) {
+        const step = descending[i] as MigrationStep & {
+          down: NonNullable<MigrationStep['down']>;
+        };
+        try {
+          data = step.down(data, ctx);
+        } catch (cause) {
+          return err(
+            'threw',
+            found,
+            version,
+            `[${name}] down-migration from v${step.to} ("${step.description}") failed`,
+            cause,
+          );
+        }
+        if (step.lossy) lossyPaths.push(...step.lossy);
+        if (step.downDerives) derivedPaths.push(...step.downDerives);
+      }
+    }
+
+    if (found < version) {
+      for (let target = found + 1; target <= version; target++) {
+        const step = stepFor(target);
+        if (!step) {
+          if (found < base) {
+            // Below the declared floor, and nothing on the page supplies the
+            // missing step. Unlike `gap` this is not a bug: the steps were
+            // deliberately retired (see VersionedOptions.base). Distinct
+            // reason, distinct remedy — discard/refetch/reset, not "report".
+            return {
+              ok: false,
+              reason: 'retired',
+              found,
+              expected: version,
+              floor: base,
+              message:
+                `[${name}] data at v${found} is below this build's retired floor (v${base}), ` +
+                `and no loaded bundle or resolved contract supplies the v${target - 1} → v${target} step. ` +
+                `This is a cleanup-policy outcome, not a bug: discard and refetch, or offer a reset.`,
+            };
+          }
+          return err(
+            'gap',
+            found,
+            version,
+            `[${name}] no migration declared for v${target - 1} → v${target}`,
+          );
+        }
+        try {
+          data = step.up(data, ctx);
+        } catch (cause) {
+          return err(
+            'threw',
+            found,
+            version,
+            `[${name}] migration to v${target} ("${step.description}") failed`,
+            cause,
+          );
+        }
+        if (step.derives) derivedPaths.push(...step.derives);
+      }
+    }
+
+    if (options.validate && !options.validate(data)) {
+      return err(
+        'invalid',
+        found,
+        version,
+        `[${name}] value failed validation after migrating v${found} → v${version}`,
+      );
+    }
+
+    return ok(data as TCurrent, {
+      migratedFrom: found < version ? found : null,
+      downgradedFrom: found > version ? found : null,
+      derivedPaths,
+      lossyPaths,
+    });
+  }
 
   return schema;
 }

@@ -62,6 +62,7 @@ boundaries, branch on the reason (below) instead of collapsing to a default.
 | `gap` | a migration step is missing from the chain | report a bug (the chain was edited or a step lost) |
 | `invalid` | not an envelope / malformed | discard and refetch |
 | `threw` | a migration function threw | report a bug |
+| `retired` | below the schema's declared `base` floor (`result.floor`) — steps were deliberately deleted after cleanup | discard and refetch, or offer a reset — a policy outcome, NOT a bug |
 
 `ahead` is the reason this library exists. Collapsing it into `null` makes
 every caller guess, and the guess is almost always "discard" — destroying data
@@ -76,6 +77,24 @@ No backfill. Data without an envelope is treated as **v1**, so declare the
 ```ts
 export const Parish = versioned<CurrentShape>('parish');  // v1 adopts everything
 ```
+
+## Retiring old versions (cleanup)
+
+Chains are append-only at the top, trim-only at the bottom, and never
+renumbered. To delete old `.next()` steps:
+
+1. Watch `result.migratedFrom` telemetry until the old versions stop
+   arriving; enable `rewriteOnRead: true` on stores to accelerate this
+   (read-repair re-persists migrated records at the current version).
+2. Re-declare with the oldest surviving shape as the base and drop the
+   retired steps: `versioned<V3>('draft', { base: 3 }).next<V4>(…)`.
+
+Reads below the floor return `reason: 'retired'` with `floor` set — handle
+as discard/refetch/reset, never as a bug. Bare data still adopts as v1, so
+it reads as `retired` after a trim unless `assumeLegacyVersion: base` is set.
+`write({ as })` below the floor throws. Registry/contract-supplied steps can
+still cure a below-floor read. Retire conservatively for non-refetchable data
+(drafts, outboxes — drain queues first), aggressively for caches.
 
 ## The schema registry
 

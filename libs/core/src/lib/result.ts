@@ -12,6 +12,12 @@
  * - `invalid` — the payload does not match the shape its version claims, or the
  *               envelope belongs to a different contract entirely.
  * - `threw`   — a migration function itself failed.
+ * - `retired` — the data is older than the schema's declared base version
+ *               (see `VersionedOptions.base`) and no loaded bundle or resolved
+ *               contract supplies the missing steps. Unlike `gap`, this is a
+ *               *policy* outcome, not a bug: the steps were deliberately
+ *               deleted after telemetry showed the version idle. Remedy:
+ *               discard and refetch, or offer the user a reset.
  *
  * Collapsing these into `null` (or a thrown `Error`) forces every caller to
  * guess, and the guess is usually "discard it" — which is data loss for the
@@ -19,7 +25,12 @@
  */
 
 /** Discriminated failure reasons for a versioned read. */
-export type SkewFailureReason = 'ahead' | 'gap' | 'invalid' | 'threw';
+export type SkewFailureReason =
+  | 'ahead'
+  | 'gap'
+  | 'invalid'
+  | 'threw'
+  | 'retired';
 
 export interface SkewOk<T> {
   readonly ok: true;
@@ -59,6 +70,11 @@ export interface SkewErr {
   readonly found: number;
   /** Version the reader expected. */
   readonly expected: number;
+  /**
+   * The schema's base version — set only on `retired` failures, so telemetry
+   * can report how far below the floor the data was.
+   */
+  readonly floor?: number;
   readonly message: string;
   readonly cause?: unknown;
 }
@@ -75,8 +91,12 @@ export interface SkewOkMeta {
 
 const NO_PATHS: readonly string[] = Object.freeze([]);
 
-export function ok<T>(value: T, meta: SkewOkMeta | number | null = null): SkewOk<T> {
-  const normalized: SkewOkMeta = typeof meta === 'number' || meta === null ? { migratedFrom: meta } : meta;
+export function ok<T>(
+  value: T,
+  meta: SkewOkMeta | number | null = null,
+): SkewOk<T> {
+  const normalized: SkewOkMeta =
+    typeof meta === 'number' || meta === null ? { migratedFrom: meta } : meta;
   return {
     ok: true,
     value,
@@ -126,7 +146,10 @@ export function valueOr<T>(r: SkewResult<T>, fallback: T): T {
 /**
  * Maps the success value, preserving all migration metadata.
  */
-export function mapResult<T, U>(r: SkewResult<T>, fn: (value: T) => U): SkewResult<U> {
+export function mapResult<T, U>(
+  r: SkewResult<T>,
+  fn: (value: T) => U,
+): SkewResult<U> {
   return r.ok
     ? ok(fn(r.value), {
         migratedFrom: r.migratedFrom,

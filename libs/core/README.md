@@ -90,6 +90,7 @@ if (!result.ok) {
     case 'gap':     return reportBug(result);    // missing migration step
     case 'invalid': return discardAndRefetch();
     case 'threw':   return reportBug(result);    // a migration failed
+    case 'retired': return discardAndRefetch();  // below the declared floor — policy, not a bug
   }
 }
 ```
@@ -120,6 +121,7 @@ const drafts = createVersionedStore(WeeklyContent, {
   driver: webStorageDriver('local'),
   buildId: BUILD_ID,
   onReadFailure: (key, failure) => telemetry.warn('stale draft', { key, ...failure }),
+  rewriteOnRead: true,   // read-repair: persist migrated records at the current version
 });
 
 await drafts.set('2026-12-06', content);
@@ -138,6 +140,38 @@ You do not need a backfill. Data with no envelope is treated as **v1**, so decla
 ```ts
 export const Parish = versioned<CurrentShape>('parish');   // v1, adopts everything
 ```
+
+### Retiring old versions (cleanup)
+
+Chains are **append-only at the top and trim-only at the bottom**. A step
+`n → n+1` is deletable only when no data enveloped at ≤ n can still reach a
+reader — so cleanup is a sequence, not an edit:
+
+1. **Instrument**: watch `result.migratedFrom` in telemetry. You can only
+   delete steps you can prove are idle.
+2. **Shrink the tail**: enable `rewriteOnRead` on stores (below), so each old
+   record pays its migration once, is re-persisted at the current version,
+   and drops out of the telemetry.
+3. **Trim**: re-declare the schema with the oldest surviving shape as its
+   base and delete the retired steps. Never renumber — v4 stays v4.
+
+```ts
+// before: versioned<V1>('draft').next<V2>(…).next<V3>(…).next<V4>(…)
+export const Draft = versioned<V3>('draft', { base: 3 }).next<V4>(…);
+```
+
+Reads below the floor fail with `reason: 'retired'` (plus `floor`) — a
+*policy* outcome whose remedy is discard/refetch/reset — never `gap`, which
+still means "a step is missing and that's a bug". If another bundle on the
+page or a resolved contract still supplies the retired steps via the shared
+registry, the read simply succeeds. Bare (un-enveloped) data is still assumed
+to be v1, so after a trim it surfaces as `retired`; set
+`assumeLegacyVersion: base` only if bare data is known to carry the base
+shape. `write({ as })` below the floor throws.
+
+Retire conservatively for data you cannot refetch (drafts, queued outboxes —
+drain queues first and give users a "too old to open" path), aggressively for
+refetchable caches. Steps are cheap; delete with evidence, not tidiness.
 
 ---
 
@@ -186,8 +220,9 @@ Emit it at build time and serve it uncached:
 
 | Export | Purpose |
 |---|---|
-| `versioned<T>(name, options?)` | Begin a schema declaration |
+| `versioned<T>(name, options?)` | Begin a schema declaration (`base` retires older versions) |
 | `VersionedSchema.next<TNext>(desc?, fn)` | Add a version |
+| `emitSkewTrace` / `SKEW_DEVTOOLS_HOOK` | Devtools trace hook — reads/writes emit events when a hook is installed |
 | `.read(raw)` / `.write(value, buildId?)` | Migrate in / envelope out |
 | `isEnvelope(v)` / `peekVersion(v)` | Inspect without migrating |
 | `createVersionedStore(schema, opts)` | Persistence with migration |

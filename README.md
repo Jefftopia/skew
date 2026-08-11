@@ -230,6 +230,7 @@ if (!result.ok) {
     case 'gap':     return reportBug();  // a migration step is missing
     case 'invalid': return discard();    // not this schema's data at all
     case 'threw':   return reportBug();  // a migration failed partway
+    case 'retired': return refetch();    // below the schema's cleanup floor — policy, not a bug
   }
 }
 ```
@@ -269,6 +270,26 @@ implement `StorageDriver` for IndexedDB or native storage. The web-storage
 driver degrades to memory under Safari private mode, disabled cookies, and
 SSR, and swallows quota errors on write — a failing cache should never break
 a save the user asked for.
+
+### Retiring old versions
+
+Chains do not grow forever: they are append-only at the top and **trim-only
+at the bottom**. Once telemetry (`result.migratedFrom`) shows a version no
+longer arrives — accelerated by `rewriteOnRead: true` on stores, which
+re-persists migrated records at the current version so old ones drop out of
+circulation — re-declare the schema with the oldest surviving shape as its
+base and delete the retired steps:
+
+```ts
+// before: versioned<V1>('draft').next<V2>(…).next<V3>(…).next<V4>(…)
+export const Draft = versioned<V3>('draft', { base: 3 }).next<V4>(…);
+```
+
+Reads below the floor fail with `reason: 'retired'` — a policy outcome
+(discard/refetch/reset), deliberately distinct from `gap`, which still means
+"a step is missing and that's a bug". Retire aggressively for refetchable
+caches, conservatively for user work you can't refetch (drain outboxes
+first). Details in the [core README](libs/core/README.md).
 
 ### Runtime validation
 

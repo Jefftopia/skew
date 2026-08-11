@@ -72,10 +72,38 @@ inert (`setSkewDisabled()`, deliberately undocumented, only for this
 comparison) so every scenario can be re-run to watch the unprotected code
 fail on its own merits.
 
+### The devtools drawer
+
+Below the activity feed sits **Skew devtools — live schema activity**: one
+row per `read()`/`write()` on the page, from *both* builds, because the host
+installs the `@skew/core` trace hook (`__SKEW_DEVTOOLS_HOOK__`, in
+`main.ts`, before federation resolves) and the two builds share one core
+instance. Run any scenario with it open: a v1→v2 migration shows as ↑ with
+its derived paths, a registry- or contract-cured read as ↓ with its lossy
+paths, and a refusal as the reason (`ahead`, `retired`, …) application code
+received. Events carry versions and outcomes only — payloads are never
+captured. The "only eventful" filter (default on) hides the once-a-second
+ticker reads that would otherwise bury the interesting rows.
+
+### The API boundary: contracts, orders, and offline
+
+**The `.well-known` contract cure** lives on the Portfolio tab: the card
+"Data from the future — cured by the contract" reads `/api/v2/funds` through
+a v1 schema (refused, `ahead`), then again through `readResolving`, which
+fetches `/.well-known/skew/contracts/portfolio-fund` from the API and
+projects the response down to v1 with every dropped path named. Watch the
+devtools drawer while pressing it — `ahead`, then `↓ downgraded from v2`.
+
 **Submitting an order** on a fund detail exercises the client↔API boundary:
 the order goes through the `@skew/angular-data` outbox, and `/api/v2/orders`
 refuses v1-shaped orders with `409 version-skew`; a "queue as v1" button lets
 you watch the outbox runner catch the 409, migrate the payload, and retry.
+
+**Offline use**: the order form's "Simulate offline" toggle makes the POST
+fail exactly as a dead network does. Submitted orders queue in the durable
+outbox (`persistOutbox` — reload the page, they're still there, with a
+"waiting to sync" badge), and flipping the toggle back flushes the queue
+automatically. Nothing is lost in between; that is the outbox's promise.
 
 ### Resetting between runs
 

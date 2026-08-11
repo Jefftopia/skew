@@ -8,6 +8,7 @@ export * from './lib/fingerprint.js';
 export * from './lib/http.js';
 export * from './lib/identity.js';
 export * from './lib/storage.js';
+export * from './lib/devtools.js';
 
 // Not public API. Undocumented on purpose — read the module comment first.
 export * from './lib/disabled.js';

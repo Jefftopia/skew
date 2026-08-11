@@ -32,7 +32,22 @@ export interface VersionedStoreOptions {
    * returned result — but wiring this to telemetry is how you discover that a
    * migration is wrong before users report it.
    */
-  readonly onReadFailure?: (key: string, failure: Extract<SkewResult<never>, { ok: false }>) => void;
+  readonly onReadFailure?: (
+    key: string,
+    failure: Extract<SkewResult<never>, { ok: false }>,
+  ) => void;
+  /**
+   * Write records back at the current version after a successful *migrated*
+   * read ("read-repair"). Each old record then pays its migration once
+   * instead of on every read — and stops appearing in `migratedFrom`
+   * telemetry, which is what makes eventually retiring its steps (see
+   * `VersionedOptions.base`) provable rather than hopeful.
+   *
+   * Downgraded reads (`downgradedFrom` set) are never written back:
+   * persisting the lossy projection would overwrite the newer record a
+   * newer build still needs.
+   */
+  readonly rewriteOnRead?: boolean;
 }
 
 export interface VersionedStore<T> {
@@ -56,21 +71,55 @@ export function createVersionedStore<T>(
   schema: VersionedSchema<T>,
   options: VersionedStoreOptions,
 ): VersionedStore<T> {
-  const { driver, keyPrefix = schema.name, buildId, onReadFailure } = options;
+  const {
+    driver,
+    keyPrefix = schema.name,
+    buildId,
+    onReadFailure,
+    rewriteOnRead = false,
+  } = options;
   const keyFor = (key: string) => `${keyPrefix}:${key}`;
 
   function parse(key: string, raw: string | null): SkewResult<T> {
     if (raw === null) {
-      return err('invalid', 0, schema.version, `[${schema.name}] nothing stored at "${key}"`);
+      return err(
+        'invalid',
+        0,
+        schema.version,
+        `[${schema.name}] nothing stored at "${key}"`,
+      );
     }
     let decoded: unknown;
     try {
       decoded = JSON.parse(raw);
     } catch (cause) {
-      return err('invalid', 0, schema.version, `[${schema.name}] stored value is not JSON`, cause);
+      return err(
+        'invalid',
+        0,
+        schema.version,
+        `[${schema.name}] stored value is not JSON`,
+        cause,
+      );
     }
     const result = schema.read(decoded);
     if (!result.ok) onReadFailure?.(key, result);
+    else if (
+      rewriteOnRead &&
+      result.migratedFrom !== null &&
+      !isSkewDisabled()
+    ) {
+      // Read-repair: persist the migrated record at the current version.
+      // Only for *upward* migrations — a downgraded read is a lossy
+      // projection of a newer record, and writing it back would destroy data.
+      try {
+        void driver.set(
+          keyFor(key),
+          JSON.stringify(schema.write(result.value, buildId)),
+        );
+      } catch {
+        // A failing repair is a cache-write failure; the read still succeeded.
+      }
+    }
     return result;
   }
 
@@ -124,7 +173,9 @@ export function memoryDriver(seed?: Map<string, string>): StorageDriver {
  */
 export function webStorageDriver(
   kind: 'local' | 'session' = 'local',
-  win: { localStorage?: Storage; sessionStorage?: Storage } | undefined = globalThis as never,
+  win:
+    | { localStorage?: Storage; sessionStorage?: Storage }
+    | undefined = globalThis as never,
 ): StorageDriver {
   const store = kind === 'local' ? win?.localStorage : win?.sessionStorage;
   if (!store || !isUsable(store)) return memoryDriver();
@@ -168,7 +219,9 @@ export interface IndexedDbDriverOptions {
  * IndexedDB driver for async, large-capacity storage.
  * Degrades gracefully on failure (e.g. if IndexedDB is blocked).
  */
-export function indexedDbDriver(options: IndexedDbDriverOptions = {}): StorageDriver {
+export function indexedDbDriver(
+  options: IndexedDbDriverOptions = {},
+): StorageDriver {
   const { dbName = 'skew-store', storeName = 'keyval' } = options;
   let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -237,8 +290,9 @@ export function indexedDbDriver(options: IndexedDbDriverOptions = {}): StorageDr
     },
     keys: async () => {
       try {
-        return await run<string[]>('readonly', (store) =>
-          store.getAllKeys() as IDBRequest<string[]>,
+        return await run<string[]>(
+          'readonly',
+          (store) => store.getAllKeys() as IDBRequest<string[]>,
         );
       } catch {
         return [];

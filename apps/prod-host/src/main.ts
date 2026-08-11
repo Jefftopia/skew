@@ -1,4 +1,9 @@
 import { initFederation } from '@angular-architects/native-federation';
+import { installSkewDevtoolsHook } from './skew-devtools-hook';
+
+// Before anything else: the devtools hook must exist before the first
+// schema read anywhere on the page, or early events are simply not seen.
+installSkewDevtoolsHook();
 
 /**
  * Federation is initialised *before* Angular boots.
