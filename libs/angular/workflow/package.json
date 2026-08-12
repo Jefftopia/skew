@@ -7,5 +7,17 @@
     "@skewkit/core": "^0.0.1"
   },
   "sideEffects": false,
-  "description": "Durable multi-step workflows for Angular: router-integrated, resumable, and versioned drafts."
+  "description": "Durable multi-step workflows for Angular: router-integrated, resumable, and versioned drafts.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jefftopia/skew.git",
+    "directory": "libs/angular/workflow"
+  },
+  "homepage": "https://github.com/Jefftopia/skew#readme",
+  "bugs": {
+    "url": "https://github.com/Jefftopia/skew/issues"
+  }
 }

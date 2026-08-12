@@ -6,5 +6,17 @@
     "@skewkit/core": "^0.0.1"
   },
   "sideEffects": false,
-  "description": "Angular DI and signal wrappers for @skewkit/core versioned stores."
+  "description": "Angular DI and signal wrappers for @skewkit/core versioned stores.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jefftopia/skew.git",
+    "directory": "libs/angular/core"
+  },
+  "homepage": "https://github.com/Jefftopia/skew#readme",
+  "bugs": {
+    "url": "https://github.com/Jefftopia/skew/issues"
+  }
 }

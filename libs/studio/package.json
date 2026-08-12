@@ -2,14 +2,34 @@
   "name": "@skewkit/studio",
   "version": "0.0.1",
   "description": "Inspection tooling for version skew: structural payload diffs that speak the migration's own vocabulary.",
-  "keywords": ["version-skew", "migration", "devtools", "diff"],
+  "keywords": [
+    "version-skew",
+    "migration",
+    "devtools",
+    "diff"
+  ],
   "license": "MIT",
   "sideEffects": false,
   "type": "module",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
   "exports": {
-    ".": { "types": "./src/index.d.ts", "default": "./src/index.js" },
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jefftopia/skew.git",
+    "directory": "libs/studio"
+  },
+  "homepage": "https://github.com/Jefftopia/skew#readme",
+  "bugs": {
+    "url": "https://github.com/Jefftopia/skew/issues"
   }
 }

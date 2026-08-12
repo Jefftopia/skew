@@ -8,5 +8,17 @@
     "@skewkit/core": "^0.0.1"
   },
   "sideEffects": false,
-  "description": "Recovers from stale lazy-chunk failures after a deploy, with classification that avoids reload loops."
+  "description": "Recovers from stale lazy-chunk failures after a deploy, with classification that avoids reload loops.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jefftopia/skew.git",
+    "directory": "libs/angular/router"
+  },
+  "homepage": "https://github.com/Jefftopia/skew#readme",
+  "bugs": {
+    "url": "https://github.com/Jefftopia/skew/issues"
+  }
 }
