@@ -5,7 +5,7 @@
  *
  * A contract document changes only when the API ships a new schema version,
  * so it is served with a strong ETag derived from the document itself plus a
- * short max-age with stale-while-revalidate. Clients (the @skew/contract
+ * short max-age with stale-while-revalidate. Clients (the @skewkit/contract
  * resolver) revalidate cheaply with If-None-Match and get a 304 when nothing
  * has changed.
  */

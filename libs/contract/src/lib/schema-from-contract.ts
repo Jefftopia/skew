@@ -5,7 +5,7 @@ import {
   compileLens,
   registerSteps,
   versionedFromSteps,
-} from '@skew/core';
+} from '@skewkit/core';
 import { SkewContractDocument, SkewContractStep } from './document.js';
 
 /**

@@ -1,4 +1,4 @@
-# @skew/contract — data-driven contract documents
+# @skewkit/contract — data-driven contract documents
 
 The `ahead` failure — data written by a newer build than the reader — is the
 one failure a code-shipped migration chain can never fix: the reader was built
@@ -53,7 +53,7 @@ import {
   versionedFromContract,
   createContractResolver,
   wellKnownContractUrl,
-} from '@skew/contract';
+} from '@skewkit/contract';
 
 // Drop-in replacement for a hand-maintained versioned().next() chain:
 const FundSchema = versionedFromContract<FundV2>(fundContract);
@@ -78,11 +78,11 @@ Type parameters (`FundV1`, `FundV2`) come from generated frozen types — see
 
 ## Serving (any Node server)
 
-`@skew/contract` is framework-free; serving is a tiny controller. Use the
+`@skewkit/contract` is framework-free; serving is a tiny controller. Use the
 contract fingerprint as the ETag so unchanged contracts cost a 304:
 
 ```ts
-import { contractFingerprint } from '@skew/contract';
+import { contractFingerprint } from '@skewkit/contract';
 
 // NestJS shown; the same logic is a few lines of Express.
 @Controller('.well-known/skew/contracts')
@@ -104,7 +104,7 @@ export class ContractsController {
 ```
 
 Responses that carry versioned bodies should also send the `skew-contract`
-header (`formatSkewContractHeader` from `@skew/core`) pointing at the
+header (`formatSkewContractHeader` from `@skewkit/core`) pointing at the
 contract, so clients discover the URL without hardcoding it.
 
 ## Codegen — frozen types from the document

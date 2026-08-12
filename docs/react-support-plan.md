@@ -1,11 +1,11 @@
 # First-class React support — implementation plan
 
-**Scope:** `@skew/react-core`, `@skew/react-data`, `@skew/react-router`, plus an
-`apps/react-demo`. Workflow (`@skew/react-workflow`) is deliberately **out of scope**
+**Scope:** `@skewkit/react-core`, `@skewkit/react-data`, `@skewkit/react-router`, plus an
+`apps/react-demo`. Workflow (`@skewkit/react-workflow`) is deliberately **out of scope**
 for this pass, per plan.md §6's deferral order.
 
-**Target parity:** everything `@skew/angular-core`, `@skew/angular-data`, and
-`@skew/angular-router` do today — versioned store DI + reactive reads, normalized
+**Target parity:** everything `@skewkit/angular-core`, `@skewkit/angular-data`, and
+`@skewkit/angular-router` do today — versioned store DI + reactive reads, normalized
 entity store + tags + durable outbox, and chunk-load classification/recovery — with
 React-native shapes rather than a mechanical port.
 
@@ -30,7 +30,7 @@ That is roughly **900 lines of subtle, well-tested behaviour** whose Angular-nes
 almost entirely `signal()` and `inject()`. Two ways forward:
 
 **A. Extract a framework-neutral engine, then bind twice. ← recommended**
-Move the pure machinery into the existing `@skew/core` under a new `client/` folder
+Move the pure machinery into the existing `@skewkit/core` under a new `client/` folder
 (no new package to publish, no new peer graph). Angular and React each become a thin
 binding layer. Rollback semantics, drain ordering, and wildcard matching then have
 *one* implementation and one test suite.
@@ -54,7 +54,7 @@ delegates.
 ```
 libs/
   core/src/lib/
-    client/                     ← NEW: framework-neutral, still shipped as @skew/core
+    client/                     ← NEW: framework-neutral, still shipped as @skewkit/core
       cell.ts                   ReactiveCell — the 15-line reactivity seam
       entity-store.ts           createEntityStore()
       cache-registry.ts         createCacheRegistry()   (moved, unchanged logic)
@@ -65,14 +65,14 @@ libs/
       recovery-engine.ts        classify() + chooseAction() as pure functions
   angular/{core,data,router}    ← unchanged public API, now thin bindings
   react/
-    core/                       @skew/react-core
-    data/                       @skew/react-data
-    router/                     @skew/react-router
+    core/                       @skewkit/react-core
+    data/                       @skewkit/react-data
+    router/                     @skewkit/react-router
 apps/
   react-demo/                   React 19 + compiler, same scenarios as the shell demo
 ```
 
-`@skew/react-*` depends on `@skew/core` and **never on a sibling** — the same adoption
+`@skewkit/react-*` depends on `@skewkit/core` and **never on a sibling** — the same adoption
 rule stated in `libs/angular/README.md` and `technical-appendix.md`.
 
 ### The reactivity seam
@@ -109,8 +109,8 @@ so RSC/SSR renders don't throw.
   `@nx/react`, `@vitejs/plugin-react`, `@testing-library/react`,
   `@testing-library/dom`, `babel-plugin-react-compiler`, `eslint-plugin-react-hooks@^6`
   (v6 ships the compiler-correctness rules as lint).
-- `tsconfig.base.json`: add three `paths` entries (`@skew/react-core`,
-  `@skew/react-data`, `@skew/react-router`). Note `jsx` is currently unset at the base —
+- `tsconfig.base.json`: add three `paths` entries (`@skewkit/react-core`,
+  `@skewkit/react-data`, `@skewkit/react-router`). Note `jsx` is currently unset at the base —
   set `"jsx": "react-jsx"` in each React lib's `tsconfig.lib.json`, not globally, so the
   Angular builds are untouched.
 - `package.json` scripts: the `lint:libs` / `test:libs` / `build:libs` targets enumerate
@@ -123,13 +123,13 @@ so RSC/SSR renders don't throw.
   trap as one already hit once.
 - Test executor: `nx:run-commands` running `vitest` with `environment: 'jsdom'`
   (`jsdom` is already a devDependency) — mirroring `libs/core/vite.config.ts`.
-- Each lib gets `package.json` with `peerDependencies: { react: "^19.0.0", "@skew/core": "^0.0.1" }`,
+- Each lib gets `package.json` with `peerDependencies: { react: "^19.0.0", "@skewkit/core": "^0.0.1" }`,
   `sideEffects: false`, and the `release`/`nx-release-publish` blocks copied from
   `libs/core/project.json`.
 
 **Done when:** three empty libs build, lint, and test green; `npm run verify` passes.
 
-### Step 2 — Extract the engine into `@skew/core/client`
+### Step 2 — Extract the engine into `@skewkit/core/client`
 
 Pure mechanical moves, one commit per module, Angular tests green after each:
 
@@ -162,9 +162,9 @@ a shared home in core.
 any Angular spec assertion. Any spec that *has* to change is a signal the extraction
 altered behaviour — treat it as a bug, not as an expected edit.
 
-### Step 3 — `@skew/react-core`
+### Step 3 — `@skewkit/react-core`
 
-Mirrors `@skew/angular-core`: config via context, state via module-level stores.
+Mirrors `@skewkit/angular-core`: config via context, state via module-level stores.
 
 ```tsx
 // Configuration only — stable, rarely changes. Never hot values.
@@ -194,7 +194,7 @@ Design notes:
 - `createSkewStore` returns a `VersionedStore<T>` **plus** a cell, so multiple
   components reading key `'me'` observe one another's writes. The Angular version gets
   this free via a root-provided token; React gets it via module scope. This is the
-  concrete reason `@skew/react-core` cannot just re-export `createVersionedStore`.
+  concrete reason `@skewkit/react-core` cannot just re-export `createVersionedStore`.
 - The synchronous `peek()` initialisation is preserved: `useSkewStore` seeds from
   `store.peek(key)` inside `getSnapshot`, so sync drivers render with data on the first
   paint — no flash of empty state, and no `useEffect`-then-setState waterfall.
@@ -205,7 +205,7 @@ Design notes:
 surfacing as `error` rather than `null`, two components sharing one key, no re-render
 storm under `StrictMode` double-invoke.
 
-### Step 4 — `@skew/react-data`
+### Step 4 — `@skewkit/react-data`
 
 ```tsx
 provideSkewData is replaced by props on the provider:
@@ -269,7 +269,7 @@ the React bindings — precise rollback, out-of-order response guard, sequential
 `ahead` queue left untouched, wildcard tag matching, plus render-count assertions
 (mutating bulletin #42 must not re-render a component reading only #7).
 
-### Step 5 — `@skew/react-router`
+### Step 5 — `@skewkit/react-router`
 
 The hard part, and where a port would be wrong. Angular's recovery hangs off
 `NavigationError` from a single injectable `Router`. React has no such event, and per
@@ -342,7 +342,7 @@ offline outbox with a pending-count badge, and a migration of a persisted draft.
 - `libs/react/README.md` mirroring `libs/angular/README.md` (adoption rule, standards).
 - A README per package, matching the existing voice: lead with the failure, then the
   API, then "known gaps".
-- Update `libs/core/README.md`'s "Related packages" — `@skew/react-*` is currently
+- Update `libs/core/README.md`'s "Related packages" — `@skewkit/react-*` is currently
   listed as forthcoming.
 - Update `docs/architecture.md` §1 diagram with a React Integration subgraph and the
   new shared-engine layer.
@@ -356,9 +356,9 @@ offline outbox with a pending-count badge, and a migration of a persisted draft.
 |---|---|---|
 | 1. Workspace plumbing | — | S |
 | 2. Engine extraction | 1 | **L** — the risk sits here |
-| 3. `@skew/react-core` | 2 | M |
-| 4. `@skew/react-data` | 2, 3 | **L** |
-| 5. `@skew/react-router` | 2, 3 | M–L (adapters add breadth) |
+| 3. `@skewkit/react-core` | 2 | M |
+| 4. `@skewkit/react-data` | 2, 3 | **L** |
+| 5. `@skewkit/react-router` | 2, 3 | M–L (adapters add breadth) |
 | 6. `apps/react-demo` | 3–5 | M |
 | 7. Docs | 3–6 | S–M |
 
@@ -378,15 +378,15 @@ Steps 4 and 5 are independent of each other and can run in parallel once 3 lands
   not inherit `experimentalDecorators`/`emitDecoratorMetadata`. Set them off explicitly.
 - **Router adapters are an open surface.** Ship React Router + TanStack + a
   no-router default; resist adding more until asked.
-- **RSC.** Every hook file gets `'use client'`. `@skew/core` itself stays server-safe and
+- **RSC.** Every hook file gets `'use client'`. `@skewkit/core` itself stays server-safe and
   must not gain a React import — that boundary is worth a lint rule.
 
 ---
 
 ## 5. Explicitly out of scope
 
-- `@skew/react-workflow` — deferred by request; the engine extraction in Step 2 does not
+- `@skewkit/react-workflow` — deferred by request; the engine extraction in Step 2 does not
   touch `libs/angular/workflow`, so it can be picked up later without rework.
-- `@skew/node` / `@skew/nest` — unchanged from plan.md's deferral.
+- `@skewkit/node` / `@skewkit/nest` — unchanged from plan.md's deferral.
 - Server-driven invalidation (`{ invalidate: string[] }` over SSE) — still a known gap
   on the Angular side; adding it to React first would fork the wire contract.

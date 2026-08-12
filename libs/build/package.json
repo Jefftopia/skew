@@ -1,5 +1,5 @@
 {
-  "name": "@skew/build",
+  "name": "@skewkit/build",
   "version": "0.0.1",
   "description": "Stamps build identity and emits the skew manifest so clients and servers can discover that they disagree.",
   "license": "MIT",

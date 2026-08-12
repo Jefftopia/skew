@@ -1,37 +1,37 @@
-# `@skew/angular` Integrations
+# `@skewkit/angular` Integrations
 
 The Angular packages in the Skew workspace provide first-class bindings for managing version skew risk within the Angular ecosystem. 
 
-These packages bridge the gap between `@skew/core`'s framework-agnostic primitives (envelopes, migrations, results) and Angular's reactivity and dependency injection systems.
+These packages bridge the gap between `@skewkit/core`'s framework-agnostic primitives (envelopes, migrations, results) and Angular's reactivity and dependency injection systems.
 
 ## Packages
 
-The Angular integration is broken down into four independent packages. **Adoption rule:** Every package depends on `@skew/core` but never on a sibling. You can adopt one, all, or none.
+The Angular integration is broken down into four independent packages. **Adoption rule:** Every package depends on `@skewkit/core` but never on a sibling. You can adopt one, all, or none.
 
-### 1. [`@skew/angular-core`](core/README.md)
-Provides the baseline dependency injection (`provideSkewStore`, `injectSkewStore`) and reactive Signal wrappers (`injectSkewSignal`) to easily integrate `@skew/core` stores into Angular.
+### 1. [`@skewkit/angular-core`](core/README.md)
+Provides the baseline dependency injection (`provideSkewStore`, `injectSkewStore`) and reactive Signal wrappers (`injectSkewSignal`) to easily integrate `@skewkit/core` stores into Angular.
 
-### 2. [`@skew/angular-router`](router/README.md)
+### 2. [`@skewkit/angular-router`](router/README.md)
 Provides chunk recovery for lazy-loaded routes. When a chunk fails to load due to a stale origin, offline device, or deleted route, this library correctly classifies the failure and recovers without bricking the user's tab. 
 
-### 2. [`@skew/angular-data`](data/README.md)
+### 2. [`@skewkit/angular-data`](data/README.md)
 A normalized entity store with a durable mutation outbox. It solves the problem of `resource()` acting as a per-call cache lacking shared identity, and provides optimistic updates, rollbacks, and tag-based invalidation for versioned data.
 
-### 3. [`@skew/angular-workflow`](workflow/README.md)
-Durable multi-step flows that survive page refreshes, deployments, and device swaps. It pairs `@skew/core` migrations with Angular routing to ensure users can safely resume multi-step wizards across boundaries.
+### 3. [`@skewkit/angular-workflow`](workflow/README.md)
+Durable multi-step flows that survive page refreshes, deployments, and device swaps. It pairs `@skewkit/core` migrations with Angular routing to ensure users can safely resume multi-step wizards across boundaries.
 
 ---
 
-## Using `@skew/core` in Angular
+## Using `@skewkit/core` in Angular
 
-The `@skew/angular-core` package provides the standard way to integrate `@skew/core` into an Angular app.
+The `@skewkit/angular-core` package provides the standard way to integrate `@skewkit/core` into an Angular app.
 
 ### Dependency Injection & Tokens
 Instead of instantiating `VersionedStore` instances inline, leverage Angular's Dependency Injection. Define an injection token and provide it at the application or route level:
 
 ```ts
-import { createSkewStoreToken, provideSkewStore, injectSkewStore } from '@skew/angular-core';
-import { webStorageDriver } from '@skew/core';
+import { createSkewStoreToken, provideSkewStore, injectSkewStore } from '@skewkit/angular-core';
+import { webStorageDriver } from '@skewkit/core';
 
 export const USER_STORE = createSkewStoreToken<UserProfile>('USER_STORE');
 
@@ -44,10 +44,10 @@ const store = injectSkewStore(USER_STORE);
 ```
 
 ### Reactivity with Signals
-`@skew/core` methods like `store.get()` return `Promise<SkewResult<T>>`, which works beautifully with modern Angular's async patterns. However, to avoid flashes of empty state during microtasks on synchronous drivers (like `localStorage`), use `injectSkewSignal()`:
+`@skewkit/core` methods like `store.get()` return `Promise<SkewResult<T>>`, which works beautifully with modern Angular's async patterns. However, to avoid flashes of empty state during microtasks on synchronous drivers (like `localStorage`), use `injectSkewSignal()`:
 
 ```ts
-import { injectSkewSignal } from '@skew/angular-core';
+import { injectSkewSignal } from '@skewkit/angular-core';
 
 export class ProfileService {
   // Returns { data, error, loading, set, reload }

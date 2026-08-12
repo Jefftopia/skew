@@ -1,8 +1,8 @@
 import { loadRemoteModule } from '@angular-architects/native-federation';
-import { lazy } from '@skew/angular-router';
+import { lazy } from '@skewkit/angular-router';
 
 /**
- * The federation boundary, wrapped so `@skew/angular-router` can see it.
+ * The federation boundary, wrapped so `@skewkit/angular-router` can see it.
  *
  * Native Federation resolves `remoteEntry.json` once, at page load, and caches
  * the hashed file names it contains for the lifetime of the tab. When the

@@ -1,5 +1,5 @@
 import { Route } from '@angular/router';
-import { lazy } from '@skew/angular-router';
+import { lazy } from '@skewkit/angular-router';
 import { fakeChunkError, shouldFailNextChunk } from './simulator';
 
 export const appRoutes: Route[] = [

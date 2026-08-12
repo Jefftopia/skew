@@ -5,7 +5,7 @@ import {
   type StorageDriver,
   type VersionedSchema,
   type VersionedStore,
-} from '@skew/core';
+} from '@skewkit/core';
 
 export type DriverKind = 'local' | 'indexeddb';
 
@@ -51,7 +51,7 @@ export function storeOn<T>(schema: VersionedSchema<T>): VersionedStore<T> {
   return createVersionedStore(schema, { driver: driverFor(readDriverKind()) });
 }
 
-/** Raw bytes at a key, read without going through `@skew/core`. */
+/** Raw bytes at a key, read without going through `@skewkit/core`. */
 export async function rawAt(fullKey: string): Promise<string | null> {
   if (readDriverKind() === 'local') {
     try {

@@ -26,7 +26,7 @@
  *    `themeQuote`, without `hymns`) and those drafts upgrade automatically
  *    the first time they are read. No backfill needed.
  */
-import { versioned, registerSchema } from '@skew/core';
+import { versioned, registerSchema } from '@skewkit/core';
 
 // ---------------------------------------------------------------------------
 // Frozen snapshots — one interface per version, copied, never imported.

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { createVersionedStore, memoryDriver } from '@skew/core';
+import { createVersionedStore, memoryDriver } from '@skewkit/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DATA_OPTIONS, resolveDataOptions } from './config';
 import { OutboxService } from './outbox';

@@ -4,7 +4,7 @@ import {
   VersionedSchema,
   registerSchema,
   versionedList,
-} from '@skew/core';
+} from '@skewkit/core';
 import {
   SkewContractDocument,
   contractFingerprint,
@@ -13,7 +13,7 @@ import {
 import { ContractCodeStep, versionedFromContract } from './schema-from-contract.js';
 
 /**
- * Runtime contract resolution — the async layer over `@skew/core`'s
+ * Runtime contract resolution — the async layer over `@skewkit/core`'s
  * synchronous reads.
  *
  * Trust model: a contract document is fetched from the same origin whose

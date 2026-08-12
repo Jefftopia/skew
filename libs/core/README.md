@@ -1,4 +1,4 @@
-# @skew/core
+# @skewkit/core
 
 Framework-agnostic primitives for surviving version skew.
 
@@ -28,7 +28,7 @@ The fourth row is the one most teams miss. A draft written by build 41 and resum
 ## Install
 
 ```sh
-npm install @skew/core
+npm install @skewkit/core
 ```
 
 ---
@@ -38,7 +38,7 @@ npm install @skew/core
 Declare a type's current version, its history, and the functions that move data between them in one place.
 
 ```ts
-import { versioned } from '@skew/core';
+import { versioned } from '@skewkit/core';
 
 // Snapshot shapes — frozen copies, never your live application types.
 interface V1 { id: string; themeQuote?: { text: string } }
@@ -115,7 +115,7 @@ return JSON.parse(raw) as WeeklyContent;
 The moment the model changes, every cached record on every user's machine has the old shape while being *typed* as the new one. You get `undefined` deep inside a renderer instead of a clean failure at the boundary.
 
 ```ts
-import { createVersionedStore, webStorageDriver } from '@skew/core';
+import { createVersionedStore, webStorageDriver } from '@skewkit/core';
 
 const drafts = createVersionedStore(WeeklyContent, {
   driver: webStorageDriver('local'),
@@ -178,7 +178,7 @@ refetchable caches. Steps are cheap; delete with evidence, not tidiness.
 ## Build identity and skew detection
 
 ```ts
-import { createVersionProbe } from '@skew/core';
+import { createVersionProbe } from '@skewkit/core';
 
 const probe = createVersionProbe({
   identity: { buildId: BUILD_ID, builtAt: BUILT_AT },
@@ -236,12 +236,12 @@ Emit it at build time and serve it uncached:
 
 ## Related packages
 
-`@skew/core` is consumed by, but never requires, the framework bindings:
+`@skewkit/core` is consumed by, but never requires, the framework bindings:
 
-- `@skew/angular-router` — chunk-load recovery for the Angular router
-- `@skew/angular-data` — versioned cache and durable mutation outbox
-- `@skew/angular-workflow` — durable multi-step flows
-- `@skew/react-*` — the same, for React
-- `@skew/node` / `@skew/nest` — server-side negotiation and manifest serving
+- `@skewkit/angular-router` — chunk-load recovery for the Angular router
+- `@skewkit/angular-data` — versioned cache and durable mutation outbox
+- `@skewkit/angular-workflow` — durable multi-step flows
+- `@skewkit/react-*` — the same, for React
+- `@skewkit/node` / `@skewkit/nest` — server-side negotiation and manifest serving
 
 Each is independently installable. None requires the others.

@@ -29,7 +29,7 @@
     {
       "text": "Client pins its schema with versionedFromContract<FundV1>(contract, { at: 1 }) or equivalent pinned construction",
       "passed": false,
-      "evidence": "versionedFromContract<PortfolioFundV1>(pinnedContract, { pinned: 1 }) \u2014 right function, invented option name ({ pinned } instead of { at }); would not compile against @skew/contract."
+      "evidence": "versionedFromContract<PortfolioFundV1>(pinnedContract, { pinned: 1 }) \u2014 right function, invented option name ({ pinned } instead of { at }); would not compile against @skewkit/contract."
     },
     {
       "text": "Client reads via createContractResolver().readResolving(...) against the well-known URL so 'ahead' data is cured by fetching the contract",

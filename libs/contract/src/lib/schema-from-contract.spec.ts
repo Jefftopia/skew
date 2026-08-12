@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { MigrationContext, resetSchemaRegistry, versioned } from '@skew/core';
+import { MigrationContext, resetSchemaRegistry, versioned } from '@skewkit/core';
 import { SkewContractDocument } from './document.js';
 import { versionedFromContract } from './schema-from-contract.js';
 import { FUND_CONTRACT } from './document.spec.js';

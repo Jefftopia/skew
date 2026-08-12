@@ -1,6 +1,6 @@
 import { Controller, Get, Headers, NotFoundException, Param, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { contractFingerprint } from '@skew/contract';
+import { contractFingerprint } from '@skewkit/contract';
 import { FUND_CONTRACT } from './fund-contract';
 
 /**

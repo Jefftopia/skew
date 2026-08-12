@@ -1,4 +1,4 @@
-# @skew/build — build-time stamping and codegen
+# @skewkit/build — build-time stamping and codegen
 
 Two CLIs, installed via the package's `bin` entries: `skew-stamp` and
 `skew-contract`. Both are plain Node executables — wire them into npm scripts,

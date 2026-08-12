@@ -1,5 +1,5 @@
-import { versioned } from '@skew/core';
-import { createContractResolver, wellKnownContractUrl } from '@skew/contract';
+import { versioned } from '@skewkit/core';
+import { createContractResolver, wellKnownContractUrl } from '@skewkit/contract';
 
 /**
  * The host's view of the portfolio contract — v1 only. It has never heard of

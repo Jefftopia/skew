@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { createVersionedStore, webStorageDriver } from '@skew/core';
-import { injectWorkflow } from '@skew/angular-workflow';
+import { createVersionedStore, webStorageDriver } from '@skewkit/core';
+import { injectWorkflow } from '@skewkit/angular-workflow';
 import { DRAFT_KEY, DraftSchemaV1, type DraftV1, VERSIONS, wizardV1 } from '../domain';
 
 interface Outcome {
@@ -17,7 +17,7 @@ interface Outcome {
  * happens when it tries to read something App 2 wrote.
  */
 @Component({
-  selector: 'demo-app-one',
+  selector: 'app-demo-one',
   imports: [RouterLink],
   styles: [
     `

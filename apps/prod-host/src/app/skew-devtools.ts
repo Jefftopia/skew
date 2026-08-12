@@ -5,13 +5,13 @@ import {
   computed,
   signal,
 } from '@angular/core';
-import type { SkewTraceEvent } from '@skew/core';
+import type { SkewTraceEvent } from '@skewkit/core';
 import { installSkewDevtoolsHook } from '../skew-devtools-hook';
 
 /**
  * The skew devtools drawer: a live feed of every `read()` / `write()` on the
  * page, from BOTH builds — the hook is installed once in `main.ts` and the
- * host and remote share one `@skew/core` instance via `sharedMappings`.
+ * host and remote share one `@skewkit/core` instance via `sharedMappings`.
  *
  * Events carry versions, outcomes, and paths — never payloads; that is the
  * library's privacy default, and this panel inherits it. Watch it while

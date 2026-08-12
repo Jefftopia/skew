@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { resetSchemaRegistry } from '@skew/core';
+import { resetSchemaRegistry } from '@skewkit/core';
 import { SharedStore } from '../shared-store';
 import { DRAFT_KEY, DraftSchemaV1, type DraftV1 } from '../domain';
 import { Lab } from '../lab';
@@ -163,7 +163,7 @@ export class Walkthrough {
       where: 'host',
       title: 'Borrow the remote’s knowledge',
       blurb:
-        'Both builds share one @skew/core instance. The remote registers its chain — including the way *down* — and the exact read that refused in step 4 now returns an honest, lossy projection that names what it dropped.',
+        'Both builds share one @skewkit/core instance. The remote registers its chain — including the way *down* — and the exact read that refused in step 4 now returns an honest, lossy projection that names what it dropped.',
       cta: 'Register & re-read',
       run: () => this.hostReadViaRegistry(),
     },

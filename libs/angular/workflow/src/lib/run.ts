@@ -1,4 +1,4 @@
-import { type VersionedSchema, versioned } from '@skew/core';
+import { type VersionedSchema, versioned } from '@skewkit/core';
 import type { StepId } from './definition';
 
 /**

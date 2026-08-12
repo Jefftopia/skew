@@ -2,9 +2,9 @@
   "run_id": "eval-0-without_skill",
   "expectations": [
     {
-      "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @skew/core API",
+      "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @skewkit/core API",
       "passed": false,
-      "evidence": "weekly-content.schema.ts:93-99 invents an object-config API: versioned<WeeklyContent>({ name, version, steps, validate }) with a hand-built MigrationStep[] array. The real API is a fluent versioned<V1>(name).next<V2>() chain; this would not compile against @skew/core."
+      "evidence": "weekly-content.schema.ts:93-99 invents an object-config API: versioned<WeeklyContent>({ name, version, steps, validate }) with a hand-built MigrationStep[] array. The real API is a fluent versioned<V1>(name).next<V2>() chain; this would not compile against @skewkit/core."
     },
     {
       "text": "Migration steps close over frozen snapshot interfaces (V1/V2 declared in the schema file), not the live application WeeklyContent type",

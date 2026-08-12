@@ -1,0 +1,70 @@
+name: Release
+
+# Manual on purpose. Publishing to npm cannot be undone — a version number is
+# spent the moment it is taken, and `npm unpublish` is unavailable after 72
+# hours — so a release is something a person decides to do, not something a
+# merge triggers by accident.
+on:
+  workflow_dispatch:
+    inputs:
+      specifier:
+        description: 'Version bump (patch | minor | major | or an exact version like 0.1.0)'
+        required: true
+        default: 'minor'
+      dry-run:
+        description: 'Rehearse without publishing or pushing'
+        type: boolean
+        default: true
+      tag:
+        description: 'npm dist-tag'
+        required: true
+        default: 'latest'
+
+concurrency:
+  # Never two releases at once: they would race for the same version number.
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    # Nothing ships that has not passed the same gate every push passes.
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the version commit and its tags
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Version, changelog, and tag
+        run: |
+          npx nx release version "${{ inputs.specifier }}" ${{ inputs.dry-run && '--dry-run' || '' }}
+          npx nx release changelog "${{ inputs.specifier }}" ${{ inputs.dry-run && '--dry-run' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to npm
+        run: npx nx release publish --tag "${{ inputs.tag }}" ${{ inputs.dry-run && '--dry-run' || '' }}
+        env:
+          # Classic automation token, or a granular token scoped to the @skewkit
+          # org with read+write. Repo → Settings → Secrets → Actions.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true

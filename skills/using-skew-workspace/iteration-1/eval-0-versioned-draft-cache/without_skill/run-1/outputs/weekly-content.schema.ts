@@ -1,5 +1,5 @@
 /**
- * Versioned schema for WeeklyContent drafts, built on @skew/core.
+ * Versioned schema for WeeklyContent drafts, built on @skewkit/core.
  *
  * Version history
  * ---------------
@@ -18,7 +18,7 @@ import {
   registerSchema,
   type MigrationStep,
   type VersionedSchema,
-} from '@skew/core';
+} from '@skewkit/core';
 
 /** Stable wire name for this document type (checked against envelope `n`). */
 export const WEEKLY_CONTENT_SCHEMA_NAME = 'bulletin.weekly-content';

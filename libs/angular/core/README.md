@@ -1,8 +1,8 @@
-# `@skew/angular-core`
+# `@skewkit/angular-core`
 
-First-class Angular bindings for `@skew/core`.
+First-class Angular bindings for `@skewkit/core`.
 
-This package provides the baseline Dependency Injection (DI) and reactive Signal wrappers needed to integrate `@skew/core`'s versioned stores seamlessly into an Angular application.
+This package provides the baseline Dependency Injection (DI) and reactive Signal wrappers needed to integrate `@skewkit/core`'s versioned stores seamlessly into an Angular application.
 
 ## Quick Start
 
@@ -11,8 +11,8 @@ This package provides the baseline Dependency Injection (DI) and reactive Signal
 Instead of manually instantiating `VersionedStore` instances inline, use `createSkewStoreToken` and `provideSkewStore` to configure it at the application or route level.
 
 ```ts
-import { createSkewStoreToken, provideSkewStore } from '@skew/angular-core';
-import { webStorageDriver } from '@skew/core';
+import { createSkewStoreToken, provideSkewStore } from '@skewkit/angular-core';
+import { webStorageDriver } from '@skewkit/core';
 
 // Create a typed InjectionToken
 export const USER_STORE = createSkewStoreToken<UserProfile>('USER_STORE');
@@ -27,13 +27,13 @@ export function provideUserStore() {
 
 ### 2. Consume via Signals
 
-`@skew/core` operations return `Promise<SkewResult<T>>`. While this works perfectly for standard async flows, it can cause a flash of empty state in the UI if you are using a synchronous storage driver (like `localStorage`).
+`@skewkit/core` operations return `Promise<SkewResult<T>>`. While this works perfectly for standard async flows, it can cause a flash of empty state in the UI if you are using a synchronous storage driver (like `localStorage`).
 
 `injectSkewSignal()` solves this by synchronously peeking at the store to initialize the Signal. It automatically triggers a background resolution if the driver is asynchronous or if the cached data needs to be migrated.
 
 ```ts
 import { Component } from '@angular/core';
-import { injectSkewSignal } from '@skew/angular-core';
+import { injectSkewSignal } from '@skewkit/angular-core';
 import { USER_STORE } from './providers';
 
 @Component({
@@ -65,7 +65,7 @@ If you need to perform manual queries or handle `SkewResult` directly (e.g. insi
 
 ```ts
 import { Injectable } from '@angular/core';
-import { injectSkewStore } from '@skew/angular-core';
+import { injectSkewStore } from '@skewkit/angular-core';
 import { USER_STORE } from './providers';
 
 @Injectable({ providedIn: 'root' })
