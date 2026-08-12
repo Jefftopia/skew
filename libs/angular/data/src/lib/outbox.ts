@@ -1,5 +1,5 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { type VersionedStore, isOk, versioned } from '@skew/core';
+import { type VersionedStore, isOk, versioned } from '@skewkit/core';
 import { DATA_OPTIONS } from './config';
 
 /**

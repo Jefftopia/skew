@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Lets a release be gated on a green run of this exact workflow.
+  workflow_call:
+
+concurrency:
+  # One run per ref. A push that lands while an older run is still going
+  # cancels it — the older result is about code nobody is looking at any more.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: lint · test · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Nx compares against the base commit to decide what is affected;
+          # a shallow clone leaves it with nothing to compare to.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verify every project
+        # The same command the workspace README documents, so a green CI and a
+        # green `npm run verify` mean the same thing. Not `affected`: this is a
+        # small workspace, and "the libraries all still build" is the claim
+        # being made on every push.
+        run: npx nx run-many -t lint test build
+
+      # A formatting gate is deliberately absent: `npm run format:check`
+      # currently reports ~140 pre-existing files, so adding it would make CI
+      # red on its first run and teach everyone to ignore it. Run
+      # `npm run format` once, then add this back:
+      #   - name: Check formatting
+      #     run: npm run format:check
+
+      - name: Pack every publishable library
+        # Catches the packaging failures that a build cannot: a missing
+        # `exports` entry, a file that never made it into `dist`, a broken
+        # `types` path. Cheap, and it is exactly what the release job will do
+        # for real.
+        run: |
+          for dir in dist/libs/*/ dist/libs/angular/*/; do
+            [ -f "$dir/package.json" ] || continue
+            # Scoped to @skewkit so a stale directory left over from an earlier
+            # package name can never be mistaken for something we ship.
+            case "$(node -p "require('./$dir/package.json').name")" in
+              @skewkit/*) echo "── $dir" && (cd "$dir" && npm pack --dry-run) ;;
+            esac
+          done

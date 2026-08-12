@@ -4,9 +4,9 @@ import {
 } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
-import { provideSkewRecovery, provideSkewDisabled } from '@skew/angular-router';
-import { provideSkewData } from '@skew/angular-data';
-import { provideSkewWorkflow } from '@skew/angular-workflow';
+import { provideSkewRecovery, provideSkewDisabled } from '@skewkit/angular-router';
+import { provideSkewData } from '@skewkit/angular-data';
+import { provideSkewWorkflow } from '@skewkit/angular-workflow';
 import { appRoutes } from './app.routes';
 import { BUILD_IDENTITY } from '../generated/build-id';
 import { manifestUrl } from './origin';
@@ -24,7 +24,7 @@ export const appConfig: ApplicationConfig = {
      * ⚠️ Demo only, and not something to copy.
      *
      * `provideSkewDisabled` is exported but undocumented — it makes every
-     * `@skew` package inert so the demo can run each scenario with the
+     * `@skewkit` package inert so the demo can run each scenario with the
      * protections removed and show you the failure instead of describing it.
      * No application should ship this. It is here because a before/after that
      * only ever runs the "after" is not a comparison.

@@ -1,6 +1,6 @@
 /**
  * localStorage-backed store for WeeklyContent drafts, versioned with
- * @skew/core.
+ * @skewkit/core.
  *
  * Storage layout (current builds):
  *

@@ -23,7 +23,7 @@ property twice over, and one gap:
    (the API process, or the browser page) and only their *trace* shipped
    to the UI.
 3. **The gap: nothing emits a trace today.** `read()`/`write()` are opaque.
-   The one primitive to add to `@skew/core` is a dev-only trace hook.
+   The one primitive to add to `@skewkit/core` is a dev-only trace hook.
 
 That hook is also what makes this better than a GraphiQL clone: GraphiQL is
 a sandbox; the interesting skew moments (a two-week-old draft migrating, an
@@ -36,7 +36,7 @@ Apollo-devtools-style — not just a scratchpad.
 React-devtools pattern — a global hook, dev-only, zero cost when absent:
 
 ```ts
-// @skew/core, guarded so minifiers drop it in prod builds
+// @skewkit/core, guarded so minifiers drop it in prod builds
 interface SkewTraceEvent {
   kind: 'read' | 'write' | 'step' | 'result';
   schema: string;            // envelope name
@@ -63,7 +63,7 @@ gives identical output.
 ```
 libs/
 ├── core/                     # + trace hook (tiny, dev-guarded)
-├── studio/                   # @skew/studio
+├── studio/                   # @skewkit/studio
 │   ├── src/lib/payload-diff.ts   # ✅ SHIPPED — structural diff engine
 │   ├── src/lib/protocol.ts   # trace event + introspection wire types
 │   ├── src/lib/introspect.ts # registry -> serializable catalog
@@ -79,14 +79,14 @@ libs/
 One UI bundle, compiled once, embedded as a string asset in the package.
 Express and Nest mounts serve the same bytes; the browser mount injects the
 same UI into an iframe/shadow-root panel. (Angular-specific niceties can
-come later via `@skew/angular-*`; nothing here depends on Angular.)
+come later via `@skewkit/angular-*`; nothing here depends on Angular.)
 
 ## The three mounts
 
 **Express** (dev-gated by default):
 
 ```ts
-import { skewStudio } from '@skew/studio/express';
+import { skewStudio } from '@skewkit/studio/express';
 app.use('/__skew', skewStudio({ contracts: [FUND_CONTRACT] }));
 ```
 
@@ -129,7 +129,7 @@ inspector right):
    fingerprints, and computed `lossyPaths`/`derivedPaths` per direction.
 Every one of those tabs drills down into the same thing — **the payload
 diff** — which is the first piece of Studio actually built
-(`@skew/studio`'s `diffPayloads`, already shipped and used by both demo
+(`@skewkit/studio`'s `diffPayloads`, already shipped and used by both demo
 apps). Given a before and an after it produces the record as a git-style
 diff, and it is the drill-down target from everywhere: a Live event, a step
 in the Cast timeline, or a version lane in Explore. Two properties make it
@@ -182,7 +182,7 @@ survived.
 
 ## Phases
 
-0. **✅ Done — the payload diff engine.** `@skew/studio` exists with
+0. **✅ Done — the payload diff engine.** `@skewkit/studio` exists with
    `diffPayloads` (pure, dependency-free, 15 tests) and is consumed by both
    demo apps: the host renders it in the Boundary Inspector and the contract
    card, the remote in the fund detail's reconciliation. Building it against
@@ -190,7 +190,7 @@ survived.
    paths and one-directional tag inheritance — neither was obvious from the
    design, and both were found by wiring it to real migration output.
 
-1. **Trace hook in `@skew/core` + protocol types in `@skew/studio`.**
+1. **Trace hook in `@skewkit/core` + protocol types in `@skewkit/studio`.**
    Smallest possible core change; unit tests assert zero behavior change
    and zero overhead when no hook is installed.
 2. **`explain.ts` + Cast tab for contract/lens steps, fully client-side**,
@@ -209,13 +209,13 @@ survived.
 
 ## Decisions (settled 2026-08-10)
 
-1. **Packaging**: one `@skew/studio` with subpath exports
-   (`@skew/studio/express`, `@skew/studio/nest`, browser entry on the
+1. **Packaging**: one `@skewkit/studio` with subpath exports
+   (`@skewkit/studio/express`, `@skewkit/studio/nest`, browser entry on the
    root). Versioning stays atomic; each mount is <200 lines over the
    shared handler.
 2. **One interpreter**: `explain.ts` wraps `compileLens` per-op — the
    studio never reimplements op semantics, so explain-vs-runtime drift is
-   structurally impossible. Only the hook is added to `@skew/core`; core
+   structurally impossible. Only the hook is added to `@skewkit/core`; core
    stays dependency-free and studio stays deletable.
 3. **No prod trace access**: the trace endpoint is dev-only, full stop.
    No signed "support mode" for now; revisit only if a live incident

@@ -26,8 +26,8 @@ import {
   createContractResolver,
   versionedFromContract,
   wellKnownContractUrl,
-} from '@skew/contract';
-import { parseSkewContractHeader, SKEW_CONTRACT_HEADER } from '@skew/core';
+} from '@skewkit/contract';
+import { parseSkewContractHeader, SKEW_CONTRACT_HEADER } from '@skewkit/core';
 import {
   FundV1,
   PORTFOLIO_FUND_CONTRACT,

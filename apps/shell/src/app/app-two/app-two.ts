@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { createVersionedStore, webStorageDriver } from '@skew/core';
-import { injectWorkflow } from '@skew/angular-workflow';
+import { createVersionedStore, webStorageDriver } from '@skewkit/core';
+import { injectWorkflow } from '@skewkit/angular-workflow';
 import { DRAFT_KEY, DraftSchemaV2, type DraftV2, VERSIONS, wizardV2 } from '../domain';
 
 interface Outcome {
@@ -17,7 +17,7 @@ interface Outcome {
  * wizard draft App 1 parked under an older workflow.
  */
 @Component({
-  selector: 'demo-app-two',
+  selector: 'app-demo-two',
   imports: [RouterLink],
   styles: [
     `

@@ -1,19 +1,19 @@
-# @skew/angular-* — Angular bindings
+# @skewkit/angular-* — Angular bindings
 
-Four independent packages. Each depends on `@skew/core`, never on a sibling.
+Four independent packages. Each depends on `@skewkit/core`, never on a sibling.
 All are standalone-only (no NgModules — configure via `provideSkew*()`),
 signal-based (no RxJS surface), zoneless-safe, and SSR-safe.
 
 Contents: [angular-core](#skewangular-core) · [angular-router](#skewangular-router)
 · [angular-data](#skewangular-data) · [angular-workflow](#skewangular-workflow)
 
-## @skew/angular-core
+## @skewkit/angular-core
 
-DI and signal wrappers for `@skew/core` stores.
+DI and signal wrappers for `@skewkit/core` stores.
 
 ```ts
-import { createSkewStoreToken, provideSkewStore, injectSkewStore, injectSkewSignal } from '@skew/angular-core';
-import { webStorageDriver } from '@skew/core';
+import { createSkewStoreToken, provideSkewStore, injectSkewStore, injectSkewSignal } from '@skewkit/angular-core';
+import { webStorageDriver } from '@skewkit/core';
 
 export const USER_STORE = createSkewStoreToken<UserProfile>('USER_STORE');
 
@@ -34,14 +34,14 @@ Use `injectSkewStore(USER_STORE)` when you need the raw store and want to
 branch on `SkewResult` reasons yourself (services, guards) — e.g. treating
 `ahead` as "refetch", not as an error.
 
-## @skew/angular-router
+## @skewkit/angular-router
 
 Chunk recovery for lazy routes that classifies the failure before acting —
 flaky network, CDN miss, offline, deleted route, or stale origin each get a
 different response, and none bricks the tab.
 
 ```ts
-import { provideSkewRecovery, lazy } from '@skew/angular-router';
+import { provideSkewRecovery, lazy } from '@skewkit/angular-router';
 import { BUILD_IDENTITY } from './generated/build-id';   // from skew-stamp
 
 bootstrapApplication(App, {
@@ -76,7 +76,7 @@ Behavior worth knowing:
 - Manual recovery UI: `inject(SkewRecoveryService)` exposes `pending()` signal
   and `recover()` — render a "new version available" banner on `'notify'`.
 
-## @skew/angular-data
+## @skewkit/angular-data
 
 Normalized entity store + tag invalidation + **durable mutation outbox**.
 Exists because `resource()`/`httpResource()` are per-call caches with no
@@ -133,7 +133,7 @@ Manual: `inject(CacheRegistry).invalidate('bulletins')`.
 Known gaps: `resource()` can't normalize into this store (use `query()`), and
 server-driven invalidation isn't shipped (tags are per-tab).
 
-## @skew/angular-workflow
+## @skewkit/angular-workflow
 
 Durable multi-step flows: step↔route mapping, guard-checked deep links, a back
 button that walks the workflow, resumption after refresh *and* after a deploy

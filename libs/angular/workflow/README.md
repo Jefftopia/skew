@@ -1,4 +1,4 @@
-# @skew/angular-workflow
+# @skewkit/angular-workflow
 
 Durable multi-step workflows for Angular — router-integrated, resumable, and with **versioned drafts** that survive a deploy.
 
@@ -92,7 +92,7 @@ Each step gets a guarded route plus a redirect from the base path to the first s
 
 **Progress follows the branch the data selects.** Counting every declared step would strand a user on the short path at 60% forever.
 
-**Drafts are versioned via `@skew/core`.** A draft written by build 41 and resumed under 57 is the same boundary as a client calling a newer server — the counterparty is your own past deployment.
+**Drafts are versioned via `@skewkit/core`.** A draft written by build 41 and resumed under 57 is the same boundary as a client calling a newer server — the counterparty is your own past deployment.
 
 ```ts
 defineWorkflow({
@@ -103,7 +103,7 @@ defineWorkflow({
 });
 ```
 
-Without this, every schema change silently corrupts drafts already in flight. A draft from a *newer* build is left alone rather than mangled — `@skew/core` reports it as `ahead`.
+Without this, every schema change silently corrupts drafts already in flight. A draft from a *newer* build is left alone rather than mangled — `@skewkit/core` reports it as `ahead`.
 
 **Concurrent submits are refused.** Double-clicking Publish throws rather than sending twice.
 

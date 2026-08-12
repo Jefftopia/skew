@@ -74,11 +74,11 @@ tooling, contract documents — is an application of the same idea to a
 specific boundary, and every package is independently adoptable.
 
 ```sh
-npm install @skew/core @skew/build
+npm install @skewkit/core @skewkit/build
 ```
 
 ```ts
-import { versioned } from '@skew/core';
+import { versioned } from '@skewkit/core';
 
 // Snapshot shapes: frozen copies of what each version looked like.
 interface DraftV1 { id: string; body: string }
@@ -111,16 +111,16 @@ produces — and TypeScript cannot warn you, because the code still compiles.
 
 | Package                                               | What it does                                                                                            |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **[`@skew/core`](libs/core)**                         | Envelopes, migration chains, versioned storage, build identity, the shared schema registry. No deps.    |
-| **[`@skew/contract`](libs/contract)**                 | Migration history published as a document the API serves; clients resolve it at runtime.                |
-| **[`@skew/build`](libs/build)**                       | `skew-stamp` (build identity + manifest) and `skew-contract gen` (frozen types from a contract).        |
-| **[`@skew/studio`](libs/studio)**                     | Inspection tooling: structural payload diffs that mark guessed and discarded values. Framework-free.    |
-| **[`@skew/angular-core`](libs/angular/core)**         | Angular DI and signal wrappers for versioned stores.                                                    |
-| **[`@skew/angular-router`](libs/angular/router)**     | Chunk-load recovery for lazy routes, without reload loops or lost work.                                 |
-| **[`@skew/angular-data`](libs/angular/data)**         | Normalized entity store, tag invalidation, and a durable mutation outbox.                               |
-| **[`@skew/angular-workflow`](libs/angular/workflow)** | Multi-step flows whose drafts survive refresh, deploys, and device changes.                             |
+| **[`@skewkit/core`](libs/core)**                         | Envelopes, migration chains, versioned storage, build identity, the shared schema registry. No deps.    |
+| **[`@skewkit/contract`](libs/contract)**                 | Migration history published as a document the API serves; clients resolve it at runtime.                |
+| **[`@skewkit/build`](libs/build)**                       | `skew-stamp` (build identity + manifest) and `skew-contract gen` (frozen types from a contract).        |
+| **[`@skewkit/studio`](libs/studio)**                     | Inspection tooling: structural payload diffs that mark guessed and discarded values. Framework-free.    |
+| **[`@skewkit/angular-core`](libs/angular/core)**         | Angular DI and signal wrappers for versioned stores.                                                    |
+| **[`@skewkit/angular-router`](libs/angular/router)**     | Chunk-load recovery for lazy routes, without reload loops or lost work.                                 |
+| **[`@skewkit/angular-data`](libs/angular/data)**         | Normalized entity store, tag invalidation, and a durable mutation outbox.                               |
+| **[`@skewkit/angular-workflow`](libs/angular/workflow)** | Multi-step flows whose drafts survive refresh, deploys, and device changes.                             |
 
-Every package depends on `@skew/core` and never on a sibling. You can adopt
+Every package depends on `@skewkit/core` and never on a sibling. You can adopt
 one, several, or none of the Angular ones; nothing is load-bearing for
 anything else.
 
@@ -132,20 +132,20 @@ These are the groupings that come up in practice.
 
 ### An app that autosaves drafts or caches API data locally
 
-**`@skew/core`** (+ **`@skew/angular-core`** in Angular).
+**`@skewkit/core`** (+ **`@skewkit/angular-core`** in Angular).
 
 The moment you write `JSON.parse(raw) as Draft`, you have an assertion where
 you need a check, and the first release that changes the model breaks every
 record already sitting in users' browsers. `versioned()` +
 `createVersionedStore` replaces the cast with migration at the boundary.
-`@skew/angular-core` adds the DI token and signal wrappers
+`@skewkit/angular-core` adds the DI token and signal wrappers
 (`provideSkewStore`, `injectSkewSignal`) so components consume the store
 without a flash of empty state. You do not need anything else for this —
 no build stamping, no contracts.
 
 ### An app whose users keep tabs open across deploys
 
-**`@skew/build`** + **`@skew/angular-router`** (+ `@skew/core`, which they build on).
+**`@skewkit/build`** + **`@skewkit/angular-router`** (+ `@skewkit/core`, which they build on).
 
 Chunk recovery needs two things migrations don't: a *build identity* to
 compare against (that's `skew-stamp`, which generates a build-id module and a
@@ -159,11 +159,11 @@ deleted route means "redirect, reloading will 404 forever".
 
 ### Offline-capable data entry
 
-**`@skew/core`** + **`@skew/build`** + **`@skew/angular-data`**.
+**`@skewkit/core`** + **`@skewkit/build`** + **`@skewkit/angular-data`**.
 
 A mutation queued while offline must survive a page reload, which means it
 must be persisted — and anything persisted can outlive the build that wrote
-it. The outbox in `@skew/angular-data` therefore needs `@skew/core`'s
+it. The outbox in `@skewkit/angular-data` therefore needs `@skewkit/core`'s
 versioning twice over: queued payloads carry the schema version they were
 authored under (so a flush after a deploy can migrate them before sending),
 and a queue written by a *newer* build is left untouched rather than
@@ -174,26 +174,26 @@ just arrive later, with less context.
 
 ### A multi-step wizard users abandon and resume
 
-**`@skew/core`** + **`@skew/angular-workflow`** (+ **`@skew/angular-router`**
+**`@skewkit/core`** + **`@skewkit/angular-workflow`** (+ **`@skewkit/angular-router`**
 if the steps are lazy-loaded routes).
 
 A six-step application form is abandoned on Thursday and resumed on Monday;
 in between, a release added a step and renamed two fields. The workflow
 package owns step↔route mapping, guarded deep links, resumption, and
-idempotent submit — and takes a `schema` from `@skew/core` so the parked
+idempotent submit — and takes a `schema` from `@skewkit/core` so the parked
 draft is migrated on resume instead of silently corrupted. If the steps are
 lazily loaded, the deploy can also break the *code* loading mid-wizard,
 which is the router package's job.
 
 ### An API whose clients you cannot force-update
 
-**`@skew/contract`** + **`@skew/core`** + **`@skew/build`**, on both sides.
+**`@skewkit/contract`** + **`@skewkit/core`** + **`@skewkit/build`**, on both sides.
 
 Mobile release trains, partner integrations, or simply many web clients on
 different deploy cadences: the server moves to v2 while v1 clients keep
 running for weeks. Code-shipped migration chains cannot fix the direction
 that matters here — a v1 client reading v2 data (`ahead`) needs knowledge
-that didn't exist when it was built. `@skew/contract` closes the gap: the
+that didn't exist when it was built. `@skewkit/contract` closes the gap: the
 server publishes its migration history as a data document at
 `/.well-known/skew/contracts/:name`, and clients resolve it at runtime
 (`readResolving`) to read newer data as an honest, labeled projection. On
@@ -204,8 +204,8 @@ one definition. See [Contracts as data](#contracts-as-data--migrations-without-a
 
 ### Independently deployed micro-frontends on one page
 
-**`@skew/core`** + **`@skew/build`** + **`@skew/angular-router`**
-(+ **`@skew/contract`** if the host and remotes also disagree with an API).
+**`@skewkit/core`** + **`@skewkit/build`** + **`@skewkit/angular-router`**
+(+ **`@skewkit/contract`** if the host and remotes also disagree with an API).
 
 A host built against v1 and a remote built against v2 share one JavaScript
 runtime. Three boundaries are live at once: the remote's chunk can vanish
@@ -217,7 +217,7 @@ can downgrade v2 records it could never have understood alone, with the
 discarded fields named. The registry also detects two builds that disagree
 about what a version *means*, via content fingerprints on every step.
 
-## `@skew/core` in more depth
+## `@skewkit/core` in more depth
 
 ### Results, not exceptions
 
@@ -346,7 +346,7 @@ the running demo is in the sections below it:
 ## The shared registry — when both builds share a page
 
 In a federated page, the host built against v1 and the remote built against
-v2 are loaded into the same JavaScript runtime and share one `@skew/core`
+v2 are loaded into the same JavaScript runtime and share one `@skewkit/core`
 instance. The remote's bundle contains exactly the migration knowledge the
 host lacks, and `registerSchema()` lets it say so:
 

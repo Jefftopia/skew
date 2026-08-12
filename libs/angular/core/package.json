@@ -1,9 +1,10 @@
 {
-  "name": "@skew/angular-core",
+  "name": "@skewkit/angular-core",
   "version": "0.0.1",
   "peerDependencies": {
-    "@angular/common": "^22.0.0",
-    "@angular/core": "^22.0.0"
+    "@angular/core": "^22.0.0",
+    "@skewkit/core": "^0.0.1"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "description": "Angular DI and signal wrappers for @skewkit/core versioned stores."
 }

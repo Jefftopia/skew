@@ -1,9 +1,9 @@
 {
   "eval_id": 0,
   "eval_name": "versioned-draft-cache",
-  "prompt": "In our Angular parish bulletin app we cache weekly-content drafts in localStorage: localStorage.setItem('draft:' + weekId, JSON.stringify(draft)), and read them back with JSON.parse(raw) as WeeklyContent. Last deploy we renamed themeQuote to scriptureOfWeek and added a hymns: string[] field, and users with old drafts got undefined errors deep in the renderer. I've heard the @skew/core package solves exactly this. Write weekly-content.schema.ts and draft-store.ts that version this data properly, migrate old drafts forward, and handle every failure case correctly — including drafts written by a newer build than the one reading them. Assume BUILD_ID is importable from './generated/build-id'.",
+  "prompt": "In our Angular parish bulletin app we cache weekly-content drafts in localStorage: localStorage.setItem('draft:' + weekId, JSON.stringify(draft)), and read them back with JSON.parse(raw) as WeeklyContent. Last deploy we renamed themeQuote to scriptureOfWeek and added a hymns: string[] field, and users with old drafts got undefined errors deep in the renderer. I've heard the @skewkit/core package solves exactly this. Write weekly-content.schema.ts and draft-store.ts that version this data properly, migrate old drafts forward, and handle every failure case correctly — including drafts written by a newer build than the one reading them. Assume BUILD_ID is importable from './generated/build-id'.",
   "assertions": [
-    "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @skew/core API",
+    "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @skewkit/core API",
     "Migration steps close over frozen snapshot interfaces (V1/V2 declared in the schema file), not the live application WeeklyContent type",
     "Storage uses createVersionedStore with webStorageDriver('local') and passes buildId",
     "Read path branches on the discriminated result: checks result.ok and switches on result.reason covering 'ahead', 'gap', 'invalid', and 'threw'",

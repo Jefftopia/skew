@@ -1,5 +1,5 @@
 import { InjectionToken, type EnvironmentProviders, makeEnvironmentProviders, inject } from '@angular/core';
-import { type VersionedStore, type VersionedSchema, type VersionedStoreOptions, createVersionedStore } from '@skew/core';
+import { type VersionedStore, type VersionedSchema, type VersionedStoreOptions, createVersionedStore } from '@skewkit/core';
 
 /**
  * Creates an InjectionToken for a specific VersionedStore.

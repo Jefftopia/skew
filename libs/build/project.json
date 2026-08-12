@@ -31,5 +31,14 @@
     "lint": {
       "executor": "@nx/eslint:lint"
     }
+  },
+  "release": {
+    "version": {
+      "manifestRootsToUpdate": [
+        "dist/{projectRoot}"
+      ],
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk"
+    }
   }
 }

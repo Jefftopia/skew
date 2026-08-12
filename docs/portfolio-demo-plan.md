@@ -32,7 +32,7 @@ has to be undone.
 | **Never run `prettier --write` on `libs/`.** Only format files you created or edited, and pass their explicit paths.                                               | Most of `libs/` is not Prettier-formatted. A blanket run reformats ~20 files you did not touch and buries your real change in noise.                                                                |
 | **Never run `prettier --write .`**                                                                                                                                 | Same reason, workspace-wide.                                                                                                                                                                        |
 | **Do not "fix" pre-existing lint errors.**                                                                                                                         | `core:lint` (`no-empty`) and `angular-router/data/workflow:lint` (missing peerDeps) already fail on `main`. They are not yours. Leave them.                                                         |
-| **Do not add anything to a library's public API without being asked.**                                                                                             | The `@skew/*` packages are published. This plan adds **no** library code.                                                                                                                           |
+| **Do not add anything to a library's public API without being asked.**                                                                                             | The `@skewkit/*` packages are published. This plan adds **no** library code.                                                                                                                           |
 | **Do not use `injectWorkflow()` in `prod-remote`.**                                                                                                                | `WorkflowRuntime.attach()` dedupes by workflow id; the host attaches first and you silently get the host's older definition. See the comment on `wizardV2` in `apps/prod-remote/src/app/domain.ts`. |
 | **`apps/*/src/generated/build-id.ts` is generated.** Do not hand-edit; `tools/deploy-demo.mjs` overwrites it on every build.                                       |                                                                                                                                                                                                     |
 | **Never use Bash to run dev servers.** Use the preview/browser tooling, or run the documented npm scripts in the background and poll with `curl`.                  |                                                                                                                                                                                                     |
@@ -53,7 +53,7 @@ apps/
   prod-host/      federated HOST, "older" deployment. Draft schema v1, wizard 0.1.
   prod-remote/    federated REMOTE, "newer" deployment. Draft schema v2, wizard 0.2.
                   Exposes ./Editor via Native Federation.
-libs/             @skew/core, /build, /angular-router, /angular-data, /angular-workflow
+libs/             @skewkit/core, /build, /angular-router, /angular-data, /angular-workflow
 tools/
   deploy-demo.mjs        stamps identity → builds → emits manifest
   serve-same-origin.mjs  serves host at / and remote at /remote/ on one origin
@@ -154,7 +154,7 @@ being able to say "this was derived, not reported":
 | Boundary                      | How the demo shows it                                                                                                                                                                                                                                                                                               |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Host ↔ fragment**          | Host holds v1 funds. It hands the selected fund to the remote, which understands v2. The remote migrates it forward, then fetches the authoritative v2 from the API and **reconciles** — showing which fields the migration guessed and which the server actually reported.                                         |
-| **Client ↔ API**             | An order is queued in the `@skew/angular-data` outbox stamped with the contract version it was authored under. If it flushes against a _newer_ API the server returns `409` with the expected version; the client migrates the queued payload forward and retries. This is the row the current demo does not cover. |
+| **Client ↔ API**             | An order is queued in the `@skewkit/angular-data` outbox stamped with the contract version it was authored under. If it flushes against a _newer_ API the server returns `409` with the expected version; the client migrates the queued payload forward and retries. This is the row the current demo does not cover. |
 | **Client ↔ origin**          | Already covered by the existing chunk-recovery scenario. Unchanged.                                                                                                                                                                                                                                                 |
 | **Past self ↔ present self** | Already covered by the draft/wizard scenarios. Unchanged.                                                                                                                                                                                                                                                           |
 
@@ -293,14 +293,14 @@ downgrading TypeScript or changing `tsconfig.base.json`. That is a workspace-wid
      - `GET /api/v2/funds` → `FundV2[]`
      - `GET /api/v2/funds/:id` → `FundV2` or 404
 
-4. **Wrap every response in a `@skew/core` envelope.** The response body must be:
+4. **Wrap every response in a `@skewkit/core` envelope.** The response body must be:
 
    ```jsonc
    { "v": 1, "payload": [ /* funds */ ] }   // from /api/v1/funds
    { "v": 2, "payload": [ /* funds */ ] }   // from /api/v2/funds
    ```
 
-   Do **not** import `@skew/core` into the Nest app to do this — the server is a separate
+   Do **not** import `@skewkit/core` into the Nest app to do this — the server is a separate
    deployment and must not share code with the client. Write the two-line literal by hand. The
    envelope shape (`{ v, payload }`) is the contract; the library is one implementation of it.
 
@@ -690,7 +690,7 @@ The remote must react when a tick or breach affects **the fund currently on scre
 A small form pre-filled from the breach's `suggestedAction`:
 
 - Build an `OrderV2` (including `breachRef` and a generated `idempotencyKey`).
-- Submit through the **`@skew/angular-data` outbox** (`OutboxService`) so it survives a reload:
+- Submit through the **`@skewkit/angular-data` outbox** (`OutboxService`) so it survives a reload:
   `register()` a runner at construction, then `enqueue()` on submit, then `flush()`.
 - The runner POSTs to `/api/v2/orders` with a `{ v: 2, payload }` envelope.
 - **Handle the 409.** On `error === 'version-skew'`, show what happened, migrate the queued

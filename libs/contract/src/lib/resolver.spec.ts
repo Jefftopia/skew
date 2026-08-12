@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { resetSchemaRegistry, versioned } from '@skew/core';
+import { resetSchemaRegistry, versioned } from '@skewkit/core';
 import { contractFingerprint } from './document.js';
 import { createContractResolver } from './resolver.js';
 import { FUND_CONTRACT } from './document.spec.js';

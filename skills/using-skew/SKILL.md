@@ -1,11 +1,11 @@
 ---
 name: using-skew
 description: >-
-  How to correctly use the @skew/* npm packages (@skew/core, @skew/contract,
-  @skew/build, @skew/angular-core, @skew/angular-router, @skew/angular-data,
-  @skew/angular-workflow) for surviving version skew: versioned schemas and
+  How to correctly use the @skewkit/* npm packages (@skewkit/core, @skewkit/contract,
+  @skewkit/build, @skewkit/angular-core, @skewkit/angular-router, @skewkit/angular-data,
+  @skewkit/angular-workflow) for surviving version skew: versioned schemas and
   data migrations, contract documents, chunk-load recovery, durable outboxes,
-  and resumable workflows. Use this skill whenever a task involves any @skew
+  and resumable workflows. Use this skill whenever a task involves any @skewkit
   package, schema/data migrations for persisted or cached data, ChunkLoadError
   recovery after deploys, localStorage/IndexedDB caches that break when a model
   changes, offline mutation queues, multi-step wizard drafts, API version
@@ -31,20 +31,20 @@ fail loudly.**
 
 | Symptom / task | Package | Reference |
 |---|---|---|
-| Persisted/cached data breaks when the model changes; `JSON.parse(raw) as T` | `@skew/core` (`versioned`, `createVersionedStore`) | [references/core.md](references/core.md) |
-| Detect stale client vs stale origin; build identity; `skew-manifest.json` | `@skew/core` (`createVersionProbe`) + `@skew/build` (`skew-stamp`) | [core.md](references/core.md), [build.md](references/build.md) |
-| Old clients must read data from a *newer* API without redeploying | `@skew/contract` | [references/contract.md](references/contract.md) |
-| Generate frozen version types from a contract JSON | `@skew/build` (`skew-contract gen`) | [references/build.md](references/build.md) |
-| Wire a versioned store into Angular DI / signals | `@skew/angular-core` | [references/angular.md](references/angular.md) |
-| `ChunkLoadError` after deploys; lazy route recovery without reload loops | `@skew/angular-router` | [references/angular.md](references/angular.md) |
-| Normalized entity cache, optimistic writes, offline outbox in Angular | `@skew/angular-data` | [references/angular.md](references/angular.md) |
-| Multi-step wizard whose draft must survive refresh *and* deploys | `@skew/angular-workflow` | [references/angular.md](references/angular.md) |
+| Persisted/cached data breaks when the model changes; `JSON.parse(raw) as T` | `@skewkit/core` (`versioned`, `createVersionedStore`) | [references/core.md](references/core.md) |
+| Detect stale client vs stale origin; build identity; `skew-manifest.json` | `@skewkit/core` (`createVersionProbe`) + `@skewkit/build` (`skew-stamp`) | [core.md](references/core.md), [build.md](references/build.md) |
+| Old clients must read data from a *newer* API without redeploying | `@skewkit/contract` | [references/contract.md](references/contract.md) |
+| Generate frozen version types from a contract JSON | `@skewkit/build` (`skew-contract gen`) | [references/build.md](references/build.md) |
+| Wire a versioned store into Angular DI / signals | `@skewkit/angular-core` | [references/angular.md](references/angular.md) |
+| `ChunkLoadError` after deploys; lazy route recovery without reload loops | `@skewkit/angular-router` | [references/angular.md](references/angular.md) |
+| Normalized entity cache, optimistic writes, offline outbox in Angular | `@skewkit/angular-data` | [references/angular.md](references/angular.md) |
+| Multi-step wizard whose draft must survive refresh *and* deploys | `@skewkit/angular-workflow` | [references/angular.md](references/angular.md) |
 
-Adoption rule: every package depends on `@skew/core` and **never on a
+Adoption rule: every package depends on `@skewkit/core` and **never on a
 sibling**. Adopt one, all, or none — never install a package the task doesn't
-need. (READMEs mention `@skew/react-*` / `@skew/node` / `@skew/nest` as related
+need. (READMEs mention `@skewkit/react-*` / `@skewkit/node` / `@skewkit/nest` as related
 work; only the packages in the table above are shipped. For servers, use
-`@skew/core` + `@skew/contract` directly — they are dependency-free and run
+`@skewkit/core` + `@skewkit/contract` directly — they are dependency-free and run
 anywhere.)
 
 ## The rules that protect user data
@@ -56,7 +56,7 @@ Hold every change against them.
    types.** Each `versioned<V1>().next<V2>(…)` step is written against `V1`,
    `V2` interfaces that are *copies frozen at that version*. The moment a
    migration references a live interface, editing that interface silently
-   changes what old migrations produce. With `@skew/contract`, `skew-contract
+   changes what old migrations produce. With `@skewkit/contract`, `skew-contract
    gen` generates these frozen types so they can't drift.
 
 2. **Never edit or reorder an existing `next()` step or contract step.** Data
@@ -82,7 +82,7 @@ Hold every change against them.
 
 6. **Never auto-reload when the origin is stale.** `staleOrigin` (origin older
    than the running client) means a reload fetches the same stale bundle and
-   loops forever. The probe and `@skew/angular-router` classify this; keep the
+   loops forever. The probe and `@skewkit/angular-router` classify this; keep the
    distinction when building your own recovery.
 
 7. **Contract documents carry data, never code.** Ops come from a closed
@@ -95,7 +95,7 @@ Hold every change against them.
 ## Canonical quick start (browser cache, framework-free)
 
 ```ts
-import { versioned, createVersionedStore, webStorageDriver } from '@skew/core';
+import { versioned, createVersionedStore, webStorageDriver } from '@skewkit/core';
 
 // Frozen snapshots — copies, not imports of live types.
 interface V1 { id: string; themeQuote?: { text: string } }
@@ -110,7 +110,7 @@ export const WeeklyContent = versioned<V1>('weekly-content')
 
 const drafts = createVersionedStore(WeeklyContent, {
   driver: webStorageDriver('local'),   // degrades to memory under private mode/SSR
-  buildId: BUILD_ID,                   // from @skew/build's generated build-id.ts
+  buildId: BUILD_ID,                   // from @skewkit/build's generated build-id.ts
   onReadFailure: (key, f) => telemetry.warn('stale draft', { key, ...f }),
 });
 
@@ -127,7 +127,7 @@ if (!result.ok) {
 
 ## Angular conventions
 
-All `@skew/angular-*` packages are standalone-only (`provideSkew*()`
+All `@skewkit/angular-*` packages are standalone-only (`provideSkew*()`
 functions, no NgModules), signal-based, zoneless-safe, and SSR-safe. Wire
 stores through DI (`createSkewStoreToken` + `provideSkewStore`), consume with
 `injectSkewSignal` to avoid empty-state flashes, and generate `BUILD_ID` /

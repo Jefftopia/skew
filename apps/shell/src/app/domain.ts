@@ -1,5 +1,5 @@
-import { versioned } from '@skew/core';
-import { defineWorkflow } from '@skew/angular-workflow';
+import { versioned } from '@skewkit/core';
+import { defineWorkflow } from '@skewkit/angular-workflow';
 
 /**
  * The demo's premise.

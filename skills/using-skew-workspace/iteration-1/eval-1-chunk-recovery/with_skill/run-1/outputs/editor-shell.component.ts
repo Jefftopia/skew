@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { trackUnsavedWork } from '@skew/angular-router';
+import { trackUnsavedWork } from '@skewkit/angular-router';
 
 /**
  * Example of the one line every form-bearing component needs so that chunk

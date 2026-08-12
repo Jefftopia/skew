@@ -4,7 +4,7 @@ import {
   type VersionedStore,
   createVersionedStore,
   webStorageDriver,
-} from '@skew/core';
+} from '@skewkit/core';
 
 export interface DataOptions {
   /**

@@ -9,7 +9,7 @@ import {
   RouterLink,
   RouterLinkActive,
 } from '@angular/router';
-import { SkewRecoveryService } from '@skew/angular-router';
+import { SkewRecoveryService } from '@skewkit/angular-router';
 import { BUILD_IDENTITY } from './app.config';
 import { originIsRolledBack } from './origin';
 import { Lab } from './lab';
@@ -74,7 +74,7 @@ import { TourOverlay } from './tour/tour-overlay';
     <!--
       The before/after control.
 
-      Off does not put @skew into a "pretend to fail" mode — it makes the
+      Off does not put @skewkit into a "pretend to fail" mode — it makes the
       packages inert, so every scenario below runs the plain code you would
       have written instead. The failures are produced, not depicted.
     -->
@@ -86,7 +86,7 @@ import { TourOverlay } from './tour/tour-overlay';
         <span>{{
           lab.guarded()
             ? 'Envelopes checked, migrations run, chunk loads retried and classified.'
-            : '@skew is inert — bare reads and writes, no retry, no recovery. Re-run any scenario to see what it costs.'
+            : '@skewkit is inert — bare reads and writes, no retry, no recovery. Re-run any scenario to see what it costs.'
         }}</span>
       </div>
       <button (click)="lab.toggle()">
@@ -101,7 +101,7 @@ import { TourOverlay } from './tour/tour-overlay';
     <!--
       The devtools drawer. The hook behind it is installed in main.ts, before
       federation resolves — so it sees every read and write on the page, from
-      this build AND the remote's, because both share one @skew/core instance.
+      this build AND the remote's, because both share one @skewkit/core instance.
     -->
     <host-skew-devtools hostTourAnchor="devtools" />
 
@@ -148,7 +148,7 @@ export class App {
     afterNextRender(() => this.tour.startIfUnseen());
 
     /**
-     * Traces the navigation itself, independently of `@skew`.
+     * Traces the navigation itself, independently of `@skewkit`.
      *
      * Without this the unprotected path is invisible: you click, nothing
      * happens, and there is nothing to read. "Nothing happened" is the most
@@ -157,7 +157,7 @@ export class App {
      * written down rather than merely not contradicted.
      *
      * Deliberately a plain router subscription, so it keeps reporting when the
-     * protections are off and every `@skew` code path has stood down.
+     * protections are off and every `@skewkit` code path has stood down.
      */
     inject(Router)
       .events.pipe(takeUntilDestroyed())

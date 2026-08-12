@@ -1,5 +1,5 @@
 import { Injectable, computed, effect, signal } from '@angular/core';
-import { isSkewDisabled, setSkewDisabled } from '@skew/core';
+import { isSkewDisabled, setSkewDisabled } from '@skewkit/core';
 
 /**
  * The demo's instrumentation: a protection switch and an event log.
@@ -87,7 +87,7 @@ export class Lab {
   private seq = this.entries().reduce((max, e) => Math.max(max, e.seq), 0);
 
   /**
-   * Mirrors the flag in `@skew/core` rather than owning it.
+   * Mirrors the flag in `@skewkit/core` rather than owning it.
    *
    * The flag itself is module-level state inside core — there is no injector
    * there to hold it — so this signal is a view onto it, and `toggle()` writes
@@ -130,7 +130,7 @@ export class Lab {
       'note',
       'mode',
       next
-        ? 'Protections OFF — @skew is inert. Envelopes, migrations, retries and recovery all stand down.'
+        ? 'Protections OFF — @skewkit is inert. Envelopes, migrations, retries and recovery all stand down.'
         : 'Protections ON — every boundary is checked.',
     );
   }

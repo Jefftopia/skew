@@ -1,10 +1,10 @@
 {
-  "name": "@skew/angular-data",
+  "name": "@skewkit/angular-data",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/core": "^22.0.0",
     "@angular/common": "^22.0.0",
-    "@skew/core": "^0.0.1"
+    "@skewkit/core": "^0.0.1"
   },
   "sideEffects": false,
   "description": "Normalized entity store, tag invalidation, and a durable mutation outbox for Angular."

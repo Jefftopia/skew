@@ -1,5 +1,5 @@
 {
-  "name": "@skew/core",
+  "name": "@skewkit/core",
   "version": "0.0.1",
   "description": "Framework-agnostic primitives for surviving version skew: versioned envelopes, migration chains, build identity and negotiation.",
   "keywords": [
