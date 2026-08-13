@@ -26,7 +26,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # Read from .nvmrc so CI and local development cannot drift apart. They must agree on
+          # the *major*: Node 22 ships npm 10 and Node 24 ships npm 11, and the two write
+          # package-lock trees the other rejects, which surfaces as `npm ci` reporting packages
+          # "missing from lock file" that are plainly present.
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci

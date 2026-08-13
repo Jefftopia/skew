@@ -43,7 +43,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # Same toolchain as CI and local development; see the note in ci.yml.
+          node-version-file: .nvmrc
           cache: npm
           registry-url: https://registry.npmjs.org
 

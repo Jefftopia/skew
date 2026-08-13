@@ -90,6 +90,14 @@ const TUTORIALS: readonly TutorialEntry[] = [
         }
       </aside>
 
+      <!--
+        Delegation container, not a control: the handler only acts on clicks that originated on
+        an <a> inside the rendered markdown, and those anchors are already keyboard accessible —
+        Enter on a link fires a click that bubbles to here. Making the <article> focusable and
+        adding key handlers would announce a non-interactive region as interactive, which is
+        worse for screen readers than the rule it satisfies.
+      -->
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
       <article class="page" (click)="onContentClick($event)">
         @if (error(); as message) {
           <div class="load-error">
