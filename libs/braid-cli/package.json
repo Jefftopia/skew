@@ -1,0 +1,39 @@
+{
+  "name": "@skewkit/braid-cli",
+  "version": "0.0.1",
+  "description": "Braid's command line: run a composed application locally with live reload, scaffold a config, and register fragments.",
+  "keywords": ["braid", "micro-frontends", "cli", "dev-server", "composition"],
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "braid": "./src/bin.js"
+  },
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./nx": {
+      "types": "./src/nx/plugin.d.ts",
+      "default": "./src/nx/plugin.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "@skewkit/braid-gateway": "^0.0.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jefftopia/skew.git",
+    "directory": "libs/braid-cli"
+  },
+  "homepage": "https://github.com/Jefftopia/skew#readme",
+  "bugs": {
+    "url": "https://github.com/Jefftopia/skew/issues"
+  }
+}

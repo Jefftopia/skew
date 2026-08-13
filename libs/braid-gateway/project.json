@@ -1,0 +1,41 @@
+{
+  "name": "braid-gateway",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/braid-gateway/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "framework:agnostic"],
+  "release": {
+    "version": {
+      "manifestRootsToUpdate": ["dist/{projectRoot}"],
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk"
+    }
+  },
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "options": {
+        "outputPath": "dist/libs/braid-gateway",
+        "main": "libs/braid-gateway/src/index.ts",
+        "tsConfig": "libs/braid-gateway/tsconfig.build.json",
+        "assets": ["libs/braid-gateway/*.md"]
+      }
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "options": {
+        "command": "vitest run --config libs/braid-gateway/vite.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

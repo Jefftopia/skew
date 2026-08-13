@@ -1,0 +1,41 @@
+{
+  "name": "braid",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/braid/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "framework:agnostic"],
+  "release": {
+    "version": {
+      "manifestRootsToUpdate": ["dist/{projectRoot}"],
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk"
+    }
+  },
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "options": {
+        "outputPath": "dist/libs/braid",
+        "main": "libs/braid/src/index.ts",
+        "tsConfig": "libs/braid/tsconfig.build.json",
+        "assets": ["libs/braid/*.md"]
+      }
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "options": {
+        "command": "vitest run --config libs/braid/vite.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "braid-poc-remote",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "billing",
+  "sourceRoot": "apps/braid-poc-remote/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "development",
+      "options": {
+        "outputPath": "dist/apps/braid-poc-remote",
+        "index": "apps/braid-poc-remote/src/index.html",
+        "browser": "apps/braid-poc-remote/src/main.ts",
+        "tsConfig": "apps/braid-poc-remote/tsconfig.app.json",
+        "styles": ["apps/braid-poc-remote/src/styles.css"]
+      },
+      "configurations": {
+        "production": {
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true,
+          "outputHashing": "all"
+        }
+      }
+    },
+    "serve": {
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "braid-poc-remote:build:development",
+        "port": 4611,
+        "servePath": "/__braid/frag/billing/"
+      },
+      "configurations": {
+        "development": {}
+      }
+    },
+    "serve-remote": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node tools/braid-poc/serve-remote.mjs"
+      }
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "braid-poc-host",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "app",
+  "sourceRoot": "apps/braid-poc-host/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "development",
+      "options": {
+        "outputPath": "dist/apps/braid-poc-host",
+        "index": "apps/braid-poc-host/src/index.html",
+        "browser": "apps/braid-poc-host/src/main.ts",
+        "server": "apps/braid-poc-host/src/main.server.ts",
+        "outputMode": "server",
+        "ssr": {
+          "entry": "apps/braid-poc-host/src/server.ts"
+        },
+        "tsConfig": "apps/braid-poc-host/tsconfig.app.json",
+        "styles": ["apps/braid-poc-host/src/styles.css"]
+      },
+      "configurations": {
+        "production": {
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true,
+          "outputHashing": "all"
+        }
+      }
+    },
+    "serve": {
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "braid-poc-host:build:development",
+        "port": 4610
+      },
+      "configurations": {
+        "development": {}
+      }
+    },
+    "serve-poc": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node dist/apps/braid-poc-host/server/server.mjs"
+      }
+    }
+  }
+}

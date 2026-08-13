@@ -1,0 +1,40 @@
+{
+  "name": "@skewkit/braid-gateway",
+  "version": "0.0.1",
+  "description": "Braid gateway — fetch-native origin-front middleware that routes fragment traffic by exact id under the reserved /__braid/frag/ namespace, loads fragment manifests, and passes everything else through to your existing app.",
+  "keywords": [
+    "micro-frontends",
+    "gateway",
+    "composition",
+    "fragments",
+    "middleware"
+  ],
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./node": {
+      "types": "./src/node.d.ts",
+      "default": "./src/node.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jefftopia/skew.git",
+    "directory": "libs/braid-gateway"
+  },
+  "homepage": "https://github.com/Jefftopia/skew#readme",
+  "bugs": {
+    "url": "https://github.com/Jefftopia/skew/issues"
+  }
+}

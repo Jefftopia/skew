@@ -1,0 +1,12 @@
+/* Loaded through a <link rel="stylesheet"> in the remote's index.html.
+   Proves the gateway rewrites the fragment's asset URLs into its own namespace: this file is
+   served from the remote's origin even though the markup lives in the host page. */
+billing-root {
+  display: block;
+  font-family: system-ui, sans-serif;
+}
+
+billing-root h3 {
+  margin-top: 0;
+  color: #5b21b6;
+}

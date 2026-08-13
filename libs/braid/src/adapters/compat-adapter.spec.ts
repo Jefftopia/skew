@@ -1,0 +1,56 @@
+import { describe, expect, it } from 'vitest';
+import { parseFragmentContent } from './compat-adapter.js';
+
+/**
+ * The client parses markup the gateway already prepared. These assert it adopts that markup
+ * faithfully — in particular that it does *not* re-run the server-side transforms, which would
+ * record `inert` as a script's real type and stop it ever executing.
+ */
+describe('parseFragmentContent()', () => {
+  it('adopts gateway-prepared document markup as-is', () => {
+    const content = parseFragmentContent(
+      `<braid-html lang="en"><braid-head><title>Billing</title></braid-head>` +
+        `<braid-body class="legacy"><h1>Invoices</h1></braid-body></braid-html>`,
+      document,
+    );
+
+    expect(content.tagName).toBe('BRAID-HTML');
+    expect(content.getAttribute('lang')).toBe('en');
+    expect(content.querySelector('braid-head title')!.textContent).toBe('Billing');
+    expect(content.querySelector('braid-body')!.getAttribute('class')).toBe('legacy');
+    expect(content.ownerDocument).toBe(document);
+  });
+
+  it('leaves already-neutralized scripts exactly as the gateway left them', () => {
+    const content = parseFragmentContent(
+      `<braid-html><braid-body>` +
+        `<script type="inert" data-script-type="module" src="/__braid/frag/billing/main.js"></script>` +
+        `</braid-body></braid-html>`,
+      document,
+    );
+
+    const script = content.querySelector('script')!;
+    expect(script.getAttribute('type')).toBe('inert');
+    // the real type must survive — the activation path restores it to run the script
+    expect(script.getAttribute('data-script-type')).toBe('module');
+    expect(script.getAttribute('src')).toBe('/__braid/frag/billing/main.js');
+  });
+
+  it('wraps bare markup that has no braid-html root', () => {
+    const content = parseFragmentContent(`<p>fragment</p>`, document);
+
+    expect(content.tagName).toBe('BRAID-HTML');
+    expect(content.querySelector('braid-body p')!.textContent).toBe('fragment');
+  });
+
+  it('does not execute scripts while parsing', () => {
+    (window as unknown as { __parsedScriptRan?: boolean }).__parsedScriptRan = false;
+    const closingScriptTag = '</' + 'script>';
+    parseFragmentContent(
+      `<braid-body><script>window.__parsedScriptRan = true;${closingScriptTag}</braid-body>`,
+      document,
+    );
+
+    expect((window as unknown as { __parsedScriptRan?: boolean }).__parsedScriptRan).toBe(false);
+  });
+});

@@ -1,0 +1,19 @@
+{
+  "port": 4600,
+  "shell": {
+    "port": 4610,
+    "command": "npx nx serve braid-poc-host"
+  },
+  "fragments": [
+    {
+      "id": "billing",
+      "title": "Billing",
+      "endpoint": "http://localhost:4611/__braid/frag/billing",
+      "dev": {
+        "port": 4611,
+        "command": "npx nx serve braid-poc-remote"
+      },
+      "pierce": ["/billing", "/billing/*"]
+    }
+  ]
+}

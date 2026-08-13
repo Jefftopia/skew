@@ -1,0 +1,183 @@
+import { afterEach, describe, expect, it } from 'vitest';
+import { createServer, Server } from 'node:http';
+import { AddressInfo } from 'node:net';
+import { createGateway, toFetchHandler } from './gateway.js';
+import { toNodeMiddleware } from './node.js';
+
+/**
+ * Integration tests for the framework bindings, against the real frameworks.
+ *
+ * Piercing is the demanding case: it requires the gateway to *read* the shell application's
+ * response, which each framework exposes differently. These tests assert the full path — a
+ * fragment server-rendered into the shell's markup — not just that the middleware is callable.
+ */
+
+const FRAGMENT_HTML = `<!doctype html><html><head><title>Billing</title></head><body><h1>Invoices</h1><script>go()</script></body></html>`;
+const SHELL_HTML = `<html><head><title>Shell</title></head><body><h1>Shell</h1><fragment-slot name="billing"></fragment-slot></body></html>`;
+
+function makeGateway() {
+  return createGateway({
+    registry: [
+      {
+        id: 'billing',
+        pierce: ['/billing', '/billing/*'],
+        endpoint: (async () =>
+          new Response(FRAGMENT_HTML, { headers: { 'content-type': 'text/html' } })) as unknown as typeof fetch,
+      },
+    ],
+  });
+}
+
+/** Asserts a composed document really contains the server-rendered fragment. */
+function expectPierced(html: string) {
+  expect(html).toContain('<fragment-slot name="billing" data-braid-pierced="">');
+  expect(html).toContain('<template shadowrootmode="open">');
+  expect(html).toContain('<h1>Invoices</h1>');
+  expect(html).toContain('<script type="inert">go()</script>');
+  // the shell's own markup survives around it
+  expect(html).toContain('<h1>Shell</h1>');
+}
+
+const servers: Server[] = [];
+
+afterEach(async () => {
+  await Promise.all(servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))));
+});
+
+async function listen(server: Server): Promise<string> {
+  servers.push(server);
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+}
+
+const documentInit = { headers: { 'sec-fetch-dest': 'document' } };
+
+describe('Express', () => {
+  it('pierces a document response and passes other routes through', async () => {
+    const { default: express } = await import('express');
+
+    const app = express();
+    app.use(toNodeMiddleware(makeGateway()));
+    app.get('/billing/invoices', (_req, res) => res.type('html').send(SHELL_HTML));
+    app.get('/other', (_req, res) => res.type('html').send('<html><body>other</body></html>'));
+
+    const origin = await listen(createServer(app));
+
+    expectPierced(await (await fetch(`${origin}/billing/invoices`, documentInit)).text());
+    expect(await (await fetch(`${origin}/other`, documentInit)).text()).toContain('other');
+  });
+
+  it('serves realm stubs through the namespace', async () => {
+    const { default: express } = await import('express');
+
+    const app = express();
+    app.use(toNodeMiddleware(makeGateway()));
+    app.use((_req, res) => res.status(404).send('shell 404'));
+
+    const origin = await listen(createServer(app));
+    const response = await fetch(`${origin}/__braid/realm/billing/`);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('name="braid-protocol"');
+  });
+
+  it('leaves a streaming shell streaming', async () => {
+    const { default: express } = await import('express');
+
+    const app = express();
+    app.use(toNodeMiddleware(makeGateway()));
+    app.get('/billing/stream', (_req, res) => {
+      res.type('html');
+      res.write('<html><body><h1>Shell</h1>');
+      res.write('<fragment-slot name="billing"></fragment-slot>');
+      res.end('</body></html>');
+    });
+
+    const origin = await listen(createServer(app));
+    expectPierced(await (await fetch(`${origin}/billing/stream`, documentInit)).text());
+  });
+});
+
+describe('NestJS', () => {
+  it('pierces a document response through the Express adapter', async () => {
+    const { NestFactory } = await import('@nestjs/core');
+    const { Module, Controller, Get, Header } = await import('@nestjs/common');
+
+    @Controller()
+    class ShellController {
+      @Get('billing/invoices')
+      @Header('content-type', 'text/html')
+      shell() {
+        return SHELL_HTML;
+      }
+    }
+
+    @Module({ controllers: [ShellController] })
+    class AppModule {}
+
+    const app = await NestFactory.create(AppModule, { logger: false });
+    app.use(toNodeMiddleware(makeGateway()));
+    await app.init();
+
+    const origin = await listen(createServer(app.getHttpAdapter().getInstance()));
+
+    try {
+      expectPierced(await (await fetch(`${origin}/billing/invoices`, documentInit)).text());
+    } finally {
+      await app.close();
+    }
+  }, 30_000);
+});
+
+describe('h3 / Nitro', () => {
+  it('pierces through toFetchHandler wrapping the app web handler', async () => {
+    const { createApp, defineEventHandler, toWebHandler } = await import('h3');
+
+    const app = createApp();
+    app.use(
+      defineEventHandler(
+        () => new Response(SHELL_HTML, { headers: { 'content-type': 'text/html' } }),
+      ),
+    );
+
+    const handler = toFetchHandler(makeGateway(), toWebHandler(app));
+    const response = await handler(new Request('http://localhost/billing/invoices', documentInit));
+
+    expectPierced(await response.text());
+  });
+
+  it('serves namespace requests through the same handler', async () => {
+    const { createApp, defineEventHandler, toWebHandler } = await import('h3');
+
+    const app = createApp();
+    app.use(defineEventHandler(() => new Response('shell', { status: 404 })));
+
+    const handler = toFetchHandler(makeGateway(), toWebHandler(app));
+    const response = await handler(
+      new Request('http://localhost/__braid/frag/billing/app.js', { headers: { 'sec-fetch-dest': 'script' } }),
+    );
+
+    expect(response.headers.get('x-braid-fragment-id')).toBe('billing');
+  });
+
+  it('runs the shell app at most once per request', async () => {
+    const { createApp, defineEventHandler, toWebHandler } = await import('h3');
+
+    let shellRuns = 0;
+    const app = createApp();
+    app.use(
+      defineEventHandler(() => {
+        shellRuns++;
+        return new Response(SHELL_HTML, { headers: { 'content-type': 'text/html' } });
+      }),
+    );
+
+    const handler = toFetchHandler(makeGateway(), toWebHandler(app));
+    await handler(new Request('http://localhost/billing/invoices', documentInit)).then((r) => r.text());
+    expect(shellRuns).toBe(1);
+
+    // and on a route braid does not touch
+    await handler(new Request('http://localhost/unrelated', documentInit)).then((r) => r.text());
+    expect(shellRuns).toBe(2);
+  });
+});

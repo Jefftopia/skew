@@ -1,0 +1,52 @@
+/**
+ * @skewkit/braid-gateway — the Braid gateway (C6): fetch-native origin-front middleware.
+ *
+ * ```ts
+ * import { createGateway, toWebMiddleware } from '@skewkit/braid-gateway';
+ *
+ * const gateway = createGateway({
+ *   registry: [{ id: 'legacy-billing', endpoint: 'https://billing.internal' }],
+ *   // adapter defaults to 'compat' — zero fragment code required
+ * });
+ * ```
+ *
+ * Node/Connect binding: `import { toNodeMiddleware } from '@skewkit/braid-gateway/node'`.
+ */
+
+export { createGateway, toWebMiddleware, toFetchHandler } from './gateway.js';
+export type { BraidGateway, GatewayOptions } from './gateway.js';
+export {
+  DEFAULT_ADAPTER,
+  DEFAULT_TIMEOUT_MS,
+  normalizeManifest,
+  Registry,
+} from './registry.js';
+export type {
+  FragmentManifest,
+  ResolvedFragmentManifest,
+  FragmentFallback,
+  FragmentAccess,
+  AccessRule,
+  Principal,
+  RegistrySource,
+} from './registry.js';
+export { satisfies, canList, canFetch } from './registry.js';
+export { DEFAULT_DISCOVERY_PATH, DEFAULT_DISCOVERY_PAGE_SIZE } from './discovery.js';
+export type { DiscoveryOptions, DiscoveryEntry, DiscoveryPage } from './discovery.js';
+export {
+  BRAID_FRAGMENT_PREFIX,
+  BRAID_REALM_PREFIX,
+  BRAID_DOCUMENT_PREFIX,
+  BRAID_PROTOCOL_VERSION,
+  parseBraidPathname,
+} from './protocol.js';
+export type { BraidRoute, BraidRouteKind } from './protocol.js';
+export { rewriteHtmlStream, concatStreams } from './rewriter/html-rewrite-stream.js';
+export type { RewriteOptions, ElementHandler, StartTag, EndTag, Injection } from './rewriter/html-rewrite-stream.js';
+export {
+  prepareFragmentHtml,
+  pierceShellHtml,
+  BRAID_FRAGMENT_STYLES,
+  BRAID_SHELL_STYLES,
+} from './rewriter/transforms.js';
+export type { PierceOptions, PierceTarget } from './rewriter/transforms.js';

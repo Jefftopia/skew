@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc",
+    "declaration": true,
+    "types": [],
+    "target": "ES2022",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["**/*.spec.ts", "**/*.test.ts"]
+}
