@@ -57,5 +57,26 @@ export const appRoutes: Route[] = [
     ],
   },
 
+  {
+    /**
+     * The tutorials — content about the libraries, served *through* them.
+     *
+     * The pages live in `docs/tutorials` and ship as static assets in both
+     * builds, but the component that renders them is the remote's
+     * `./Tutorials` exposure, fetched at runtime like `./FundDetail` above.
+     * Redeploying the remote updates the tutorial UI under a running host —
+     * and if that redeploy lands while this route is being opened, the same
+     * `lazy()` retry/attribution path protects it. Teaching material with a
+     * stake in the lesson.
+     */
+    path: 'tutorials',
+    loadComponent: loadRemote(
+      'remote-tutorials',
+      'prod-remote',
+      './Tutorials',
+      (m) => m['Tutorials'] as never,
+    ),
+  },
+
   { path: '**', redirectTo: 'basics' },
 ];

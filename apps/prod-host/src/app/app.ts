@@ -69,6 +69,7 @@ import { TourOverlay } from './tour/tour-overlay';
     <nav class="tabs" hostTourAnchor="tabs">
       <a routerLink="/basics" routerLinkActive="active">Basics</a>
       <a routerLink="/portfolio" routerLinkActive="active">Portfolio</a>
+      <a routerLink="/tutorials" routerLinkActive="active">Tutorials</a>
     </nav>
 
     <!--

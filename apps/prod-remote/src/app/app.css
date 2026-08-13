@@ -47,3 +47,32 @@ h1 {
   border-radius: 5px;
   font-size: 0.76rem;
 }
+
+/* Standalone view switch — a signal, not a router; see the note in app.ts. */
+.views {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.views button {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid #d5dae3;
+  background: #fff;
+  color: #3c4356;
+  cursor: pointer;
+}
+
+.views button:hover {
+  border-color: #a5adc0;
+}
+
+.views button.active {
+  background: #1e3a5f;
+  border-color: #1e3a5f;
+  color: #fff;
+}

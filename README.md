@@ -107,6 +107,20 @@ your live application types. Each step closes over its own frozen snapshot
 then editing that interface later silently changes what the old migration
 produces — and TypeScript cannot warn you, because the code still compiles.
 
+## Tutorials
+
+Step-by-step, screenshot-illustrated introductions to each package live in
+[`docs/tutorials`](docs/tutorials/README.md) — core, build, angular-core, and
+angular-data, each building something small and real.
+
+They are also served *inside the production demo*: the remote exposes a
+`./Tutorials` module and the host routes to it at
+<http://localhost:4410/tutorials>, so the tutorials cross the same deployment
+boundary they teach about. Redeploy the remote and the tutorial UI updates
+under the running host.
+
+---
+
 ## Packages
 
 | Package                                               | What it does                                                                                            |

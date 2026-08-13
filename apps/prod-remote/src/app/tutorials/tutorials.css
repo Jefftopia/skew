@@ -1,0 +1,222 @@
+/* Tutorials — a two-pane reader in the demo's visual language.
+   Reuses the palette of cards.css without depending on it, so the component
+   renders identically federated into the host and standalone. */
+
+.tutorials {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .tutorials {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- table of contents -------------------------------------------------- */
+
+.toc {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toc-head {
+  border: 1px solid #d9dbe8;
+  border-radius: 10px;
+  background: #f7f5ff;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.78rem;
+  color: #4b4e63;
+}
+
+.toc-head .badge {
+  display: inline-block;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  margin-bottom: 0.4rem;
+}
+
+.toc-head p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.toc-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-align: left;
+  border: 1px solid #d9dbe8;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.toc-entry:hover {
+  border-color: #a5a8c0;
+}
+
+.toc-entry.active {
+  border-color: #1e3a5f;
+  box-shadow: 0 0 0 1px #1e3a5f inset;
+}
+
+.toc-entry .pkg {
+  font-family: ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: #7c3aed;
+}
+
+.toc-entry .title {
+  font-weight: 650;
+  font-size: 0.92rem;
+  color: #1c1e2e;
+}
+
+.toc-entry .summary {
+  font-size: 0.76rem;
+  color: #6b6e85;
+  line-height: 1.4;
+}
+
+/* --- the rendered page --------------------------------------------------- */
+
+.page {
+  border: 1px solid #d9dbe8;
+  border-radius: 12px;
+  background: #fff;
+  padding: 1.5rem 2rem 2rem;
+  min-height: 20rem;
+}
+
+.loading,
+.load-error {
+  color: #6b6e85;
+  font-size: 0.9rem;
+}
+
+.load-error strong {
+  color: #b3261e;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.markdown {
+  line-height: 1.6;
+  color: #24263a;
+  font-size: 0.95rem;
+}
+
+.markdown h1 {
+  font-size: 1.45rem;
+  margin: 0 0 0.75rem;
+  line-height: 1.25;
+}
+
+.markdown h2 {
+  font-size: 1.1rem;
+  margin: 1.75rem 0 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ececf3;
+}
+
+.markdown h3 {
+  font-size: 0.98rem;
+  margin: 1.25rem 0 0.4rem;
+}
+
+.markdown p,
+.markdown li {
+  margin: 0.4rem 0;
+}
+
+.markdown ul,
+.markdown ol {
+  padding-left: 1.4rem;
+}
+
+.markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.84em;
+  background: #f2f2f8;
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+.markdown pre {
+  background: #16182a;
+  color: #e6e8f5;
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.markdown pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.markdown blockquote {
+  margin: 0.75rem 0;
+  border-left: 3px solid #8fbfe0;
+  background: #f4f9fd;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0 8px 8px 0;
+}
+
+.markdown blockquote p {
+  margin: 0.2rem 0;
+}
+
+.markdown table {
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.86rem;
+  display: block;
+  overflow-x: auto;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid #e2e3ee;
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+}
+
+.markdown th {
+  background: #f7f7fb;
+}
+
+.markdown img {
+  max-width: 100%;
+  border: 1px solid #d9dbe8;
+  border-radius: 10px;
+  margin: 0.75rem 0;
+  box-shadow: 0 2px 10px rgba(28, 30, 46, 0.07);
+}
+
+.markdown a {
+  color: #1e5fa8;
+}
+
+.markdown hr {
+  border: none;
+  border-top: 1px solid #ececf3;
+  margin: 1.5rem 0;
+}

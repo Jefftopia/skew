@@ -9,6 +9,7 @@ export default withNativeFederation({
   exposes: {
     './Editor': './apps/prod-remote/src/app/editor/editor.ts',
     './FundDetail': './apps/prod-remote/src/app/portfolio/fund-detail.ts',
+    './Tutorials': './apps/prod-remote/src/app/tutorials/tutorials.ts',
   },
 
   /**

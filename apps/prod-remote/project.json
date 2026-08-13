@@ -38,7 +38,9 @@
     },
     "esbuild": {
       "executor": "@angular/build:application",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/prod-remote",
@@ -48,10 +50,19 @@
           {
             "glob": "**/*",
             "input": "apps/prod-remote/public"
+          },
+          {
+            "glob": "**/*",
+            "input": "docs/tutorials",
+            "output": "tutorial-content"
           }
         ],
-        "styles": ["apps/prod-remote/src/styles.css"],
-        "polyfills": ["es-module-shims"]
+        "styles": [
+          "apps/prod-remote/src/styles.css"
+        ],
+        "polyfills": [
+          "es-module-shims"
+        ]
       },
       "configurations": {
         "production": {
