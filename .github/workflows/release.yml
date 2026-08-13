@@ -68,3 +68,14 @@ jobs:
           # org with read+write. Repo → Settings → Secrets → Actions.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+      - name: Push the release record
+        # Without this, the changelog commit and the v{version} tag exist only
+        # in this runner and evaporate when it exits — which is exactly what
+        # happened to v0.1.0: npm had it, the repo had no record, and the next
+        # release would have resolved its current version from the disk
+        # fallback and collided with the version already spent on npm. The
+        # push runs AFTER publish on purpose: a failed publish must not leave
+        # a tag pointing at a release that never shipped.
+        if: ${{ !inputs.dry-run }}
+        run: git push --follow-tags origin HEAD:main
