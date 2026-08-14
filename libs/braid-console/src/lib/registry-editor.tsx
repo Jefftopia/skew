@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FragmentManifest } from '@skewkit/braid-gateway';
-import type { DescriptorNote, FieldChange, RegistryFinding } from '@skewkit/braid-registry';
+import type { DescriptorNote, FieldChange, NamedPrincipal, RegistryFinding } from '@skewkit/braid-registry';
+import { AccessPanel } from './access-panel.js';
 import {
   fetchHead,
   publishSnapshot,
@@ -8,6 +9,7 @@ import {
   type ConsoleApi,
   type PublishOutcome,
 } from './client.js';
+import { accessMatrix, ANONYMOUS } from '@skewkit/braid-registry';
 import {
   addFragment,
   createDraft,
@@ -28,6 +30,14 @@ export interface RegistryEditorProps {
   className?: string;
   /** Called after a successful publish, for hosts that want to react (toast, audit, navigate). */
   onPublished?: (outcome: PublishOutcome) => void;
+  /**
+   * Principals the access preview tests against, beyond anonymous (which is always included).
+   *
+   * Held by the host when given, so they can be persisted or shared; otherwise the editor keeps
+   * them for the session. Either way they are a what-if, not a directory.
+   */
+  principals?: NamedPrincipal[];
+  onPrincipalsChange?: (principals: NamedPrincipal[]) => void;
 }
 
 type Phase =
@@ -44,11 +54,24 @@ type Phase =
  * Publishing never mutates the snapshot being edited; it mints a new one and moves a pointer, so
  * the previous configuration remains exactly as it was and rollback is re-pinning it.
  */
-export function RegistryEditor({ api, theme, className, onPublished }: RegistryEditorProps) {
+export function RegistryEditor({
+  api,
+  theme,
+  className,
+  onPublished,
+  principals,
+  onPrincipalsChange,
+}: RegistryEditorProps) {
   const [draft, setDraft] = useState<Draft>(() => createDraft([]));
   const [phase, setPhase] = useState<Phase>({ status: 'loading' });
   const [expanded, setExpanded] = useState<number | null>(null);
   const [showDiff, setShowDiff] = useState(false);
+  const [showAccess, setShowAccess] = useState(false);
+  const [ownPrincipals, setOwnPrincipals] = useState<NamedPrincipal[]>([]);
+
+  // Controlled when the host supplies them, uncontrolled otherwise — the same shape as any input.
+  const testPrincipals = principals ?? ownPrincipals;
+  const setPrincipals = (next: NamedPrincipal[]) => (onPrincipalsChange ?? setOwnPrincipals)(next);
 
   const apiKey = `${api?.baseUrl ?? ''}|${api?.apiPath ?? ''}`;
 
@@ -81,6 +104,13 @@ export function RegistryEditor({ api, theme, className, onPublished }: RegistryE
   }, [apiKey]);
 
   const status = useMemo(() => draftStatus(draft), [draft]);
+
+  // Computed whether or not the panel is open: an access loss is a finding, and a finding hidden
+  // behind a toggle nobody pressed is not a finding.
+  const accessLosses = useMemo(
+    () => accessMatrix(draft.manifests, [ANONYMOUS, ...testPrincipals], draft.base).losses.length,
+    [draft.manifests, draft.base, testPrincipals],
+  );
 
   const publish = useCallback(async () => {
     setPhase({ status: 'publishing' });
@@ -154,12 +184,23 @@ export function RegistryEditor({ api, theme, className, onPublished }: RegistryE
       )}
 
       {showDiff && <DiffPanel changes={status.diff} />}
+      {showAccess && (
+        <AccessPanel
+          manifests={draft.manifests}
+          base={draft.base}
+          principals={testPrincipals}
+          onPrincipalsChange={setPrincipals}
+        />
+      )}
 
       <PublishBar
         status={status}
         phase={phase}
         showDiff={showDiff}
         onToggleDiff={() => setShowDiff(!showDiff)}
+        showAccess={showAccess}
+        onToggleAccess={() => setShowAccess(!showAccess)}
+        accessLosses={accessLosses}
         onReset={() => setDraft(resetDraft(draft))}
         onPublish={publish}
       />
@@ -380,6 +421,9 @@ function PublishBar({
   phase,
   showDiff,
   onToggleDiff,
+  showAccess,
+  onToggleAccess,
+  accessLosses,
   onReset,
   onPublish,
 }: {
@@ -387,6 +431,9 @@ function PublishBar({
   phase: Phase;
   showDiff: boolean;
   onToggleDiff: () => void;
+  showAccess: boolean;
+  onToggleAccess: () => void;
+  accessLosses: number;
   onReset: () => void;
   onPublish: () => void;
 }) {
@@ -403,6 +450,14 @@ function PublishBar({
             : `Ready${warnings > 0 ? ` — ${warnings} warning${warnings === 1 ? '' : 's'}` : ''}`}
       </span>
       <span className="braid-console__spacer" />
+      {accessLosses > 0 && (
+        <span className="braid-console__barstate--error">
+          {accessLosses} access loss{accessLosses === 1 ? '' : 'es'}
+        </span>
+      )}
+      <button className="braid-console__ghost" type="button" onClick={onToggleAccess}>
+        {showAccess ? 'Hide access' : 'Show access'}
+      </button>
       <button className="braid-console__ghost" type="button" onClick={onToggleDiff}>
         {showDiff ? 'Hide changes' : 'Show changes'}
       </button>

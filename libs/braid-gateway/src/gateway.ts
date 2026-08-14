@@ -85,6 +85,35 @@ export interface GatewayOptions {
    * `sec-fetch-dest` into the edge's cache key. See `docs/braid-cdn.md`.
    */
   pierceCacheControl?: 'private' | 'preserve';
+  /**
+   * Called for every document request that reaches the shell, with which fragments composed into
+   * it. This is what makes traffic-informed impact analysis possible: "after this change, 43 of
+   * the 412 page URLs we actually serve stop composing billing".
+   *
+   * **On the request path, so it must be cheap.** It is called synchronously and never awaited;
+   * a sink that does real work should buffer and flush elsewhere. It is also called *outside* any
+   * try/catch — a throwing observer will fail the request, which is the honest behavior for a
+   * broken observer rather than one that silently records nothing.
+   *
+   * Off unless configured. Recording the paths a site serves is a data-retention decision, not a
+   * default: paths carry identifiers, and sometimes personal ones.
+   */
+  observe?: (event: RoutingEvent) => void;
+}
+
+/**
+ * One document request, and what composed into it.
+ *
+ * Emitted for *every* document request the shell handles, not only pierce-matched ones. A path
+ * that composes nothing today is exactly the path that a widened pattern would start composing
+ * tomorrow, and analysis needs both sides to report a gain.
+ */
+export interface RoutingEvent {
+  /** Page pathname. Search is excluded — it never affects pierce matching. */
+  pathname: string;
+  /** Fragment ids that composed into this response, in registration order. */
+  fragmentIds: string[];
+  at: number;
 }
 
 export interface BraidGateway {
@@ -132,7 +161,7 @@ export function createGateway(options: GatewayOptions): BraidGateway {
     async handle(request: Request, next?: () => Promise<Response>): Promise<Response | null> {
       const requestUrl = new URL(request.url);
 
-      if (discovery && requestUrl.pathname === discovery.path) {
+      if (discovery?.owns(requestUrl.pathname)) {
         return discovery.handle(request, requestUrl);
       }
 
@@ -445,9 +474,22 @@ export function createGateway(options: GatewayOptions): BraidGateway {
     if (request.method !== 'GET') return null;
 
     const matches = await registry.matchPierceRoutes(requestUrl.pathname);
+    const isDocument = isDocumentRequest(request);
+
+    // Observed before the early return below, so paths that compose *nothing* are recorded too.
+    // Only document requests: they are the population that could ever compose, and a soft
+    // navigation fetching the same URL is not a second page view.
+    if (options.observe && isDocument) {
+      options.observe({
+        pathname: requestUrl.pathname,
+        fragmentIds: matches.map((manifest) => manifest.id),
+        at: Date.now(),
+      });
+    }
+
     if (matches.length === 0) return null;
 
-    if (isDocumentRequest(request)) {
+    if (isDocument) {
       // a fragment the caller may not load is simply not composed into their page; the slot is
       // left for the client, which will get the same 403/404 and can render it as it sees fit
       const permitted: ResolvedFragmentManifest[] = [];

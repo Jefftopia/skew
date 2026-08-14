@@ -1,4 +1,5 @@
 import { BRAID_FRAGMENT_PREFIX, BRAID_PROTOCOL_VERSION } from './protocol.js';
+import { toAppdApplication, type AppdAppResponse, type AppdListResponse } from './appd.js';
 import { canFetch, canList, Principal, Registry, ResolvedFragmentManifest } from './registry.js';
 
 /**
@@ -24,6 +25,13 @@ export interface DiscoveryOptions {
    * Forced on in development mode.
    */
   includeEndpoints?: boolean;
+  /**
+   * Also serve the registry in FDC3 **App Directory** shape, under `<path>/appd/v2/apps`.
+   *
+   * Off by default. It is a projection over the same manifests and the same `access.list` rules —
+   * not a second directory — so turning it on adds a shape, never a source of truth.
+   */
+  appd?: boolean;
 }
 
 export interface DiscoveryEntry {
@@ -61,6 +69,14 @@ export interface DiscoveryPage {
   unfiltered?: boolean;
 }
 
+export interface DiscoveryHandler {
+  /** The listing path itself. */
+  path: string;
+  /** Whether this handler answers for a pathname — the listing, or its App Directory projection. */
+  owns(pathname: string): boolean;
+  handle(request: Request, url: URL): Promise<Response>;
+}
+
 export const DEFAULT_DISCOVERY_PATH = '/__braid/registry';
 export const DEFAULT_DISCOVERY_PAGE_SIZE = 100;
 
@@ -76,7 +92,7 @@ export function createDiscoveryHandler(
   options: DiscoveryOptions | undefined,
   mode: 'production' | 'development',
   resolvePrincipal: (request: Request) => Promise<Principal | undefined>,
-): { path: string; handle(request: Request, url: URL): Promise<Response> } | null {
+): DiscoveryHandler | null {
   if (!options) return null;
 
   const path = options.path ?? DEFAULT_DISCOVERY_PATH;
@@ -92,8 +108,15 @@ export function createDiscoveryHandler(
     );
   }
 
+  const appdEnabled = options.appd ?? false;
+  const appdPath = `${path}/appd/v2/apps`;
+
   return {
     path,
+    /** True for the discovery path and, when enabled, its App Directory projection. */
+    owns(pathname: string): boolean {
+      return pathname === path || (appdEnabled && (pathname === appdPath || pathname.startsWith(`${appdPath}/`)));
+    },
 
     async handle(request: Request, url: URL): Promise<Response> {
       if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -103,6 +126,31 @@ export function createDiscoveryHandler(
       const principal = isDevelopment ? undefined : await resolvePrincipal(request);
       const all = await registry.listFragments();
       const visible = isDevelopment ? all : all.filter((manifest) => canList(manifest, principal));
+
+      // The App Directory is the same list, in AppD's shape — same manifests, same access rules,
+      // so a caller can never see a resolver through AppD that discovery would have hidden.
+      if (appdEnabled && url.pathname.startsWith(appdPath)) {
+        const requested = url.pathname.slice(appdPath.length).replace(/^\//, '');
+
+        if (!requested) {
+          const body: AppdListResponse = {
+            applications: visible.map((manifest) => toAppdApplication(manifest, url.origin)),
+            message: 'OK',
+          };
+          return json(body, 200, { 'Cache-Control': 'no-store', Vary: 'cookie, authorization' });
+        }
+
+        const appId = decodeURIComponent(requested);
+        const match = visible.find((manifest) => manifest.id === appId);
+        if (!match) {
+          // 404 for "not visible to you" as well as "not registered" — distinguishing them would
+          // let an unauthorized caller enumerate the registry one id at a time.
+          return json({ message: `No application with appId "${appId}"` }, 404, { 'Cache-Control': 'no-store' });
+        }
+
+        const body: AppdAppResponse = { application: toAppdApplication(match, url.origin), message: 'OK' };
+        return json(body, 200, { 'Cache-Control': 'no-store', Vary: 'cookie, authorization' });
+      }
 
       const pageSize = clampPageSize(url.searchParams.get('pageSize'), defaultPageSize, maxPageSize);
       const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));

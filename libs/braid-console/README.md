@@ -96,6 +96,15 @@ page-wide blast radius; a changed `title` is a label. An unlabelled list makes t
 **Clearing a field removes it.** An empty input means *unset*, not `""` — because an omitted field
 is what lets a fragment descriptor supply it later, and `title: ""` is not the same as no title.
 
+**Previews who loses access.** *Show access* renders a list/fetch matrix per named principal, with
+`✓ → ✗` transitions against what is pinned. Losses lead; the grid is context. The count surfaces in
+the publish bar whether or not the panel is open, because a finding hidden behind a toggle nobody
+pressed is not a finding. Every outcome carries a text label as well as a symbol, so the meaning
+does not depend on colour.
+
+Principals are what-ifs, not a directory — the gateway has none. Pass `principals` and
+`onPrincipalsChange` to hold them in the host; omit both and the editor keeps them for the session.
+
 Drafts live in the browser. Nothing is written until you publish, so closing the tab discards, and
 there is no draft state to reconcile between editors.
 

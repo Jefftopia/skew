@@ -14,6 +14,10 @@ export default defineConfig({
   root: import.meta.dirname,
   cacheDir: '../../node_modules/.vite/libs/braid-console',
   esbuild: { jsx: 'automatic' },
+  // Relative asset URLs, so one bundle works at any mount path — served from a CDN root, or from
+  // `/__braid/console` on the gateway itself. An absolute base would pin the artifact to a
+  // deployment, which is exactly what the snapshot model refuses to do for configuration.
+  base: './',
   build: {
     outDir: '../../dist/apps/braid-console',
     emptyOutDir: true,

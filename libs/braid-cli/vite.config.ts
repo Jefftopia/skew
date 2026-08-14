@@ -24,6 +24,12 @@ export default defineConfig({
         find: '@skewkit/braid-registry',
         replacement: resolve(import.meta.dirname, '../braid-registry/src/index.ts'),
       },
+      // reached transitively: the access matrix calls the gateway's own canList/canFetch rather
+      // than reimplementing them
+      {
+        find: '@skewkit/braid-gateway',
+        replacement: resolve(import.meta.dirname, '../braid-gateway/src/index.ts'),
+      },
     ],
   },
   test: {

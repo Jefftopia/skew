@@ -43,3 +43,36 @@ describe('Registry', () => {
     expect((await registry.getFragment('lazy'))?.adapter).toBe('compat');
   });
 });
+
+describe('overlapping patterns on one fragment', () => {
+  /**
+   * A fragment declaring both `/billing` and `/billing/*` matches `/billing` through both — the
+   * second via the trailing-slash tolerance. Before this was deduplicated the gateway fetched that
+   * fragment twice per page load and reported it twice in `x-braid-fragment-id`.
+   */
+  it('returns a fragment once however many of its patterns match', async () => {
+    const registry = new Registry([
+      { id: 'billing', endpoint: 'https://b.internal', pierce: ['/billing', '/billing/*'] },
+      { id: 'reviews', endpoint: 'https://r.internal', pierce: ['/billing', '/billing/*'] },
+    ]);
+
+    expect((await registry.matchPierceRoutes('/billing')).map((m) => m.id)).toEqual(['billing', 'reviews']);
+  });
+
+  it('still matches paths only one pattern covers', async () => {
+    const registry = new Registry([
+      { id: 'billing', endpoint: 'https://b.internal', pierce: ['/billing', '/billing/*'] },
+    ]);
+
+    expect((await registry.matchPierceRoutes('/billing/settings')).map((m) => m.id)).toEqual(['billing']);
+  });
+
+  it('preserves registration order', async () => {
+    const registry = new Registry([
+      { id: 'second', endpoint: 'https://s.internal', pierce: ['/x/*'] },
+      { id: 'first', endpoint: 'https://f.internal', pierce: ['/x', '/x/*'] },
+    ]);
+
+    expect((await registry.matchPierceRoutes('/x')).map((m) => m.id)).toEqual(['second', 'first']);
+  });
+});

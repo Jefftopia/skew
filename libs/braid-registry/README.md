@@ -97,6 +97,91 @@ That split comes from one question — *can a lie here hurt anyone but the liar?
 is a routing change with page-wide blast radius; a changed `title` is a label. A flat list of
 altered keys makes them look alike.
 
+## Access preview
+
+`satisfies()` is a pure function of a rule and a principal, so the effect of an access change is
+*exactly* computable — no sampling, no observation. What is not available is a list of real users:
+the gateway holds no principal directory. So the operator names who to test as, which is honest
+about its inputs and still catches the change that matters.
+
+```ts
+const matrix = accessMatrix(proposed, [ANONYMOUS, { name: 'trader', roles: ['trader'] }], published);
+matrix.losses; // ← the output that matters
+```
+
+**Losses are the finding; the grid is context for it.** A gain is usually deliberate and already
+visible in the diff. A loss is how a fragment quietly stops being listed for the people who use it,
+and nothing else in the toolchain would tell you.
+
+Three details that are easy to get wrong:
+
+- A removed fragment produces losses, not silence. Losing access by deletion is still losing
+  access, and an operator should not have to cross-reference the diff to notice.
+- `denied → absent` is **neither** a gain nor a loss. Classifying by "was not previously allowed"
+  would announce that deleting a fragment granted people access to it.
+- Manifests are not normalized first, because this runs while someone is still typing one. An
+  incomplete manifest is `validateRegistry`'s finding to report, not this one's to throw on.
+
+```bash
+braid registry access --against ./snapshots --as 'trader:roles=trader'
+```
+
+Principals can also live in `braid.config.json` under `principals`, which makes them reviewable and
+shared — the roles a deployment cares about are a property of the deployment, not of one command.
+`anonymous` is always checked and never needs declaring.
+
+## Traffic-informed impact
+
+The static checks answer *"do these patterns overlap?"*. This answers *"and does anyone go there?"* —
+which turns a warning an operator has to judge into a number they can act on. It is the only
+analysis here that is **not** decidable from the manifests alone, which is why it needs a gateway to
+have been recording and is opt-in at both ends.
+
+```ts
+const observations = createRoutingObservations({
+  maxPaths: 5000,
+  redact: (pathname) => pathname.replace(/\/invoices\/[^/]+/, '/invoices/:id'),
+});
+
+createGateway({ registry, observe: (event) => observations.record(event) });
+```
+
+```bash
+braid registry impact --observations ./observations.json --against ./snapshots
+```
+
+```
+  billing  −5 requests on 2 paths
+  reviews  +3 requests on 1 path
+
+requests  path
+       4  /billing/settings  −billing
+       3  /reports/q3        +reviews
+       1  /billing           −billing
+
+  8 of 20 observed requests affected
+```
+
+**An aggregate, not a log.** A log of every document request is unbounded, is a retention
+liability, and answers no question this needs. What the analysis needs is the distinct paths, how
+often each is served, and what composes there.
+
+Three disciplines, all of which any request-path event sink needs:
+
+| Concern | Approach |
+| --- | --- |
+| **Bounded memory** | `maxPaths` caps distinct paths; least-recently-seen is evicted first, keeping the sample weighted toward live traffic |
+| **Redaction** | paths carry identifiers and sometimes personal ones — `redact` collapses them, which flattens cardinality at the same time |
+| **Never blocking** | `observe` is synchronous, unawaited, and updates one map entry; a sink doing real work must buffer and flush elsewhere |
+
+A capped set reports `sampled: true`, and every summary built from it says so. Truncated data that
+reads as complete is worse than none.
+
+Only **document** requests are observed — a soft navigation fetching the same URL is not a second
+page view — and *every* document request is, not just pierce-matched ones. A path that composes
+nothing today is exactly the path a widened pattern would start composing tomorrow, and reporting a
+gain needs both sides.
+
 ## Stores
 
 | Store | Where | Use |

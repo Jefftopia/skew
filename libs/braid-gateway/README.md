@@ -36,6 +36,42 @@ to load, and the element to mount:
   events: ['rating:change'] }
 ```
 
+### The registry as an FDC3 App Directory
+
+```ts
+createGateway({ registry, discovery: { appd: true } });
+```
+
+Serves the same registry in FDC3 App Directory shape at `/__braid/registry/appd/v2/apps` (and
+`/appd/v2/apps/{appId}`). It is a **projection, not a second directory** — same manifests, same
+`access.list` rules — so a caller can never see through AppD a resolver that discovery would have
+hidden. `findIntent` becomes a registry query, and a user only sees resolvers they may use.
+
+Manifests contribute intents through an `fdc3` block and listing metadata through `appd`:
+
+```ts
+{ id: 'billing', endpoint: '…', pierce: ['/billing/*'],
+  fdc3: { listensFor: { ViewInvoice: { contexts: ['fdc3.instrument'] } },
+          raises: { ViewChart: ['fdc3.instrument'] } },
+  appd: { publisher: 'Payments', contactEmail: 'payments@example.com' } }
+```
+
+Two mapping decisions worth knowing:
+
+- **`details.url` is a page, when there is one.** AppD asks where a web app lives; a fragment lives
+  inside a host page. If the fragment declares `pierce`, the first concrete pattern names a page it
+  actually appears on and that is the URL — follow it and you see the app. Otherwise the mount is
+  used, and `hostManifests.braid.standalonePage` says which you got.
+- **Braid launch detail rides in `hostManifests`**, which is what AppD reserves for exactly this.
+  A fragment is *mounted into a page*, not opened as a window, so a Braid-aware agent reads
+  `hostManifests.braid` and mounts a `<fragment-slot>`; one that does not falls back to the URL.
+
+An app the caller may not list 404s exactly as an unregistered one does — distinguishing them would
+let an unauthorized caller enumerate the registry one id at a time.
+
+Verify the record shape against the FDC3 AppD v2 spec before depending on it; the schema carries
+more optional members than this projects.
+
 A relative `entry` is re-rooted into the fragment's namespace, so the module and its imports are
 fetched through the gateway rather than from the host's root. Such a fragment serves no document,
 and the gateway answers its document request with `204` rather than forwarding it.

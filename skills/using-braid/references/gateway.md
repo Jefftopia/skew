@@ -54,6 +54,14 @@ imports are fetched through the gateway rather than from the host's own root.
 The registry is data: inline manifests, a URL to JSON, or an async loader. Deploying a fragment
 never redeploys the gateway.
 
+## App Directory
+
+`discovery: { appd: true }` also serves the registry in FDC3 App Directory shape at
+`/__braid/registry/appd/v2/apps`. A projection over the same manifests and the same `access.list`
+rules — never a second directory. Intents come from the manifest's `fdc3.listensFor`/`fdc3.raises`;
+Braid launch detail rides in `hostManifests.braid`, because a fragment is mounted into a page
+rather than opened as a window.
+
 ## The three namespaces
 
 | Path | Serves | Notes |
@@ -116,6 +124,9 @@ everything and says so.
 
 ## Other options
 
+- `observe` — records which page paths compose which fragments, for `braid registry impact`. Off by
+  default; recording paths is a retention decision. Synchronous and on the request path, so it must
+  be cheap.
 - `trustForwardedHeaders` — off by default; `x-forwarded-*` are overwritten from the real request
   unless a proxy you control is the only path in.
 - `mode: 'development'` — verbose errors, bypassed access rules, and the `Origin` header rewritten

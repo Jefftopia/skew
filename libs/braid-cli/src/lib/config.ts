@@ -23,6 +23,20 @@ export interface BraidConfig {
   fragments: DevFragment[];
   /** Passed through to `createGateway`. */
   gateway?: { discovery?: Record<string, unknown> };
+  /**
+   * Representative principals for `braid registry access`.
+   *
+   * The gateway holds no principal directory, so an access preview needs the operator to say who
+   * to test as. Keeping them in config rather than in flags makes them reviewable and shared —
+   * "the roles we care about" is a property of the deployment, not of one invocation.
+   *
+   * ```jsonc
+   * "principals": { "trader": { "roles": ["trader"] }, "auditor": {} }
+   * ```
+   *
+   * `anonymous` is always checked and never needs declaring.
+   */
+  principals?: Record<string, { roles?: string[]; scopes?: string[] }>;
 }
 
 export interface DevTarget {
@@ -52,6 +66,7 @@ export interface ResolvedConfig {
   shell: ResolvedTarget;
   fragments: (FragmentManifest & { dev?: ResolvedTarget })[];
   gateway: BraidConfig['gateway'];
+  principals: NonNullable<BraidConfig['principals']>;
   configPath: string;
 }
 
@@ -97,6 +112,7 @@ export function resolveConfig(config: BraidConfig, configPath: string): Resolved
 
   return {
     port: config.port ?? 4000,
+    principals: config.principals ?? {},
     shell: resolveTarget(config.shell, 'shell'),
     fragments: (config.fragments ?? []).map((fragment) => {
       const dev = fragment.dev ? resolveTarget(fragment.dev, `fragment "${fragment.id}"`) : undefined;

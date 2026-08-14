@@ -35,6 +35,32 @@ export type {
   FetchDescriptorsOptions,
 } from './lib/descriptor.js';
 
+export {
+  createRoutingObservations,
+  serializeObservations,
+  parseObservations,
+} from './lib/observations.js';
+export type {
+  RoutingObservations,
+  RoutingObservationsOptions,
+  ObservationSet,
+  PathObservation,
+} from './lib/observations.js';
+
+export { routingImpact } from './lib/routing-impact.js';
+export type { RoutingImpact, PathImpact, FragmentImpact } from './lib/routing-impact.js';
+
+export { accessMatrix, parsePrincipal, ANONYMOUS } from './lib/access-matrix.js';
+export type {
+  AccessMatrix,
+  AccessRow,
+  AccessCell,
+  AccessOutcome,
+  AccessAction,
+  AccessTransition,
+  NamedPrincipal,
+} from './lib/access-matrix.js';
+
 export { createRegistryApi } from './lib/api.js';
 export type { RegistryApi, RegistryApiOptions, PublishRequestBody, PublishResult } from './lib/api.js';
 export type {

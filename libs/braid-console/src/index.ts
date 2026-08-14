@@ -22,6 +22,8 @@ export { RegistryConsole, filterEntries } from './lib/registry-console.js';
 export type { RegistryConsoleProps } from './lib/registry-console.js';
 export { RegistryEditor } from './lib/registry-editor.js';
 export type { RegistryEditorProps } from './lib/registry-editor.js';
+export { AccessPanel } from './lib/access-panel.js';
+export type { AccessPanelProps } from './lib/access-panel.js';
 export {
   createDraft,
   draftStatus,

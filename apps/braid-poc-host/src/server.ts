@@ -1,7 +1,11 @@
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
 import { createGateway } from '@skewkit/braid-gateway';
+import type { FragmentManifest } from '@skewkit/braid-gateway';
 import { toNodeMiddleware } from '@skewkit/braid-gateway/node';
+import { createRegistryApi, createRoutingObservations, createSnapshot, serializeObservations } from '@skewkit/braid-registry';
+import { fileSnapshotStore } from '@skewkit/braid-registry/node';
 import express from 'express';
+import { writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,8 +29,7 @@ const angularApp = new AngularNodeAppEngine({ allowedHosts: ['localhost', '127.0
  *    output and the remote's HTML concurrently and interleaves them, so the remote's markup is
  *    inside `<fragment-slot>` in the very first response — no client round trip to fill it.
  */
-const gateway = createGateway({
-  registry: [
+const REGISTRY: FragmentManifest[] = [
     {
       id: 'billing',
       // no `adapter` — compat is the default, which is what lets a stock Angular app be a
@@ -36,6 +39,13 @@ const gateway = createGateway({
       title: 'Billing',
       description: 'Invoices and billing settings, deployed independently of the shell.',
       tags: ['finance'],
+      // Projected into the App Directory listing. `findIntent` becomes a registry query, and
+      // because the listing is access-filtered, a user only sees resolvers they may use.
+      fdc3: {
+        listensFor: { ViewInvoice: { contexts: ['fdc3.instrument'], displayName: 'View invoice' } },
+        raises: { ViewChart: ['fdc3.instrument'] },
+      },
+      appd: { publisher: 'Payments', contactEmail: 'payments@example.com', version: '1.4.0' },
     },
 
     /**
@@ -68,10 +78,76 @@ const gateway = createGateway({
       description: 'A framework-free web component, mounted through the contract adapter.',
       tags: ['widget'],
     },
-  ],
+
+    /**
+     * Registered but restricted, so the console's access preview has something to say. Listing
+     * and loading are independent: this is visible to everyone and loadable only by `finance`.
+     */
+    {
+      id: 'payroll',
+      endpoint: process.env['BRAID_PAYROLL_ORIGIN'] ?? 'http://localhost:4504',
+      title: 'Payroll',
+      description: 'Listed for everyone, loadable only with the finance role.',
+      tags: ['finance'],
+      access: { fetch: { roles: ['finance'] } },
+    },
+];
+
+/**
+ * Records which page paths this gateway actually serves, so `braid registry impact` can say what a
+ * change would do to real traffic rather than to hypothetical URLs.
+ *
+ * Off by default in the library: recording paths is a data-retention decision, not a default. Here
+ * it is on, bounded, and redacted — the redactor collapses invoice ids, which both protects the
+ * identifiers and keeps cardinality flat.
+ */
+const observations = createRoutingObservations({
+  maxPaths: 2000,
+  redact: (pathname) => pathname.replace(/\/invoices\/[^/]+/, '/invoices/:id'),
+});
+
+const gateway = createGateway({
+  registry: REGISTRY,
+  // synchronous and cheap: it updates one Map entry and returns
+  observe: (event) => observations.record(event),
   mode: 'development',
-  // `GET /__braid/registry` — in development this lists everything, endpoints included
-  discovery: {},
+  // `GET /__braid/registry` — in development this lists everything, endpoints included.
+  // `appd: true` additionally serves it in FDC3 App Directory shape at
+  // `/__braid/registry/appd/v2/apps` — a projection over the same manifests and the same access
+  // rules, never a second directory.
+  discovery: { appd: true },
+});
+
+/**
+ * The registry console, served from the gateway's own origin at `/__braid/console`.
+ *
+ * Same origin is the point: the console reads `/__braid/registry` and writes to
+ * `/__braid/registry-api`, so there is no CORS, no second deployment, and no cross-origin session
+ * to arrange. It is also a realistic shape — the console is a static bundle, and the gateway is
+ * already an HTTP server.
+ *
+ * Snapshots land in `.braid/registry` so publishing survives a restart and the artifacts are
+ * inspectable. Note the deliberate gap the POC leaves visible: this gateway serves the *inline*
+ * manifests above, so publishing a snapshot here does not change what it composes until a deploy
+ * pins the new id. That is the model, not a limitation of the demo — configuration changes are
+ * deploys.
+ */
+const snapshots = fileSnapshotStore({ directory: resolve(process.cwd(), '.braid/registry') });
+
+// Seed once, so the editor has a pinned snapshot to branch from on a fresh checkout. Content
+// addressing makes this idempotent: re-seeding identical manifests yields the same id.
+if (!(await snapshots.head?.())) {
+  const seed = await createSnapshot({ manifests: REGISTRY, labels: { by: 'braid-poc' } });
+  await snapshots.put(seed);
+  await snapshots.setHead?.(seed.id);
+}
+
+const registryApi = createRegistryApi({
+  store: snapshots,
+  // A demo, so everything is permitted. A real deployment wires this to its own session — without
+  // it the API refuses writes, because an unauthenticated publish endpoint is remote control of
+  // which fragments compose which pages.
+  authorize: () => true,
 });
 
 /**
@@ -82,6 +158,48 @@ const gateway = createGateway({
 if (!process.env['BRAID_DEV']) {
   app.use(toNodeMiddleware(gateway));
 }
+
+// The console's write API. `/__braid/registry-api/*` is not one of the gateway's three namespaces,
+// so the middleware above passes it through to here.
+app.use(async (req, res, next) => {
+  const url = new URL(req.originalUrl, `http://${req.headers.host ?? 'localhost'}`);
+  if (!url.pathname.startsWith('/__braid/registry-api')) return next();
+
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+
+  const response = await registryApi.handle(
+    new Request(url, {
+      method: req.method,
+      headers: Object.entries(req.headers).filter(([, value]) => typeof value === 'string') as [string, string][],
+      ...(chunks.length > 0 ? { body: Buffer.concat(chunks) } : {}),
+    }),
+  );
+
+  if (!response) return next();
+  res.status(response.status);
+  response.headers.forEach((value, key) => res.setHeader(key, value));
+  res.send(Buffer.from(await response.arrayBuffer()));
+});
+
+// The console itself. Its bundle uses relative asset URLs, so it works under this prefix without
+// being rebuilt for it — hence the redirect: without the trailing slash the browser would resolve
+// `./assets/…` against `/__braid/` and miss.
+app.use('/__braid/console', (req, res, next) => {
+  // Exact-match on originalUrl, not a route: Express treats `/x` and `/x/` as the same path, so
+  // `app.get('/__braid/console')` would also catch the slashed form and redirect it to itself.
+  if (req.originalUrl === '/__braid/console') return res.redirect(301, '/__braid/console/');
+  next();
+});
+app.use('/__braid/console', express.static(resolve(serverDistFolder, '../../braid-console'), { index: 'index.html' }));
+
+// Dumps what has been observed, so the CLI can analyze it. A real deployment would flush this on
+// an interval to durable storage rather than exposing it — this is a demo affordance.
+app.get('/__braid/observations', async (_req, res) => {
+  const path = resolve(process.cwd(), '.braid/observations.json');
+  await writeFile(path, serializeObservations(observations.snapshot()));
+  res.type('application/json').send(serializeObservations(observations.snapshot()));
+});
 
 // The host's own static assets. No max-age: this POC builds without filename hashing, so a
 // long-lived cache would serve a stale bundle after every rebuild.

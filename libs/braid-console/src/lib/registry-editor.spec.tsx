@@ -193,6 +193,85 @@ describe('<RegistryEditor>', () => {
     expect(owners.every((text) => text === 'gateway')).toBe(true);
   });
 
+  describe('access preview', () => {
+    /** A pinned snapshot where anonymous can list billing, so tightening it is a loss. */
+    function apiWithAccess() {
+      const doFetch = vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.endsWith('/head')) {
+          return json({ id: 'reg_base', snapshot: { id: 'reg_base', createdAt: '2026-01-01', manifests } });
+        }
+        return json({ snapshot: { id: 'reg_new', createdAt: 'x', fragmentCount: 1 }, findings: [], descriptorNotes: [], pinned: true }, 201);
+      });
+      return { fetch: doFetch as unknown as typeof fetch };
+    }
+
+    it('says nothing about access when a change does not touch it', async () => {
+      await render(apiWithAccess());
+      await click(button('Show access'));
+
+      expect(container.querySelector('.braid-console__access')?.textContent).toContain('changes nobody');
+    });
+
+    it('warns in the publish bar when a change removes access, without opening the panel', async () => {
+      await render(apiWithAccess());
+      await click(byLabel('Remove billing'));
+
+      // the finding is surfaced whether or not anyone pressed the toggle
+      expect(container.querySelector('.braid-console__bar')?.textContent).toContain('access loss');
+    });
+
+    it('names who lost what', async () => {
+      await render(apiWithAccess());
+      await click(byLabel('Remove billing'));
+      await click(button('Show access'));
+
+      const alert = container.querySelector('.braid-console__access [role="alert"]');
+      expect(alert?.textContent).toContain('anonymous');
+      expect(alert?.textContent).toContain('billing');
+      expect(alert?.textContent).toContain('fragment removed');
+    });
+
+    it('always shows anonymous as a column', async () => {
+      await render(apiWithAccess());
+      await click(button('Show access'));
+
+      const headers = [...container.querySelectorAll('.braid-console__matrix th')].map((h) => h.textContent);
+      expect(headers.some((text) => text?.includes('anonymous'))).toBe(true);
+    });
+
+    it('adds a principal to test as', async () => {
+      await render(apiWithAccess());
+      await click(button('Show access'));
+
+      const input = container.querySelector('.braid-console__access input') as HTMLInputElement;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'trader:roles=trader');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await click(button('Test as'));
+
+      const headers = [...container.querySelectorAll('.braid-console__matrix th')].map((h) => h.textContent);
+      expect(headers.some((text) => text?.includes('trader'))).toBe(true);
+    });
+
+    it('labels every outcome for readers who cannot see colour', async () => {
+      await render(apiWithAccess());
+      await click(button('Show access'));
+
+      const marks = [...container.querySelectorAll('.braid-console__mark')];
+      expect(marks.length).toBeGreaterThan(0);
+      expect(marks.every((mark) => /allowed|denied|not present/.test(mark.textContent ?? ''))).toBe(true);
+    });
+
+    it('does not crash on a half-written fragment', async () => {
+      await render(apiWithAccess());
+      await click(button('Add fragment'));
+      await click(button('Show access'));
+
+      expect(container.querySelector('.braid-console__matrix')).not.toBeNull();
+    });
+  });
+
   it('reports a failure to load rather than showing an empty editor', async () => {
     const doFetch = vi.fn(async () => json({ error: 'not authorized to read' }, 403));
     await render({ fetch: doFetch as unknown as typeof fetch });

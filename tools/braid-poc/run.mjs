@@ -6,6 +6,9 @@
  * billing → http://localhost:4501  Angular SPA          (compat adapter)
  * reviews → http://localhost:4502  React 19 app         (compat adapter)
  * rating  → http://localhost:4503  a custom element     (contract custom-element adapter)
+ *
+ * The registry console is served by the host itself at /__braid/console — same origin as the
+ * gateway, so it reads the live registry and writes to the registry API with no CORS to arrange.
  */
 import { execSync, spawn } from 'node:child_process';
 
@@ -81,6 +84,9 @@ await runToCompletion('npx', [
   'braid-poc-host',
 ]);
 
+// The console is a separate build target: a static bundle, not an Nx library output.
+await runToCompletion('npx', ['nx', 'build-app', 'braid-console']);
+
 const children = FRAGMENTS.map((fragment) =>
   runServer(
     'tools/braid-poc/serve-static.mjs',
@@ -104,5 +110,8 @@ for (const fragment of FRAGMENTS) {
 await waitFor(`http://localhost:${HOST_PORT}/`, 'host (SSR + gateway)');
 
 console.log(
-  `\nOpen http://localhost:${HOST_PORT}/billing/invoices — Angular, React and a web component on one page.\n`,
+  `\nOpen http://localhost:${HOST_PORT}/billing/invoices — Angular, React and a web component on one page.` +
+    `\nRegistry console: http://localhost:${HOST_PORT}/__braid/console/` +
+    `\n  Snapshots are written to .braid/registry. This gateway serves its inline manifests, so a` +
+    `\n  published snapshot takes effect when a deploy pins its id — configuration changes are deploys.\n`,
 );

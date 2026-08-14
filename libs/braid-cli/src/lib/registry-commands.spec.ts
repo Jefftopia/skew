@@ -177,6 +177,166 @@ describe('braid registry', () => {
     });
   });
 
+  describe('access', () => {
+    const gated = [
+      { id: 'billing', endpoint: 'https://b.internal' },
+      { id: 'payroll', endpoint: 'https://p.internal', access: { fetch: { roles: ['payroll'] } } },
+    ];
+
+    it('shows who can list and load each fragment', async () => {
+      const config = await writeConfig(gated);
+
+      expect(await registry(['access', '--config', config, '--as', 'clerk'])).toBe(0);
+      const output = plain(stdout);
+      expect(output).toContain('anonymous');
+      expect(output).toContain('clerk');
+      expect(output).toContain('billing');
+      expect(output).toContain('payroll');
+    });
+
+    it('always includes anonymous, even when principals are named', async () => {
+      const config = await writeConfig(gated);
+      await registry(['access', '--config', config, '--as', 'ops:roles=ops']);
+
+      expect(plain(stdout)).toContain('anonymous');
+    });
+
+    it('reads principals from the config when no --as is given', async () => {
+      const path = join(directory, 'braid.config.json');
+      await writeFile(
+        path,
+        JSON.stringify({ port: 4000, shell: { port: 4200 }, fragments: gated, principals: { auditor: { roles: ['audit'] } } }),
+      );
+
+      await registry(['access', '--config', path]);
+
+      expect(plain(stdout)).toContain('auditor');
+    });
+
+    it('reports what a tightened rule takes away', async () => {
+      const published = await writeConfig(gated);
+      const out = join(directory, 'snapshots');
+      await registry(['publish', '--config', published, '--to', out]);
+
+      const tightened = await writeConfig([
+        { ...gated[0], access: { list: { roles: ['finance'] } } },
+        gated[1],
+      ]);
+      stdout = '';
+      await registry(['access', '--config', tightened, '--against', out, '--as', 'clerk']);
+
+      const output = plain(stdout);
+      expect(output).toContain('Access removed');
+      expect(output).toContain('anonymous can no longer list billing');
+    });
+
+    it('names a removed fragment as the reason access went away', async () => {
+      const published = await writeConfig(gated);
+      const out = join(directory, 'snapshots');
+      await registry(['publish', '--config', published, '--to', out]);
+
+      const removed = await writeConfig([gated[0]]);
+      stdout = '';
+      await registry(['access', '--config', removed, '--against', out]);
+
+      expect(plain(stdout)).toContain('(fragment removed)');
+    });
+
+    it('says so when a change touches no access at all', async () => {
+      const published = await writeConfig(gated);
+      const out = join(directory, 'snapshots');
+      await registry(['publish', '--config', published, '--to', out]);
+
+      const renamed = await writeConfig([{ ...gated[0], title: 'Renamed' }, gated[1]]);
+      stdout = '';
+      await registry(['access', '--config', renamed, '--against', out]);
+
+      expect(plain(stdout)).toContain('no access changes');
+    });
+  });
+
+  describe('impact', () => {
+    const routed = [
+      { id: 'billing', endpoint: 'https://b.internal', pierce: ['/billing/*'] },
+      { id: 'reviews', endpoint: 'https://r.internal', pierce: ['/reviews/*'] },
+    ];
+
+    async function writeObservations(paths: [string, number][]): Promise<string> {
+      const file = join(directory, 'observations.json');
+      await writeFile(
+        file,
+        JSON.stringify({
+          paths: paths.map(([pathname, count]) => ({
+            pathname,
+            count,
+            fragmentIds: [],
+            firstSeen: '2026-08-01T00:00:00.000Z',
+            lastSeen: '2026-08-14T00:00:00.000Z',
+          })),
+          totalRequests: paths.reduce((sum, [, count]) => sum + count, 0),
+          evicted: 0,
+          since: '2026-08-01T00:00:00.000Z',
+        }),
+      );
+      return file;
+    }
+
+    it('counts the traffic a narrowed pattern stops composing on', async () => {
+      const published = await writeConfig(routed);
+      const out = join(directory, 'snapshots');
+      await registry(['publish', '--config', published, '--to', out]);
+
+      const observations = await writeObservations([
+        ['/billing/invoices', 40],
+        ['/billing/settings', 3],
+      ]);
+      const narrowed = await writeConfig([{ ...routed[0], pierce: ['/billing/invoices'] }, routed[1]]);
+      stdout = '';
+
+      expect(
+        await registry(['impact', '--config', narrowed, '--observations', observations, '--against', out]),
+      ).toBe(0);
+
+      const output = plain(stdout);
+      expect(output).toContain('billing');
+      expect(output).toContain('/billing/settings');
+      expect(output).toContain('3 of 43 observed requests affected');
+    });
+
+    it('says so when observed traffic is unaffected', async () => {
+      const published = await writeConfig(routed);
+      const out = join(directory, 'snapshots');
+      await registry(['publish', '--config', published, '--to', out]);
+
+      const observations = await writeObservations([['/billing/x', 5]]);
+      const renamed = await writeConfig([{ ...routed[0], title: 'Renamed' }, routed[1]]);
+      stdout = '';
+      await registry(['impact', '--config', renamed, '--observations', observations, '--against', out]);
+
+      expect(plain(stdout)).toContain('no observed traffic changes what it composes');
+    });
+
+    it('requires both inputs, and says where observations come from', async () => {
+      const config = await writeConfig(routed);
+
+      expect(await registry(['impact', '--config', config])).toBe(1);
+      expect(plain(stderr)).toContain('--observations');
+      expect(plain(stderr)).toContain('observe');
+    });
+
+    it('reports a missing observations file rather than crashing', async () => {
+      const published = await writeConfig(routed);
+      const out = join(directory, 'snapshots');
+      await registry(['publish', '--config', published, '--to', out]);
+      stderr = '';
+
+      expect(
+        await registry(['impact', '--config', published, '--observations', join(directory, 'nope.json'), '--against', out]),
+      ).toBe(1);
+      expect(plain(stderr)).toContain('braid registry impact:');
+    });
+  });
+
   it('prints usage for an unknown subcommand', async () => {
     expect(await registry(['wat'])).toBe(1);
     expect(plain(stdout)).toContain('braid registry');

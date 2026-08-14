@@ -2,15 +2,23 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { FragmentManifest } from '@skewkit/braid-gateway';
 import {
+  accessMatrix,
+  ANONYMOUS,
   createSnapshot,
   diffRegistries,
   fetchDescriptors,
   mergeDescriptors,
+  parsePrincipal,
+  parseObservations,
   parseSnapshot,
+  routingImpact,
   validateRegistry,
+  type AccessMatrix,
   type DescriptorNote,
   type FieldChange,
+  type NamedPrincipal,
   type RegistryDiff,
+  type RoutingImpact,
   type RegistryFinding,
 } from '@skewkit/braid-registry';
 import { fileSnapshotStore } from '@skewkit/braid-registry/node';
@@ -33,8 +41,17 @@ export const REGISTRY_USAGE = `braid registry — inspect and publish the fragme
       --descriptors                             merge each fragment's self-published descriptor
       --dry-run                                 compute the snapshot id without writing
 
+  braid registry impact --observations <file> --against <ref>
+                                              what a change does to traffic you actually serve
+  braid registry access [--against <ref>]      who can list and load each fragment
+      --as <spec>                               a principal to test, repeatable
+                                                  name:roles=a,b;scopes=c   (bare name = holds nothing)
+
   <ref> is a snapshot file, a directory holding one, or an http(s) URL.
   Every command accepts --config <path>.
+
+  Principals may also live in braid.config.json:
+      "principals": { "trader": { "roles": ["trader"] }, "auditor": {} }
 `;
 
 /** `braid registry <subcommand>` */
@@ -48,6 +65,10 @@ export async function registry(argv: string[]): Promise<number> {
       return diffCommand(rest);
     case 'publish':
       return publishCommand(rest);
+    case 'access':
+      return accessCommand(rest);
+    case 'impact':
+      return impactCommand(rest);
     default:
       process.stdout.write(REGISTRY_USAGE);
       return subcommand && subcommand !== '--help' && subcommand !== '-h' ? 1 : 0;
@@ -151,6 +172,94 @@ async function publishCommand(argv: string[]): Promise<number> {
   );
 
   return 0;
+}
+
+/**
+ * `braid registry access` — who can see and load what, and what a change would do to that.
+ *
+ * With `--against`, the interesting output is the **losses**: access that goes away. A gain is
+ * usually deliberate and already visible in the diff; a loss is how a fragment disappears for the
+ * people who needed it, and nothing else in the toolchain would tell you.
+ */
+async function accessCommand(argv: string[]): Promise<number> {
+  const manifests = await localManifests(argv);
+  if (!manifests) return 1;
+
+  const principals = await resolvePrincipals(argv);
+  const against = flag(argv, '--against');
+
+  let before: FragmentManifest[] | undefined;
+  if (against) {
+    try {
+      before = await loadReference(against);
+    } catch (error) {
+      process.stderr.write(`braid registry access: ${error instanceof Error ? error.message : String(error)}\n`);
+      return 1;
+    }
+  }
+
+  process.stdout.write(formatAccessMatrix(accessMatrix(manifests, principals, before), Boolean(against)));
+  return 0;
+}
+
+/**
+ * Principals to test against: `--as` flags, else the config's `principals`, else anonymous alone.
+ *
+ * Anonymous is always included. A registry is public by default, so "what can someone with no
+ * credentials reach" is the question most worth answering and the easiest to forget to ask.
+ */
+async function resolvePrincipals(argv: string[]): Promise<NamedPrincipal[]> {
+  const fromFlags = argv
+    .map((argument, index) => (argument === '--as' ? argv[index + 1] : undefined))
+    .filter((value): value is string => Boolean(value))
+    .map(parsePrincipal);
+
+  const named = fromFlags.length > 0 ? fromFlags : await configPrincipals(argv);
+  const withoutAnonymous = named.filter((principal) => principal.name !== ANONYMOUS.name);
+
+  return [ANONYMOUS, ...withoutAnonymous];
+}
+
+async function configPrincipals(argv: string[]): Promise<NamedPrincipal[]> {
+  const explicit = flag(argv, '--config');
+  const configPath = explicit ? resolve(process.cwd(), explicit) : await findConfig();
+  if (!configPath) return [];
+
+  const config = await loadConfig(configPath);
+  return Object.entries(config.principals).map(([name, attributes]) => ({ name, ...attributes }));
+}
+
+/**
+ * `braid registry impact` — the one analysis that is not decidable from the manifests alone.
+ *
+ * The static checks answer "do these patterns overlap?". This answers "and does anyone go there?",
+ * which turns a warning an operator has to judge into a number they can act on. It needs a gateway
+ * to have been recording, so it is opt-in at both ends.
+ */
+async function impactCommand(argv: string[]): Promise<number> {
+  const observationsPath = flag(argv, '--observations');
+  const against = flag(argv, '--against');
+
+  if (!observationsPath || !against) {
+    process.stderr.write(
+      'braid registry impact: --observations <file> and --against <ref> are both required\n' +
+        '  observations come from a gateway configured with `observe`; see @skewkit/braid-registry\n',
+    );
+    return 1;
+  }
+
+  const manifests = await localManifests(argv);
+  if (!manifests) return 1;
+
+  try {
+    const observations = parseObservations(await readFile(resolve(process.cwd(), observationsPath), 'utf8'));
+    const published = await loadReference(against);
+    process.stdout.write(formatRoutingImpact(await routingImpact(observations, published, manifests)));
+    return 0;
+  } catch (error) {
+    process.stderr.write(`braid registry impact: ${error instanceof Error ? error.message : String(error)}\n`);
+    return 1;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -278,6 +387,127 @@ export function formatDescriptorNotes(notes: readonly DescriptorNote[]): string 
     .map((note) => `  ${marker[note.kind]}  ${note.message}`);
 
   return `${lines.join('\n')}\n\n`;
+}
+
+/**
+ * The matrix, with losses first.
+ *
+ * Losses lead because they are the finding; the grid below is the context that explains them. A
+ * grid alone would make an operator scan for the one cell that moved.
+ */
+export function formatAccessMatrix(matrix: AccessMatrix, isDelta: boolean): string {
+  const sections: string[] = [];
+
+  if (isDelta) {
+    if (matrix.losses.length > 0) {
+      sections.push(
+        `${RED}Access removed${RESET}\n` +
+          matrix.losses
+            .map(
+              (loss) =>
+                `  ${BOLD}${loss.principal}${RESET} can no longer ${loss.action} ${BOLD}${loss.fragmentId}${RESET}` +
+                `${loss.to === 'absent' ? ` ${DIM}(fragment removed)${RESET}` : ''}`,
+            )
+            .join('\n'),
+      );
+    }
+    if (matrix.gains.length > 0) {
+      sections.push(
+        `${GREEN}Access granted${RESET}\n` +
+          matrix.gains
+            .map((gain) => `  ${BOLD}${gain.principal}${RESET} can now ${gain.action} ${BOLD}${gain.fragmentId}${RESET}`)
+            .join('\n'),
+      );
+    }
+    if (matrix.unchanged) sections.push(`${GREEN}✓${RESET} no access changes`);
+  }
+
+  const width = Math.max(12, ...matrix.rows.map((row) => row.fragmentId.length + 8));
+  const columns = matrix.principals.map((name) => Math.max(name.length, 5));
+
+  const header =
+    `${DIM}${''.padEnd(width)}${matrix.principals.map((name, index) => name.padEnd(columns[index]! + 2)).join('')}${RESET}`;
+
+  const body = matrix.rows.map((row) => {
+    const label = `${row.fragmentId} ${DIM}${row.action}${RESET}`.padEnd(width + DIM.length + RESET.length);
+    const cells = row.cells
+      .map((cell, index) => {
+        const text = cell.changed && isDelta ? `${mark(cell.before)}→${mark(cell.after)}` : mark(cell.after);
+        return text.padEnd(columns[index]! + 2 + (text.length - visibleLength(text)));
+      })
+      .join('');
+    return `${label}${cells}`;
+  });
+
+  return `${sections.length > 0 ? sections.join('\n\n') + '\n\n' : ''}${header}\n${body.join('\n')}\n`;
+}
+
+function mark(outcome: string): string {
+  if (outcome === 'allowed') return `${GREEN}✓${RESET}`;
+  if (outcome === 'denied') return `${DIM}✗${RESET}`;
+  return `${DIM}·${RESET}`;
+}
+
+/** Length ignoring ANSI, so padding lines up in a terminal. */
+function visibleLength(text: string): number {
+  // eslint-disable-next-line no-control-regex -- measuring around escape sequences is the point
+  return text.replace(/\u001b\[[0-9;]*m/g, '').length;
+}
+
+/**
+ * Impact, per fragment first.
+ *
+ * The per-path list is evidence; the rollup is the decision. "billing stops composing on 43 paths
+ * carrying 1,204 requests" is actionable in a way that forty lines of paths is not.
+ */
+export function formatRoutingImpact(impact: RoutingImpact): string {
+  const scope =
+    `${DIM}  measured over ${impact.observed.requests} document request` +
+    `${impact.observed.requests === 1 ? '' : 's'} across ${impact.observed.paths} path` +
+    `${impact.observed.paths === 1 ? '' : 's'} since ${impact.observed.since}` +
+    `${impact.sampled ? ` — ${YELLOW}sampled${RESET}${DIM}, ${impact.observed.evicted} path(s) evicted` : ''}` +
+    `${RESET}\n`;
+
+  if (impact.unchanged) {
+    return `${GREEN}✓${RESET} no observed traffic changes what it composes\n${scope}`;
+  }
+
+  const rollup = impact.byFragment
+    .map((fragment) => {
+      const lost =
+        fragment.lostPaths > 0
+          ? `${RED}−${fragment.lostRequests} request${fragment.lostRequests === 1 ? '' : 's'}${RESET} ` +
+            `${DIM}on ${fragment.lostPaths} path${fragment.lostPaths === 1 ? '' : 's'}${RESET}`
+          : '';
+      const gained =
+        fragment.gainedPaths > 0
+          ? `${GREEN}+${fragment.gainedRequests} request${fragment.gainedRequests === 1 ? '' : 's'}${RESET} ` +
+            `${DIM}on ${fragment.gainedPaths} path${fragment.gainedPaths === 1 ? '' : 's'}${RESET}`
+          : '';
+      return `  ${BOLD}${fragment.fragmentId}${RESET}  ${[lost, gained].filter(Boolean).join('  ')}`;
+    })
+    .join('\n');
+
+  const sample = impact.paths.slice(0, 10);
+  const paths = sample
+    .map((path) => {
+      const changes = [
+        ...path.lost.map((id) => `${RED}−${id}${RESET}`),
+        ...path.gained.map((id) => `${GREEN}+${id}${RESET}`),
+      ].join(' ');
+      return `  ${String(path.count).padStart(6)}  ${path.pathname}  ${changes}`;
+    })
+    .join('\n');
+
+  const more =
+    impact.paths.length > sample.length
+      ? `${DIM}  … and ${impact.paths.length - sample.length} more path(s)${RESET}\n`
+      : '';
+
+  return (
+    `${rollup}\n\n${DIM}${'requests'.padStart(8)}  path${RESET}\n${paths}\n${more}\n` +
+    `${DIM}  ${impact.affectedRequests} of ${impact.observed.requests} observed requests affected${RESET}\n${scope}`
+  );
 }
 
 export function formatDiff(diff: RegistryDiff, against: string): string {

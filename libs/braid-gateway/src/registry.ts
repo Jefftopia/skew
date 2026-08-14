@@ -9,6 +9,8 @@ export type FragmentFallback = 'omit' | 'placeholder' | 'error-html';
 /**
  * `braid.manifest.json` — one per fragment.
  */
+import type { FragmentAppdMetadata, FragmentFdc3Metadata } from './appd.js';
+
 export interface FragmentManifest {
   /** Unique fragment id; addresses the fragment in the reserved namespace (`/__braid/frag/:id/*`). */
   id: string;
@@ -69,6 +71,19 @@ export interface FragmentManifest {
   description?: string;
   /** Free-form labels for filtering and grouping in discovery listings. */
   tags?: string[];
+
+  /**
+   * FDC3 metadata: the intents this app handles and raises, and the channels it uses.
+   *
+   * Projected into the App Directory listing (see `appd.ts`). The runtime members —
+   * `apiVersion`, `contexts` — are reserved for the FDC3 work and unused by the gateway.
+   */
+  fdc3?: FragmentFdc3Metadata;
+  /**
+   * Descriptive fields the App Directory carries that the registry does not otherwise need —
+   * publisher, contact addresses, icons. Purely for listings.
+   */
+  appd?: FragmentAppdMetadata;
 
   /**
    * Who may list this fragment, and who may load it. Declared at registration, so a
@@ -207,7 +222,19 @@ export class Registry {
    */
   async matchPierceRoutes(pathname: string): Promise<ResolvedFragmentManifest[]> {
     await this.#load();
-    return this.#pierceRoutes!.filter((route) => route.matches(pathname)).map((route) => route.manifest);
+
+    // Deduplicated by fragment. Routes are compiled one per *pattern*, so a fragment declaring
+    // both `/billing` and `/billing/*` matches `/billing` twice — the second through the
+    // trailing-slash tolerance. Returning it twice would fetch that fragment twice per page load
+    // and pierce two copies of it into one slot; callers want the set of fragments that match,
+    // not the set of patterns that did.
+    const matched = new Map<string, ResolvedFragmentManifest>();
+    for (const route of this.#pierceRoutes!) {
+      if (route.matches(pathname) && !matched.has(route.manifest.id)) {
+        matched.set(route.manifest.id, route.manifest);
+      }
+    }
+    return [...matched.values()];
   }
 
   /** Every registered fragment, ordered by id so pagination is deterministic. */

@@ -14,7 +14,7 @@
  */
 
 export { createGateway, toWebMiddleware, toFetchHandler } from './gateway.js';
-export type { BraidGateway, GatewayOptions } from './gateway.js';
+export type { BraidGateway, GatewayOptions, RoutingEvent } from './gateway.js';
 export {
   DEFAULT_ADAPTER,
   DEFAULT_TIMEOUT_MS,
@@ -33,6 +33,14 @@ export type {
 export { satisfies, canList, canFetch } from './registry.js';
 export { DEFAULT_DISCOVERY_PATH, DEFAULT_DISCOVERY_PAGE_SIZE } from './discovery.js';
 export type { DiscoveryOptions, DiscoveryEntry, DiscoveryPage } from './discovery.js';
+export { toAppdApplication } from './appd.js';
+export type {
+  AppdApplication,
+  AppdListResponse,
+  AppdAppResponse,
+  FragmentFdc3Metadata,
+  FragmentAppdMetadata,
+} from './appd.js';
 export {
   BRAID_FRAGMENT_PREFIX,
   BRAID_REALM_PREFIX,

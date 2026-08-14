@@ -196,6 +196,29 @@ export const CONSOLE_STYLES = `
 .braid-console__diffline--remove { color: var(--bc-err); }
 .braid-console__diffield { padding: 2px 0 2px 16px; color: var(--bc-muted); }
 
+/* --- access matrix ------------------------------------------------------ */
+
+.braid-console__access {
+  margin-top: var(--bc-gap); padding: 10px;
+  border: 1px solid var(--bc-border); border-radius: var(--bc-radius); background: var(--bc-surface);
+}
+.braid-console__accesshead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.braid-console__matrix { margin-top: 8px; background: var(--bc-bg); }
+.braid-console__matrix th, .braid-console__matrix td { padding: 4px 8px; }
+.braid-console__matrix th { white-space: nowrap; }
+.braid-console__remove { border: 0; padding: 0 4px; margin-left: 4px; font-size: 13px; line-height: 1; }
+
+.braid-console__mark { font-family: var(--bc-mono); }
+.braid-console__mark--allowed { color: var(--bc-ok); }
+.braid-console__mark--denied { color: var(--bc-muted); }
+.braid-console__mark--absent { color: var(--bc-muted); opacity: 0.6; }
+
+/* Visually hidden, still read aloud — the symbols carry meaning that colour alone would not. */
+.braid-console__sronly {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
 /* Container query, not a media query: the library's width is its host's business, not the
    viewport's. A console in a 400px sidebar should stack even on a wide screen. */
 @container (max-width: 640px) {

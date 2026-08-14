@@ -65,6 +65,17 @@ POC runs in development mode, so it returns everything including internal endpoi
 [gateway README](../libs/braid-gateway/README.md) for how roles, permissions, and pagination work
 in production.
 
+**The registry console runs alongside it**, at
+<http://localhost:4500/__braid/console/> — the same origin as the gateway, which is why it needs no
+CORS, no second deployment, and no separate session. It reads `/__braid/registry` and writes to
+`/__braid/registry-api`, and the POC mounts both.
+
+Publishing there writes an immutable snapshot to `.braid/registry`. Note the gap the POC leaves
+deliberately visible: **this gateway serves the inline manifests in `server.ts`**, so a published
+snapshot changes nothing until a deploy pins its id. That is the model rather than a shortcoming of
+the demo — configuration changes are deploys, which is what makes rollback a pointer move. See
+[`@skewkit/braid-registry`](../libs/braid-registry/README.md).
+
 ## The host's entire integration
 
 The host uses [`@skewkit/braid-angular`](../libs/braid-angular/README.md), so the integration is
