@@ -1,0 +1,184 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { FragmentManifest } from '@skewkit/braid-gateway';
+import { parseSnapshot } from '@skewkit/braid-registry';
+import { registry } from './registry-commands.js';
+
+/** Strips ANSI so assertions read as plain text. */
+// eslint-disable-next-line no-control-regex -- matching escape sequences is the point
+const plain = (text: string) => text.replace(/?\[[0-9;]*m/g, '');
+
+describe('braid registry', () => {
+  let directory: string;
+  let stdout: string;
+  let stderr: string;
+  let restore: () => void;
+
+  const healthy: FragmentManifest[] = [
+    { id: 'billing', endpoint: 'https://billing.internal', pierce: ['/billing/*'], title: 'Billing' },
+    { id: 'reviews', endpoint: 'https://reviews.internal' },
+  ];
+
+  async function writeConfig(fragments: unknown[]): Promise<string> {
+    const path = join(directory, 'braid.config.json');
+    await writeFile(path, JSON.stringify({ port: 4000, shell: { port: 4200 }, fragments }));
+    return path;
+  }
+
+  beforeEach(async () => {
+    directory = await mkdtemp(join(tmpdir(), 'braid-registry-'));
+    stdout = '';
+    stderr = '';
+
+    const originalOut = process.stdout.write.bind(process.stdout);
+    const originalErr = process.stderr.write.bind(process.stderr);
+    process.stdout.write = ((chunk: string) => ((stdout += chunk), true)) as typeof process.stdout.write;
+    process.stderr.write = ((chunk: string) => ((stderr += chunk), true)) as typeof process.stderr.write;
+    restore = () => {
+      process.stdout.write = originalOut;
+      process.stderr.write = originalErr;
+    };
+  });
+
+  afterEach(async () => {
+    restore();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  describe('validate', () => {
+    it('exits 0 on a healthy registry', async () => {
+      const config = await writeConfig(healthy);
+
+      expect(await registry(['validate', '--config', config])).toBe(0);
+      expect(plain(stdout)).toContain('2 fragments, no conflicts');
+    });
+
+    it('exits 1 and names the problem on an error', async () => {
+      const config = await writeConfig([{ id: 'billing', endpoint: '/relative' }]);
+
+      expect(await registry(['validate', '--config', config])).toBe(1);
+      expect(plain(stdout)).toContain('not an absolute URL');
+    });
+
+    it('reports a pierce conflict without failing the run', async () => {
+      const config = await writeConfig([
+        { id: 'shell', endpoint: 'https://s.internal', pierce: ['/*'] },
+        { id: 'billing', endpoint: 'https://b.internal', pierce: ['/billing/*'] },
+      ]);
+
+      expect(await registry(['validate', '--config', config])).toBe(0);
+      expect(plain(stdout)).toContain('both pierce the same page URLs');
+    });
+  });
+
+  describe('publish', () => {
+    it('writes a snapshot and points HEAD at it', async () => {
+      const config = await writeConfig(healthy);
+      const out = join(directory, 'snapshots');
+
+      expect(await registry(['publish', '--config', config, '--to', out])).toBe(0);
+
+      const id = plain(stdout).match(/reg_[0-9a-f]{32}/)?.[0];
+      expect(id).toBeDefined();
+      expect((await readFile(join(out, 'HEAD'), 'utf8')).trim()).toBe(id);
+
+      const snapshot = parseSnapshot(await readFile(join(out, `${id}.json`), 'utf8'));
+      expect(snapshot.manifests.map((m) => m.id)).toEqual(['billing', 'reviews']);
+    });
+
+    it('excludes dev scaffolding, so two developers publish the same id', async () => {
+      const withDev = await writeConfig([{ ...healthy[0]!, dev: { port: 4301 } }]);
+      const withoutDev = await writeConfig([healthy[0]!]);
+
+      await registry(['publish', '--config', withDev, '--dry-run']);
+      const first = plain(stdout).match(/reg_[0-9a-f]{32}/)?.[0];
+      stdout = '';
+      await registry(['publish', '--config', withoutDev, '--dry-run']);
+      const second = plain(stdout).match(/reg_[0-9a-f]{32}/)?.[0];
+
+      expect(first).toBe(second);
+    });
+
+    it('refuses to publish a registry with errors', async () => {
+      const config = await writeConfig([{ id: 'billing', endpoint: '/relative' }]);
+
+      expect(await registry(['publish', '--config', config, '--to', join(directory, 'out')])).toBe(1);
+      expect(plain(stderr)).toContain('refusing to publish');
+    });
+
+    it('writes nothing on --dry-run', async () => {
+      const config = await writeConfig(healthy);
+      const out = join(directory, 'snapshots');
+
+      expect(await registry(['publish', '--config', config, '--to', out, '--dry-run'])).toBe(0);
+      expect(plain(stdout)).toContain('dry run');
+      await expect(readFile(join(out, 'HEAD'), 'utf8')).rejects.toThrow();
+    });
+
+    it('keeps labels out of the content address', async () => {
+      const config = await writeConfig(healthy);
+
+      await registry(['publish', '--config', config, '--dry-run', '--label', 'by=ada']);
+      const first = plain(stdout).match(/reg_[0-9a-f]{32}/)?.[0];
+      stdout = '';
+      await registry(['publish', '--config', config, '--dry-run', '--label', 'by=grace']);
+
+      expect(plain(stdout).match(/reg_[0-9a-f]{32}/)?.[0]).toBe(first);
+    });
+  });
+
+  describe('diff', () => {
+    it('reports an unchanged registry as identical', async () => {
+      const config = await writeConfig(healthy);
+      const out = join(directory, 'snapshots');
+      await registry(['publish', '--config', config, '--to', out]);
+      stdout = '';
+
+      expect(await registry(['diff', '--config', config, '--against', out])).toBe(0);
+      expect(plain(stdout)).toContain('identical');
+    });
+
+    it('labels a routing change as gateway-owned', async () => {
+      const published = await writeConfig(healthy);
+      const out = join(directory, 'snapshots');
+      await registry(['publish', '--config', published, '--to', out]);
+
+      const changed = await writeConfig([{ ...healthy[0]!, pierce: ['/billing/*', '/invoices/*'] }, healthy[1]!]);
+      stdout = '';
+
+      expect(await registry(['diff', '--config', changed, '--against', out])).toBe(0);
+      const output = plain(stdout);
+      expect(output).toContain('pierce');
+      expect(output).toContain('gateway');
+      expect(output).toContain('1 gateway-owned field');
+    });
+
+    it('reports additions and removals', async () => {
+      const published = await writeConfig(healthy);
+      const out = join(directory, 'snapshots');
+      await registry(['publish', '--config', published, '--to', out]);
+
+      const changed = await writeConfig([healthy[0]!, { id: 'rating', endpoint: 'https://r.internal' }]);
+      stdout = '';
+      await registry(['diff', '--config', changed, '--against', out]);
+
+      const output = plain(stdout);
+      expect(output).toContain('+ rating');
+      expect(output).toContain('- reviews');
+    });
+
+    it('requires --against', async () => {
+      const config = await writeConfig(healthy);
+
+      expect(await registry(['diff', '--config', config])).toBe(1);
+      expect(plain(stderr)).toContain('--against');
+    });
+  });
+
+  it('prints usage for an unknown subcommand', async () => {
+    expect(await registry(['wat'])).toBe(1);
+    expect(plain(stdout)).toContain('braid registry');
+  });
+});

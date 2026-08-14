@@ -1,0 +1,71 @@
+{
+  "name": "braid-console",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/braid-console/src",
+  "projectType": "library",
+  "tags": [
+    "scope:shared",
+    "framework:react"
+  ],
+  "release": {
+    "version": {
+      "manifestRootsToUpdate": [
+        "dist/{projectRoot}"
+      ],
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk"
+    }
+  },
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/braid-console",
+        "main": "libs/braid-console/src/index.ts",
+        "tsConfig": "libs/braid-console/tsconfig.build.json",
+        "assets": [
+          "libs/braid-console/*.md"
+        ]
+      }
+    },
+    "build-app": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/dist/apps/braid-console"
+      ],
+      "options": {
+        "command": "vite build --config libs/braid-console/vite.config.ts"
+      }
+    },
+    "serve-app": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vite --config libs/braid-console/vite.config.ts"
+      }
+    },
+    "size": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node tools/braid-console/check-size.mjs"
+      }
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "options": {
+        "command": "vitest run --config libs/braid-console/vite.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

@@ -1,8 +1,31 @@
 import { defineConfig } from 'vite';
+import { resolve } from 'node:path';
 
+/**
+ * Workspace packages this project imports *as values* are aliased to their sources.
+ *
+ * Type-only imports need no help — they are erased before resolution — which is why most libs
+ * here get by without aliases. `braid registry` actually calls into `@skewkit/braid-registry`, so
+ * it does. Explicit aliases rather than a tsconfig-paths plugin: one fewer dependency, and the
+ * mapping is visible where the failure would be.
+ *
+ * The `/node` subpath must precede the bare specifier — the first match wins.
+ */
 export default defineConfig({
   root: import.meta.dirname,
   cacheDir: '../../node_modules/.vite/libs/braid-cli',
+  resolve: {
+    alias: [
+      {
+        find: '@skewkit/braid-registry/node',
+        replacement: resolve(import.meta.dirname, '../braid-registry/src/node.ts'),
+      },
+      {
+        find: '@skewkit/braid-registry',
+        replacement: resolve(import.meta.dirname, '../braid-registry/src/index.ts'),
+      },
+    ],
+  },
   test: {
     globals: true,
     environment: 'node',

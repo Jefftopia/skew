@@ -104,6 +104,8 @@ graph TD
     RemoteJS -.-> |Proxy Facade: Syncs DOM & Events| Shadow
 ```
 
+![Braid demo application running Angular, React, and Web Component microfrontends on one page inside Shadow Roots and hidden iframe realms](assets/mfes.png)
+
 ### The Core Mental Model:
 1. **Isolated Execution Realms**: Each microfrontend runs inside its own lightweight, hidden `iframe` realm. It has its own `window`, its own `document`, its own framework instance (any version of React, Angular, Svelte, or vanilla JS), and its own memory heap.
 2. **Projected Shadow DOM**: The visual output of the microfrontend is projected into the host page inside a **Shadow Root** (`<template shadowrootmode="open">`).

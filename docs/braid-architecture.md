@@ -90,6 +90,8 @@ flowchart LR
   HostApp -->|HTTP Requests| GW
 ```
 
+![Braid architecture in action: independently deployed Angular, React, and Web Component microfrontends composed on one page inside Shadow Roots and hidden iframe realms](tutorials/assets/mfes.png)
+
 ### Fragment Boot Sequence (Contract Mode)
 
 ```mermaid

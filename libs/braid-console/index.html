@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Braid registry</title>
+    <style>
+      body { margin: 0; padding: 24px; background: #fff; }
+      @media (prefers-color-scheme: dark) { body { background: #14171b; } }
+    </style>
+  </head>
+  <body>
+    <!-- Point the console at a gateway (omit for this origin), and opt into editing. -->
+    <script type="application/json" id="braid-console-config">{ "edit": true }</script>
+    <div id="root"></div>
+    <script type="module" src="/src/app/main.tsx"></script>
+  </body>
+</html>

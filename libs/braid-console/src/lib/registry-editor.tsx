@@ -1,0 +1,477 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { FragmentManifest } from '@skewkit/braid-gateway';
+import type { DescriptorNote, FieldChange, RegistryFinding } from '@skewkit/braid-registry';
+import {
+  fetchHead,
+  publishSnapshot,
+  RegistryApiError,
+  type ConsoleApi,
+  type PublishOutcome,
+} from './client.js';
+import {
+  addFragment,
+  createDraft,
+  draftStatus,
+  formatList,
+  parseList,
+  removeFragment,
+  resetDraft,
+  updateFragment,
+  type Draft,
+} from './draft.js';
+import { ensureStyles } from './styles.js';
+
+export interface RegistryEditorProps {
+  /** Must carry an `apiPath` (or accept the default) — editing needs the write API. */
+  api?: ConsoleApi;
+  theme?: 'light' | 'dark';
+  className?: string;
+  /** Called after a successful publish, for hosts that want to react (toast, audit, navigate). */
+  onPublished?: (outcome: PublishOutcome) => void;
+}
+
+type Phase =
+  | { status: 'loading' }
+  | { status: 'ready' }
+  | { status: 'publishing' }
+  | { status: 'published'; outcome: PublishOutcome }
+  | { status: 'error'; error: Error; findings: RegistryFinding[]; notes: DescriptorNote[] };
+
+/**
+ * Edit the registry and publish it as a new immutable snapshot.
+ *
+ * The flow is deliberately: **branch from what is pinned → edit → see what it changes → publish**.
+ * Publishing never mutates the snapshot being edited; it mints a new one and moves a pointer, so
+ * the previous configuration remains exactly as it was and rollback is re-pinning it.
+ */
+export function RegistryEditor({ api, theme, className, onPublished }: RegistryEditorProps) {
+  const [draft, setDraft] = useState<Draft>(() => createDraft([]));
+  const [phase, setPhase] = useState<Phase>({ status: 'loading' });
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const [showDiff, setShowDiff] = useState(false);
+
+  const apiKey = `${api?.baseUrl ?? ''}|${api?.apiPath ?? ''}`;
+
+  useEffect(() => {
+    ensureStyles();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let current = true;
+
+    setPhase({ status: 'loading' });
+    fetchHead(api, controller.signal).then(
+      (head) => {
+        if (!current) return;
+        setDraft(createDraft(head.snapshot?.manifests ?? [], head.id));
+        setPhase({ status: 'ready' });
+      },
+      (error: unknown) => {
+        if (!current || controller.signal.aborted) return;
+        setPhase({ status: 'error', error: asError(error), findings: [], notes: [] });
+      },
+    );
+
+    return () => {
+      current = false;
+      controller.abort();
+    };
+    // apiKey stands in for the api object, which is usually a fresh literal each render
+  }, [apiKey]);
+
+  const status = useMemo(() => draftStatus(draft), [draft]);
+
+  const publish = useCallback(async () => {
+    setPhase({ status: 'publishing' });
+    try {
+      const outcome = await publishSnapshot(api ?? {}, { manifests: draft.manifests });
+      // Re-base on what was actually published, so the diff resets and a second publish of the
+      // same content is correctly reported as no change.
+      setDraft(createDraft(draft.manifests, outcome.snapshot.id));
+      setPhase({ status: 'published', outcome });
+      onPublished?.(outcome);
+    } catch (error) {
+      const apiError = error instanceof RegistryApiError ? error : null;
+      setPhase({
+        status: 'error',
+        error: asError(error),
+        findings: apiError?.findings ?? [],
+        notes: apiError?.descriptorNotes ?? [],
+      });
+    }
+  }, [api, draft.manifests, onPublished]);
+
+  if (phase.status === 'loading') {
+    return (
+      <div className={rootClass(className)} {...themeAttr(theme)}>
+        <p className="braid-console__empty">Loading the pinned registry…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={rootClass(className)} {...themeAttr(theme)}>
+      <div className="braid-console__header">
+        <h2 className="braid-console__title">Edit registry</h2>
+        <span className="braid-console__count">
+          {draft.baseId ? (
+            <>
+              from <code className="braid-console__mono">{draft.baseId}</code>
+            </>
+          ) : (
+            'nothing published yet'
+          )}
+        </span>
+        <span className="braid-console__spacer" />
+        <button className="braid-console__retry" type="button" onClick={() => setDraft(addFragment(draft))}>
+          Add fragment
+        </button>
+      </div>
+
+      {phase.status === 'error' && <ErrorPanel phase={phase} />}
+      {phase.status === 'published' && <PublishedPanel outcome={phase.outcome} />}
+
+      {draft.manifests.length === 0 ? (
+        <p className="braid-console__empty">No fragments. Add one to get started.</p>
+      ) : (
+        <ul className="braid-console__list">
+          {draft.manifests.map((manifest, index) => (
+            <FragmentRow
+              key={index}
+              manifest={manifest}
+              findings={status.findings.filter((finding) => finding.fragmentIds.includes(manifest.id))}
+              expanded={expanded === index}
+              onToggle={() => setExpanded(expanded === index ? null : index)}
+              onChange={(patch) => setDraft(updateFragment(draft, index, patch))}
+              onRemove={() => {
+                setDraft(removeFragment(draft, index));
+                setExpanded(null);
+              }}
+            />
+          ))}
+        </ul>
+      )}
+
+      {showDiff && <DiffPanel changes={status.diff} />}
+
+      <PublishBar
+        status={status}
+        phase={phase}
+        showDiff={showDiff}
+        onToggleDiff={() => setShowDiff(!showDiff)}
+        onReset={() => setDraft(resetDraft(draft))}
+        onPublish={publish}
+      />
+    </div>
+  );
+}
+
+function FragmentRow({
+  manifest,
+  findings,
+  expanded,
+  onToggle,
+  onChange,
+  onRemove,
+}: {
+  manifest: FragmentManifest;
+  findings: RegistryFinding[];
+  expanded: boolean;
+  onToggle: () => void;
+  onChange: (patch: Partial<FragmentManifest>) => void;
+  onRemove: () => void;
+}) {
+  const errors = findings.filter((finding) => finding.severity === 'error');
+
+  return (
+    <li className="braid-console__card">
+      <div className="braid-console__cardhead">
+        <button className="braid-console__disclose" type="button" onClick={onToggle} aria-expanded={expanded}>
+          <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+          <span className="braid-console__id">{manifest.id || '(no id)'}</span>
+        </button>
+        <span className="braid-console__mono">{String(manifest.endpoint || '(no endpoint)')}</span>
+        <span className="braid-console__spacer" />
+        {errors.length > 0 && (
+          <span className="braid-console__badge braid-console__badge--error">{errors.length} error</span>
+        )}
+        <button className="braid-console__ghost" type="button" onClick={onRemove} aria-label={`Remove ${manifest.id}`}>
+          Remove
+        </button>
+      </div>
+
+      {findings.length > 0 && (
+        <ul className="braid-console__findings">
+          {findings.map((finding, index) => (
+            <li key={index} className={`braid-console__finding braid-console__finding--${finding.severity}`}>
+              {finding.message}
+              {finding.hint && <span className="braid-console__desc"> {finding.hint}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {expanded && <FragmentFields manifest={manifest} onChange={onChange} />}
+    </li>
+  );
+}
+
+function FragmentFields({
+  manifest,
+  onChange,
+}: {
+  manifest: FragmentManifest;
+  onChange: (patch: Partial<FragmentManifest>) => void;
+}) {
+  const endpointIsFunction = typeof manifest.endpoint === 'function';
+
+  return (
+    <div className="braid-console__fields">
+      <Field label="id" hint="addresses the fragment; no “/”">
+        <input value={manifest.id} onChange={(event) => onChange({ id: event.target.value })} />
+      </Field>
+
+      <Field label="endpoint" hint={endpointIsFunction ? 'an in-process fetch function' : 'absolute URL'} owner="gateway">
+        <input
+          value={endpointIsFunction ? '(function)' : String(manifest.endpoint ?? '')}
+          disabled={endpointIsFunction}
+          onChange={(event) => onChange({ endpoint: event.target.value })}
+        />
+      </Field>
+
+      <Field label="pierce" hint="page URL patterns, comma separated" owner="gateway">
+        <input
+          value={formatList(manifest.pierce)}
+          onChange={(event) => onChange({ pierce: parseList(event.target.value) })}
+        />
+      </Field>
+
+      <Field label="title">
+        <input value={manifest.title ?? ''} onChange={(event) => onChange({ title: event.target.value })} />
+      </Field>
+
+      <Field label="description">
+        <input
+          value={manifest.description ?? ''}
+          onChange={(event) => onChange({ description: event.target.value })}
+        />
+      </Field>
+
+      <Field label="tags" hint="comma separated">
+        <input value={formatList(manifest.tags)} onChange={(event) => onChange({ tags: parseList(event.target.value) })} />
+      </Field>
+
+      <Field label="adapter">
+        <select value={manifest.adapter ?? ''} onChange={(event) => onChange({ adapter: event.target.value })}>
+          <option value="">compat (default)</option>
+          <option value="compat">compat</option>
+          <option value="custom-element">custom-element</option>
+        </select>
+      </Field>
+
+      {manifest.adapter === 'custom-element' && (
+        <>
+          <Field label="entry" hint="module to evaluate in the realm">
+            <input value={manifest.entry ?? ''} onChange={(event) => onChange({ entry: event.target.value })} />
+          </Field>
+          <Field label="element" hint="tag name that module defines">
+            <input value={manifest.element ?? ''} onChange={(event) => onChange({ element: event.target.value })} />
+          </Field>
+        </>
+      )}
+
+      <Field label="fallback" hint="when SSR of this fragment fails" owner="gateway">
+        <select
+          value={manifest.fallback ?? ''}
+          onChange={(event) => onChange({ fallback: (event.target.value || undefined) as FragmentManifest['fallback'] })}
+        >
+          <option value="">placeholder (default)</option>
+          <option value="placeholder">placeholder</option>
+          <option value="omit">omit</option>
+          <option value="error-html">error-html</option>
+        </select>
+      </Field>
+
+      <Field label="access.list" hint="roles, any-of — blank is public" owner="gateway">
+        <input
+          value={formatList(manifest.access?.list?.roles)}
+          onChange={(event) => onChange({ access: withRoles(manifest, 'list', parseList(event.target.value)) })}
+        />
+      </Field>
+
+      <Field label="access.fetch" hint="roles, any-of — blank is public" owner="gateway">
+        <input
+          value={formatList(manifest.access?.fetch?.roles)}
+          onChange={(event) => onChange({ access: withRoles(manifest, 'fetch', parseList(event.target.value)) })}
+        />
+      </Field>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  owner,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  owner?: 'gateway';
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="braid-console__field">
+      <span className="braid-console__fieldlabel">
+        {label}
+        {/* Gateway-owned fields are marked because their blast radius is different in kind: a
+            fragment descriptor may never supply these, and changing one alters routing or who can
+            reach what rather than how a row is labelled. */}
+        {owner === 'gateway' && (
+          <span className="braid-console__owner" title="Gateway-owned: routing or exposure">
+            gateway
+          </span>
+        )}
+      </span>
+      {children}
+      {hint && <span className="braid-console__desc">{hint}</span>}
+    </label>
+  );
+}
+
+function DiffPanel({ changes }: { changes: ReturnType<typeof draftStatus>['diff'] }) {
+  if (changes.identical) {
+    return <p className="braid-console__empty">No changes yet.</p>;
+  }
+
+  return (
+    <div className="braid-console__diff">
+      {changes.added.map((manifest) => (
+        <div key={`+${manifest.id}`} className="braid-console__diffline braid-console__diffline--add">
+          + {manifest.id}
+        </div>
+      ))}
+      {changes.removed.map((manifest) => (
+        <div key={`-${manifest.id}`} className="braid-console__diffline braid-console__diffline--remove">
+          − {manifest.id}
+        </div>
+      ))}
+      {changes.changed.map(({ id, changes: fields }) => (
+        <div key={`~${id}`} className="braid-console__diffline">
+          <div>~ {id}</div>
+          {fields.map((change: FieldChange) => (
+            <div key={change.field} className="braid-console__diffield">
+              <span className="braid-console__mono">{change.field}</span>{' '}
+              <span className={`braid-console__owner braid-console__owner--${change.owner}`}>{change.owner}</span>
+              <div className="braid-console__mono">
+                {short(change.before)} → {short(change.after)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PublishBar({
+  status,
+  phase,
+  showDiff,
+  onToggleDiff,
+  onReset,
+  onPublish,
+}: {
+  status: ReturnType<typeof draftStatus>;
+  phase: Phase;
+  showDiff: boolean;
+  onToggleDiff: () => void;
+  onReset: () => void;
+  onPublish: () => void;
+}) {
+  const errors = status.findings.filter((finding) => finding.severity === 'error').length;
+  const warnings = status.findings.length - errors;
+
+  return (
+    <div className="braid-console__bar">
+      <span className={errors > 0 ? 'braid-console__barstate--error' : 'braid-console__barstate'}>
+        {errors > 0
+          ? `${errors} error${errors === 1 ? '' : 's'} — cannot publish`
+          : status.clean
+            ? 'No changes'
+            : `Ready${warnings > 0 ? ` — ${warnings} warning${warnings === 1 ? '' : 's'}` : ''}`}
+      </span>
+      <span className="braid-console__spacer" />
+      <button className="braid-console__ghost" type="button" onClick={onToggleDiff}>
+        {showDiff ? 'Hide changes' : 'Show changes'}
+      </button>
+      <button className="braid-console__ghost" type="button" onClick={onReset} disabled={status.clean}>
+        Discard
+      </button>
+      <button
+        className="braid-console__primary"
+        type="button"
+        onClick={onPublish}
+        disabled={status.blocked || status.clean || phase.status === 'publishing'}
+      >
+        {phase.status === 'publishing' ? 'Publishing…' : 'Publish'}
+      </button>
+    </div>
+  );
+}
+
+function PublishedPanel({ outcome }: { outcome: PublishOutcome }) {
+  return (
+    <div className="braid-console__notice braid-console__notice--ok" role="status">
+      <span aria-hidden="true">✓</span>
+      <span>
+        Published <code className="braid-console__mono">{outcome.snapshot.id}</code> —{' '}
+        {outcome.snapshot.fragmentCount} fragment{outcome.snapshot.fragmentCount === 1 ? '' : 's'}
+        {outcome.pinned ? ', now pinned.' : ', not pinned.'}{' '}
+        {outcome.pinned && 'Gateways pick it up on restart.'}
+      </span>
+    </div>
+  );
+}
+
+function ErrorPanel({ phase }: { phase: Extract<Phase, { status: 'error' }> }) {
+  return (
+    <div className="braid-console__error" role="alert">
+      <h3>Could not publish</h3>
+      <p>{phase.error.message}</p>
+      {phase.findings.length > 0 && (
+        <ul className="braid-console__findings">
+          {phase.findings.map((finding, index) => (
+            <li key={index}>{finding.message}</li>
+          ))}
+        </ul>
+      )}
+      {phase.notes.length > 0 && (
+        <ul className="braid-console__findings">
+          {phase.notes.map((note, index) => (
+            <li key={index}>{note.message}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function withRoles(manifest: FragmentManifest, key: 'list' | 'fetch', roles: string[]) {
+  const access = { ...(manifest.access ?? {}) };
+  if (roles.length === 0) delete access[key];
+  else access[key] = { ...access[key], roles };
+  return access;
+}
+
+function short(value: unknown): string {
+  if (value === undefined) return '(unset)';
+  if (typeof value === 'function') return '(function)';
+  const json = JSON.stringify(value);
+  return json.length > 48 ? `${json.slice(0, 45)}…` : json;
+}
+
+const rootClass = (className?: string) => `braid-console${className ? ` ${className}` : ''}`;
+const themeAttr = (theme?: 'light' | 'dark') => (theme ? { 'data-theme': theme } : {});
+const asError = (error: unknown) => (error instanceof Error ? error : new Error(String(error)));

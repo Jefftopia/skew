@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { add, dev, init } from './lib/commands.js';
+import { registry } from './lib/registry-commands.js';
 
 const USAGE = `braid — compose independently deployed frontends
 
@@ -9,11 +10,15 @@ const USAGE = `braid — compose independently deployed frontends
       --endpoint <url>              where the fragment is served
       --port <n>                    dev port (implies http://localhost:<n>)
       --pierce <pattern>            page routes to server-render it into (repeatable)
+  braid registry <subcommand>     validate, diff, or publish the registry
+      validate                      check the local registry for conflicts
+      diff --against <ref>          compare local config to a published snapshot
+      publish --to <dir>            mint an immutable snapshot from local config
 `;
 
 const [command, ...argv] = process.argv.slice(2);
 
-const commands: Record<string, (argv: string[]) => Promise<number>> = { dev, init, add };
+const commands: Record<string, (argv: string[]) => Promise<number>> = { dev, init, add, registry };
 const run = command ? commands[command] : undefined;
 
 if (!run) {

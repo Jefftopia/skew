@@ -21,6 +21,8 @@ Then open <http://localhost:4500/billing/invoices>.
 and a framework-free web component sits beside them — none of them imported by the host, each in
 its own realm with its own dependency graph.
 
+![Braid POC Demo running Angular host, Angular remote, React remote, and Web Component widget](tutorials/assets/mfes.png)
+
 ## What the POC actually proves
 
 **The remote is a normal Angular app.** Look at `apps/braid-poc-remote` — no Braid import, no

@@ -1,19 +1,17 @@
 {
-  "name": "@skewkit/braid-cli",
+  "name": "@skewkit/braid-console",
   "version": "0.0.1",
-  "description": "Braid's command line: run a composed application locally with live reload, scaffold a config, and register fragments.",
+  "description": "A read-only console for a Braid gateway's fragment registry. Mountable React library, or a standalone deployable app.",
   "keywords": [
     "braid",
     "micro-frontends",
-    "cli",
-    "dev-server",
-    "composition"
+    "registry",
+    "console",
+    "react"
   ],
   "license": "MIT",
+  "sideEffects": false,
   "type": "module",
-  "bin": {
-    "braid": "./src/bin.js"
-  },
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
   "exports": {
@@ -21,14 +19,12 @@
       "types": "./src/index.d.ts",
       "default": "./src/index.js"
     },
-    "./nx": {
-      "types": "./src/nx/plugin.d.ts",
-      "default": "./src/nx/plugin.js"
-    },
     "./package.json": "./package.json"
   },
   "peerDependencies": {
     "@skewkit/braid-gateway": "^0.0.1",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
     "@skewkit/braid-registry": "^0.0.1"
   },
   "publishConfig": {
@@ -37,7 +33,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Jefftopia/skew.git",
-    "directory": "libs/braid-cli"
+    "directory": "libs/braid-console"
   },
   "homepage": "https://github.com/Jefftopia/skew#readme",
   "bugs": {

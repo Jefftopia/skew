@@ -1,0 +1,27 @@
+{
+  "name": "@skewkit/braid-registry",
+  "version": "0.0.1",
+  "description": "Immutable, content-addressed snapshots of a Braid fragment registry, with validation and diff analysis.",
+  "keywords": ["braid", "micro-frontends", "registry", "configuration", "snapshots"],
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": { "types": "./src/index.d.ts", "default": "./src/index.js" },
+    "./node": { "types": "./src/node.d.ts", "default": "./src/node.js" },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "@skewkit/braid-gateway": "^0.0.1"
+  },
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jefftopia/skew.git",
+    "directory": "libs/braid-registry"
+  },
+  "homepage": "https://github.com/Jefftopia/skew#readme",
+  "bugs": { "url": "https://github.com/Jefftopia/skew/issues" }
+}
