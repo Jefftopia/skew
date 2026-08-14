@@ -5,13 +5,13 @@ import { executeScriptsInFragmentContent } from '../compat/script-execution.js';
 import { isDevMode } from '../config.js';
 
 /**
- * The compat adapter (C5) — the emulation layer, contained.
+ * The compat adapter — the emulation layer, contained.
  *
  * For apps that cannot be told anything (the legacy monolith mid-migration), this adapter
  * provides the full web-fragments-style illusion: the fragment's code believes it owns the whole
  * browser, while its DOM lives in the host page's shadow root and its JS runs in a hidden
  * same-origin realm iframe. All interception is confined to the fragment's own realm and
- * boundary (ledger entries M1–M4); the host page is never patched (M0).
+ * boundary; the host page is never patched.
  *
  * This is the only adapter shipped in this build, and the default (see `DEFAULT_ADAPTER`):
  * a manifest that doesn't declare an adapter gets this one, so being a fragment requires zero
@@ -45,8 +45,8 @@ export const compatAdapter: InstalledAdapter = {
     const fragmentAbortController = new AbortController();
     signal.addEventListener('abort', () => fragmentAbortController.abort(), { once: true });
 
-    // Install the full compat illusion onto the realm (M1 window patches, M2 document facade,
-    // M3 boundary stamping, M4 born-inert scripts).
+    // Install the full compat illusion onto the realm (window patches, document facade,
+    // boundary stamping, born-inert scripts).
     initializeRealmContext(realm, fragmentShadowRoot, contentRoot, bound, fragmentAbortController);
 
     // Now activate the fragment's scripts, in document order, in the realm's JS context.

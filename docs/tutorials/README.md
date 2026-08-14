@@ -10,6 +10,7 @@ protects you from — reproduced, not described.
 | 2 | [Give your build a name](02-build.md) | `@skewkit/build` | A stamped build identity, a served manifest, a stale-origin detector, and generated frozen types |
 | 3 | [Versioned stores, the Angular way](03-angular-core.md) | `@skewkit/angular-core` | A draft editor on DI + Signals with zero flicker and typed failure states |
 | 4 | [One graph, durable writes](04-angular-data.md) | `@skewkit/angular-data` | A normalized fund list with optimistic, outbox-durable order submission |
+| 5 | [Compose without colliding](05-braid.md) | `@skewkit/braid-gateway` · `@skewkit/braid-client` | An enterprise microfrontend shell with server-side piercing, isolated iframe realms, and zero-blast-radius degradation |
 
 **Read them in the demo.** These pages are also served inside the federated
 demo apps — the remote exposes a `./Tutorials` module and the host routes to

@@ -1,5 +1,5 @@
 /**
- * @skewkit/braid-gateway — the Braid gateway (C6): fetch-native origin-front middleware.
+ * @skewkit/braid-gateway — the Braid gateway: fetch-native origin-front middleware.
  *
  * ```ts
  * import { createGateway, toWebMiddleware } from '@skewkit/braid-gateway';

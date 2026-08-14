@@ -142,8 +142,11 @@ when a child exits non-zero.
 reverse. A page URL that a fragment pierces is the only Braid URL with more than one
 representation — see [the three namespaces](../libs/braid-gateway/README.md#the-three-namespaces).
 
-**Prevention.** Don't edge-cache pierced pages. If you must, put `sec-fetch-dest` in the cache
-key for those routes and make sure nothing at the edge strips it. Braid URLs themselves
+**Prevention.** Don't edge-cache pierced pages — the gateway defends this by default, marking
+them `private` so a correct shared cache will not store them. Seeing this failure anyway means
+either something at the edge is rewriting `Cache-Control`, or you set
+`pierceCacheControl: 'preserve'`, in which case `sec-fetch-dest` must be in the cache key for
+those routes and nothing at the edge may strip it. Braid URLs themselves
 (`/__braid/frag|realm|doc/*`) vary on nothing and need no configuration.
 
 ---

@@ -1,17 +1,16 @@
 import { Component, signal } from '@angular/core';
-import { BraidFragment, type BraidFragmentError } from '@skewkit/braid-angular';
+import { BraidFragment, type BraidFragmentError, type BraidFragmentEvent } from '@skewkit/braid-angular';
 import { DeferredPanel } from './deferred-panel';
 
 /**
- * The host's billing page. Its entire contribution is the fragment: the content inside it is
- * served by a different application, deployed on its own schedule, running in its own realm.
+ * One Angular page composing three independently deployed applications:
  *
- * `<braid-fragment>` is the Angular binding over `<fragment-slot>`. Using it rather than the raw
- * custom element means this component keeps strict template checking (no
- * `CUSTOM_ELEMENTS_SCHEMA`), and gets typed outputs instead of hand-wired event listeners.
+ * - **billing** — an Angular SPA, bound to the host router (compat adapter)
+ * - **reviews** — a React 19 app (compat adapter, no adapter declared)
+ * - **rating** — a framework-free custom element (contract `custom-element` adapter)
  *
- * There is no `src`, so the fragment is *bound*: it follows the host's location, and navigations
- * it performs drive the host URL.
+ * The host imports none of them. Each runs in its own realm with its own dependency graph, so
+ * Angular and React coexist on this page without sharing a thing.
  */
 @Component({
   selector: 'app-billing-page',
@@ -20,20 +19,38 @@ import { DeferredPanel } from './deferred-panel';
   template: `
     <h2>Billing</h2>
     <p class="note">
-      Everything inside the dashed border below comes from the remote application through the
-      Braid gateway. The host never imported it.
+      Three fragments below, from three separately deployed applications. The host never imported
+      any of them.
     </p>
 
     <braid-fragment name="billing" (ready)="onReady($event)" (failed)="onFailed($event)" />
 
-    @if (status(); as message) {
-      <p class="status">{{ message }}</p>
-    }
+    <braid-fragment name="reviews" (ready)="onReady($event)" (failed)="onFailed($event)" />
 
     <!--
-      Incremental hydration on the same page as a fragment. The block is server-rendered, its
-      JavaScript stays undownloaded until the user interacts with it, and the fragment beside it
-      boots independently of either.
+      A web component, mounted by the contract adapter. Props go in as element properties and its
+      own rating:change event comes back out as a typed host event — no emulation involved.
+    -->
+    <braid-fragment
+      name="rating"
+      [props]="{ value: rating(), label: 'How is billing working for you?' }"
+      (fragmentEvent)="onRatingChange($event)"
+      (failed)="onFailed($event)"
+    />
+
+    <p class="status">
+      @if (ready().length) {
+        ready: <strong>{{ ready().join(', ') }}</strong> ·
+      }
+      host received rating: <strong>{{ rating() }}</strong> / 5
+      @if (failure(); as message) {
+        <br /><span class="failure">{{ message }}</span>
+      }
+    </p>
+
+    <!--
+      Incremental hydration on the same page as three fragments: server-rendered, dehydrated
+      until interaction, and independent of every realm on the page.
     -->
     @defer (hydrate on interaction) {
       <app-deferred-panel />
@@ -43,18 +60,27 @@ import { DeferredPanel } from './deferred-panel';
   `,
   styles: `
     .note { color: #475569; font-size: 0.9rem; }
-    braid-fragment { display: block; margin-top: 1rem; min-height: 8rem; }
-    .status { color: #475569; font-size: 0.8rem; font-style: italic; }
+    braid-fragment { display: block; margin-top: 1rem; min-height: 4rem; }
+    .status { margin-top: 1rem; color: #475569; font-size: 0.85rem; }
+    .failure { color: #b91c1c; }
   `,
 })
 export class BillingPage {
-  readonly status = signal<string | undefined>(undefined);
+  readonly ready = signal<string[]>([]);
+  readonly rating = signal(4);
+  readonly failure = signal<string | undefined>(undefined);
 
   onReady(detail: { fragmentId: string }): void {
-    this.status.set(`fragment "${detail.fragmentId}" reported ready through the Angular binding`);
+    this.ready.update((ids) => (ids.includes(detail.fragmentId) ? ids : [...ids, detail.fragmentId]));
   }
 
   onFailed(detail: BraidFragmentError): void {
-    this.status.set(`fragment failed at ${detail.stage}: ${detail.fixHint ?? detail.error.message}`);
+    this.failure.set(`${detail.fragmentId} failed at ${detail.stage}: ${detail.fixHint ?? detail.error.message}`);
+  }
+
+  /** The web component's own event, republished across the fragment boundary. */
+  onRatingChange(event: BraidFragmentEvent): void {
+    const detail = event.detail as { value?: number } | undefined;
+    if (typeof detail?.value === 'number') this.rating.set(detail.value);
   }
 }

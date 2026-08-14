@@ -1,5 +1,5 @@
 /**
- * Gateway side of the Braid composition protocol (C7).
+ * Gateway side of the Braid composition protocol.
  *
  * These constants are deliberately duplicated in `@skewkit/braid/src/protocol.ts`: the client
  * and gateway bundles do not share modules, but always ship in the same package version, and
@@ -37,6 +37,16 @@ export const BRAID_PROTOCOL_META = 'braid-protocol';
 
 /** Name of the `<meta>` element carrying the fragment's manifest-declared adapter in the realm stub. */
 export const BRAID_ADAPTER_META = 'braid-adapter';
+
+/**
+ * Name of the `<meta>` carrying adapter-specific options as JSON — the manifest fields an
+ * adapter needs that mean nothing to the runtime, such as which custom element to mount.
+ *
+ * It rides on the realm stub for the same reason the adapter name does: the client learns
+ * everything it needs about a fragment from the fragment's own registration, with no
+ * client-side registry to keep in sync.
+ */
+export const BRAID_ADAPTER_OPTIONS_META = 'braid-adapter-options';
 
 /** Response/request header carrying a fragment id for diagnostics. */
 export const BRAID_FRAGMENT_ID_HEADER = 'x-braid-fragment-id';

@@ -1,6 +1,6 @@
 # @skewkit/braid-gateway
 
-The Braid gateway (C6): fetch-native, platform-neutral origin-front middleware. Routes fragment
+The Braid gateway: fetch-native, platform-neutral origin-front middleware. Routes fragment
 traffic by **exact id** under the reserved `/__braid/frag/:fragmentId/*` namespace — no route
 pattern sniffing, no header-trust fallback — and passes everything else through to your existing
 app.
@@ -24,8 +24,21 @@ const gateway = createGateway({
 });
 ```
 
-The registry is data, not code (C8): pass inline manifests, a URL to a JSON array of manifests,
+The registry is data, not code: pass inline manifests, a URL to a JSON array of manifests,
 or an async loader (file/KV/database). Deploying a fragment never redeploys the gateway.
+
+A fragment that ships a **web component** rather than a whole app declares the adapter, the module
+to load, and the element to mount:
+
+```ts
+{ id: 'rating', endpoint: 'https://widgets.example.com',
+  adapter: 'custom-element', entry: '/star-rating.js', element: 'star-rating',
+  events: ['rating:change'] }
+```
+
+A relative `entry` is re-rooted into the fragment's namespace, so the module and its imports are
+fetched through the gateway rather than from the host's root. Such a fragment serves no document,
+and the gateway answers its document request with `204` rather than forwarding it.
 
 ## Bindings
 
@@ -131,6 +144,14 @@ no configuration at all.
 | Header | URL | Response changes to | Why |
 | --- | --- | --- | --- |
 | `sec-fetch-dest: document` | a page URL some fragment `pierce`s | the shell with fragments composed into it | A page navigation gets a complete document with fragments already inside. The same URL fetched by a client-side router wants the SPA's own payload, and injecting a declarative shadow root into that would corrupt it. The browser sets this header; it must reach the origin. |
+
+Both representations carry `Vary: sec-fetch-dest` — and, because most CDNs honor `Vary` only for
+`Accept-Encoding`, the gateway also rewrites `Cache-Control` on these URLs to keep them out of
+shared caches: `public` and `s-maxage` are dropped, `private` is added, and your own `max-age` /
+`no-store` / `stale-while-revalidate` are untouched. Browser caching still works.
+
+Set `pierceCacheControl: 'preserve'` to opt out — only if the pages are anonymous *and* you have
+put `sec-fetch-dest` into the edge's cache key. See [CDN configuration](../../docs/braid-cdn.md).
 
 The gateway sends `Vary: sec-fetch-dest` on those page responses.
 
@@ -253,7 +274,7 @@ fragment endpoints, so treat a manifest entry as granting that endpoint the user
 Not yet implemented from the architecture's security section: allow-listed manifest origins and
 signed manifests. Until those land, treat the registry as trusted configuration.
 
-**The rewriter is owned, not forked** (D7). `rewriteHtmlStream` is a small streaming HTML
+**The rewriter is owned, not forked.** `rewriteHtmlStream` is a small streaming HTML
 rewriter with bounded memory and chunk-boundary safety; its conformance vectors
 (`html-rewrite-stream.spec.ts`) are the oracle any second implementation — a native
 `HTMLRewriter` path on workerd, say — must pass before it is allowed to serve traffic. Only the

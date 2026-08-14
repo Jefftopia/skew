@@ -2,7 +2,7 @@
 name: using-braid
 description: >-
   How to correctly use the Braid packages (@skewkit/braid, @skewkit/braid-gateway,
-  @skewkit/braid-angular, @skewkit/braid-cli) to compose independently deployed frontend
+  @skewkit/braid-angular, @skewkit/braid-react, @skewkit/braid-cli) to compose independently deployed frontend
   applications into one page. Use this skill whenever a task involves micro-frontends,
   composing or embedding one web application inside another, <fragment-slot> or
   <braid-fragment>, the /__braid/ URL namespaces, server-side piercing, fragment realms,
@@ -31,7 +31,9 @@ Two things make it work, and most mistakes come from misunderstanding one of the
 | Situation | Do this |
 | --- | --- |
 | Add an existing app into another page | compat adapter (the default) — no changes to the fragment |
+| Compose a fragment that *is* a web component | `custom-element` adapter: manifest `entry` + `element` |
 | Host a fragment in an Angular app | `@skewkit/braid-angular`: `provideBraid()` + `<braid-fragment>` |
+| Host a fragment in a React app | `@skewkit/braid-react`: `initBraidReact()` + `<BraidFragment>` |
 | Host a fragment in anything else | `initBraid()` + `<fragment-slot name="…">` |
 | Put a gateway in front of an app | `createGateway()` + a binding (`toNodeMiddleware`, `toFetchHandler`) |
 | Run it all locally | `braid dev` from `@skewkit/braid-cli` |
@@ -88,7 +90,8 @@ Most reported failures are one of these, and each is invisible without looking:
 3. **The fragment's `<base href>` must not be rewritten.** It is what the fragment's router reads.
 4. **Stale bundles.** Unhashed dev filenames with a long `max-age` serve yesterday's client.
 5. **Cache variance.** Only page URLs that a fragment pierces vary (`sec-fetch-dest`); the
-   `/__braid/*` namespaces vary on nothing.
+   `/__braid/*` namespaces vary on nothing. The gateway marks pierced pages `private` by default,
+   so a shared cache seeing `public` on one means the edge rewrote it or the app opted out.
 
 `references/failure-modes.md` has the full catalogue with symptoms and fixes. Run this in the
 console first — it answers most of them at once:
@@ -104,6 +107,7 @@ const slot = document.querySelector('fragment-slot');
 - `references/gateway.md` — registry, manifests, piercing, access rules, bindings, discovery
 - `references/client.md` — slots, realms, adapters, props and events, the `FragmentEnv` contract
 - `references/angular.md` — `provideBraid`, `<braid-fragment>`, SSR and hydration specifics
+- `references/react.md` — `initBraidReact`, `<BraidFragment>`, host navigation without a fixed router
 - `references/dev-workflow.md` — `braid dev`, live reload, Nx integration, what still needs config
 - `references/failure-modes.md` — symptom → cause → prevention
 
@@ -113,4 +117,5 @@ const slot = document.querySelector('fragment-slot');
 - Do not put authorization only in the registry: `access` governs composition, not the
   fragment's own API.
 - Do not add `CUSTOM_ELEMENTS_SCHEMA` across an Angular app; use `<braid-fragment>`.
-- Do not cache pierced pages at a CDN without `sec-fetch-dest` in the key.
+- Do not set `pierceCacheControl: 'preserve'` to get pierced pages cached at a CDN unless they are
+  anonymous *and* `sec-fetch-dest` is in the cache key.

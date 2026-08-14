@@ -326,6 +326,57 @@ describe('gateway piercing', () => {
     expect(await response!.text()).not.toContain('template');
   });
 
+  describe('shared-cacheability of pierce-matching URLs', () => {
+    // `Vary` alone does not protect these URLs: most CDNs honor it only for `Accept-Encoding`,
+    // so a shared cache would store one representation and serve it as the other.
+    const cacheableShell = (cacheControl: string) => async () =>
+      htmlResponse('<html><body><fragment-slot name="billing"></fragment-slot></body></html>', {
+        headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': cacheControl },
+      });
+
+    it('strips shared-cache directives from a composed document', async () => {
+      const response = await pierceGateway().handle(
+        documentRequest('/billing/invoices'),
+        cacheableShell('public, max-age=600, s-maxage=3600'),
+      );
+
+      const cacheControl = response!.headers.get('cache-control')!;
+      expect(cacheControl).toContain('private');
+      expect(cacheControl).not.toContain('public');
+      expect(cacheControl).not.toContain('s-maxage');
+      // the app's own freshness lifetime is its business — only sharing is overridden
+      expect(cacheControl).toContain('max-age=600');
+    });
+
+    it('marks the unpierced representation too', async () => {
+      // it is the other half of the pair a cache could confuse, so it needs the same treatment
+      const softNavigation = new Request('https://example.com/billing/x', {
+        headers: { 'sec-fetch-dest': 'empty' },
+      });
+
+      const response = await pierceGateway().handle(softNavigation, cacheableShell('public, max-age=600'));
+
+      expect(response!.headers.get('cache-control')).toContain('private');
+    });
+
+    it('adds nothing when the shell already said no-store', async () => {
+      const response = await pierceGateway().handle(documentRequest('/billing/invoices'), cacheableShell('no-store'));
+
+      expect(response!.headers.get('cache-control')).toBe('no-store');
+    });
+
+    it('leaves the shell untouched when the app opts out', async () => {
+      const gateway = createGateway({
+        registry: [{ id: 'billing', endpoint: billingApp as unknown as typeof fetch, pierce: ['/billing/*'] }],
+        pierceCacheControl: 'preserve',
+      });
+
+      const response = await gateway.handle(documentRequest('/billing/invoices'), cacheableShell('public, max-age=600'));
+
+      expect(response!.headers.get('cache-control')).toBe('public, max-age=600');
+    });
+  });
+
   it('leaves URLs that no fragment pierces completely untouched', async () => {
     const gateway = pierceGateway();
     const request = new Request('https://example.com/unrelated.js', { headers: { 'sec-fetch-dest': 'script' } });

@@ -57,7 +57,7 @@ function isUnauditedDocumentMember(name: string): boolean {
  * instance has an ordinary, mutable [[Prototype]] slot, so splicing is safe cross-browser. Own
  * properties of the document instance (e.g. the [LegacyUnforgeable] `location`) are unaffected.
  *
- * This is ledger entry M2: it patches the fragment's own realm document only — never the host
+ * This patches the fragment's own realm document only — never the host
  * page's document.
  *
  * @param realmDocument the fragment's realm iframe document to install the facade on

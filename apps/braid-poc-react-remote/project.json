@@ -1,0 +1,14 @@
+{
+  "name": "braid-poc-react-remote",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/braid-poc-react-remote/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/apps/braid-poc-react-remote"],
+      "options": { "command": "node apps/braid-poc-react-remote/build.mjs" }
+    }
+  }
+}

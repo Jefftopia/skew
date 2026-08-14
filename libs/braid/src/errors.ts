@@ -1,5 +1,5 @@
 /**
- * The Braid error standard (C11): every thrown or reported runtime error names the fragment,
+ * The Braid error standard: every thrown or reported runtime error names the fragment,
  * the failing stage, and — where we know it — the likely fix.
  */
 
@@ -10,7 +10,7 @@ export type BraidErrorStage =
   | 'realm-boot' // creating or verifying the fragment's realm failed
   | 'adapter-resolution' // the manifest-declared adapter is not available in this client
   | 'adapter-mount' // the adapter failed while mounting the fragment
-  | 'context-version'; // a context value's schema version could not be bridged (C9)
+  | 'context-version'; // a context value's schema version could not be bridged
 
 export interface BraidErrorInit {
   fragmentId: string;

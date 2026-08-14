@@ -12,12 +12,12 @@ import { navigationBus, ensureHostNavigationSources } from './navigation-bus.js'
 import { RealmHandle } from '../realm/realm-manager.js';
 
 /**
- * Realm-side monkey patches (ledger entry M1): applied to the fragment's own realm window so
+ * Realm-side monkey patches: applied to the fragment's own realm window so
  * that code running in it behaves as if it were running in the main frame.
  *
  * Everything here patches objects the runtime itself created (the hidden realm iframe) or nodes
  * confined to the fragment's boundary — the host page's globals and prototypes are never
- * touched (invariant M0).
+ * touched.
  */
 export function initializeRealmContext(
   realm: RealmHandle,

@@ -13,7 +13,7 @@ import { removeBornInertShadowing, unwrapBornInertScriptToLive } from './born-in
 import { isDevMode } from '../config.js';
 
 /**
- * The fragment boundary (ledger entry M3): all main-realm interception is confined here — the
+ * The fragment boundary: all main-realm interception is confined here — the
  * host page's `Node`/`Element` prototypes are never touched.
  *
  * Every node inside a fragment's DOM is "stamped" with a per-fragment prototype spliced above

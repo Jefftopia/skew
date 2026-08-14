@@ -1,7 +1,7 @@
 /**
  * @skewkit/braid — the Braid client runtime.
  *
- * This build ships the compat adapter (C5) as the only — and default — adapter: legacy apps
+ * This build ships the compat adapter as the only — and default — adapter: legacy apps
  * compose as fragments with zero app-code changes, config only.
  *
  * ```ts
@@ -16,6 +16,7 @@
 import { BraidOptions, setBraidConfig } from './config.js';
 import { installAdapter } from './adapters/adapter.js';
 import { compatAdapter } from './adapters/compat-adapter.js';
+import { customElementAdapter } from './adapters/custom-element-adapter.js';
 import { FragmentSlot } from './elements/fragment-slot.js';
 
 export { BraidError } from './errors.js';
@@ -24,6 +25,7 @@ export type { BraidOptions } from './config.js';
 export type { FragmentEnv, EnvDocument, EnvLocation, EnvHistory, EnvContext } from './env/fragment-env.js';
 export type { BraidAdapter } from './adapters/adapter.js';
 export { DEFAULT_ADAPTER } from './adapters/adapter.js';
+export { customElementAdapter } from './adapters/custom-element-adapter.js';
 export { FragmentSlot } from './elements/fragment-slot.js';
 export type { FragmentSlotState } from './elements/fragment-slot.js';
 export { braidContext } from './context/context-bus.js';
@@ -43,6 +45,7 @@ export {
 export function initBraid(options: BraidOptions = {}): void {
   setBraidConfig(options);
   installAdapter(compatAdapter);
+  installAdapter(customElementAdapter);
 
   if (!customElements.get('fragment-slot')) {
     customElements.define('fragment-slot', FragmentSlot);

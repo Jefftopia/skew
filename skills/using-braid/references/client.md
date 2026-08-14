@@ -65,6 +65,26 @@ confined to the fragment's own realm and boundary:
 **The host page is never patched.** Verify with
 `Node.prototype.appendChild.toString().includes('[native code]')`.
 
+## The custom-element adapter
+
+For a fragment that already *is* a web component. No emulation, no fragment document — the
+manifest names an entry module and an element:
+
+```ts
+{ id: 'rating', endpoint: 'https://widgets.example.com',
+  adapter: 'custom-element', entry: '/star-rating.js', element: 'star-rating',
+  events: ['rating:change'] }
+```
+
+The adapter evaluates the entry in the realm, creates the element **there** (so it upgrades
+against the fragment's own definition), and then moves it into the host DOM. Adoption across
+documents preserves the element's class, so the fragment keeps its implementation while its
+custom element registry stays out of the host's. `env.props` become DOM properties; the manifest's
+`events` are republished as `braid:event`.
+
+The gateway answers the document request for such a fragment with `204`, and the adapter declares
+`needsDocument: false` — a fragment that serves no document is not a broken fragment.
+
 ## Props, events, context
 
 ```ts

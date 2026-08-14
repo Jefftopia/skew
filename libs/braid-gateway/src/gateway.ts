@@ -1,5 +1,6 @@
 import {
   BRAID_ADAPTER_META,
+  BRAID_ADAPTER_OPTIONS_META,
   BRAID_FRAGMENT_ID_HEADER,
   BRAID_PROTOCOL_META,
   BRAID_PROTOCOL_VERSION,
@@ -19,13 +20,13 @@ import { createDiscoveryHandler, DiscoveryOptions } from './discovery.js';
 import { pierceShellHtml, PierceTarget, prepareFragmentHtml } from './rewriter/transforms.js';
 
 /**
- * Gateway core (C6): fetch-native, platform-neutral origin-front middleware.
+ * Gateway core: fetch-native, platform-neutral origin-front middleware.
  *
  * Two responsibilities:
  *
- * 1. **Namespace routing (D4)**: requests under `/__braid/frag/:id/*` address a fragment by id,
+ * 1. **Namespace routing**: requests under `/__braid/frag/:id/*` address a fragment by id,
  *    exactly — realm stubs, assets, and data. No pattern matching, no request sniffing.
- * 2. **Piercing (C7)**: for document requests whose page URL a fragment declares in its
+ * 2. **Piercing**: for document requests whose page URL a fragment declares in its
  *    `pierce` patterns, the fragment's server-rendered HTML is interleaved into the shell's
  *    response stream, so fragments paint with the shell's first response.
  *
@@ -33,7 +34,7 @@ import { pierceShellHtml, PierceTarget, prepareFragmentHtml } from './rewriter/t
  */
 
 export interface GatewayOptions {
-  /** The fragment registry: inline manifests, a JSON URL, or an async loader (C8). */
+  /** The fragment registry: inline manifests, a JSON URL, or an async loader. */
   registry: RegistrySource;
   /** 'development' enables verbose error bodies; defaults to 'development'. */
   mode?: 'production' | 'development';
@@ -65,6 +66,25 @@ export interface GatewayOptions {
    * host.
    */
   trustForwardedHeaders?: boolean;
+  /**
+   * What to do with `Cache-Control` on a page URL some fragment declares in `pierce`.
+   *
+   * - `'private'` (default) — keep it out of shared caches: `public` and `s-maxage` are dropped
+   *   and `private` is added. The browser may still cache it.
+   * - `'preserve'` — leave the shell's own headers untouched.
+   *
+   * The default exists because such a URL has two representations (composed for a navigation,
+   * plain for a soft-navigation fetch) and `Vary: sec-fetch-dest` is not enough to protect them:
+   * most CDNs, Cloudflare among them, honor `Vary` only for `Accept-Encoding`. A shared cache
+   * that ignores it will store one representation and serve it as the other — the fragment
+   * silently vanishes from the page, or appears in a payload a router is trying to parse as JSON.
+   * Composed pages are also usually personalized, and caching one freezes the fragment's HTML at
+   * the shell's TTL, so a fragment deploy stays invisible until the page expires.
+   *
+   * Choose `'preserve'` only when the pages are genuinely anonymous **and** you have put
+   * `sec-fetch-dest` into the edge's cache key. See `docs/braid-cdn.md`.
+   */
+  pierceCacheControl?: 'private' | 'preserve';
 }
 
 export interface BraidGateway {
@@ -94,6 +114,7 @@ export interface BraidGateway {
 export function createGateway(options: GatewayOptions): BraidGateway {
   const registry = new Registry(options.registry);
   const mode = options.mode ?? 'development';
+  const pierceCacheControl = options.pierceCacheControl ?? 'private';
   const additionalHeaders = options.additionalHeaders ?? {};
   const trustForwardedHeaders = options.trustForwardedHeaders ?? false;
   const isDevelopment = mode === 'development';
@@ -159,6 +180,7 @@ export function createGateway(options: GatewayOptions): BraidGateway {
             `<!doctype html><title>Braid realm</title>` +
               `<meta name="${BRAID_PROTOCOL_META}" content="${BRAID_PROTOCOL_VERSION}">` +
               `<meta name="${BRAID_ADAPTER_META}" content="${escapeHtml(fragment.adapter)}">` +
+              adapterOptionsMeta(fragment) +
               `<base href="${escapeHtml(braidFragmentUrl(fragment.id, route.pathname))}">`,
             200,
             {
@@ -174,6 +196,18 @@ export function createGateway(options: GatewayOptions): BraidGateway {
          * piercing injects, for the client-boot path.
          */
         case 'document':
+          /**
+           * A fragment built from an entry module has no document to give: its adapter creates
+           * the UI itself. Answering "nothing here" is the truthful response, and keeps a widget
+           * that ships only a script from logging a 404 on every boot.
+           */
+          if (fragment.entry) {
+            return new Response(null, {
+              status: 204,
+              headers: { [BRAID_FRAGMENT_ID_HEADER]: fragment.id },
+            });
+          }
+
           return forwardToFragment(request, requestUrl, route.pathname, fragment, { prepare: true });
 
         /**
@@ -398,6 +432,10 @@ export function createGateway(options: GatewayOptions): BraidGateway {
    * the same URL now has two representations. Without it a shared cache can store the
    * unpierced shell from a soft-navigation fetch and later serve it to a real navigation,
    * silently dropping the fragment from the page.
+   *
+   * The unpierced representation is marked shared-cache-unsafe for the same reason the composed
+   * one is: it is the *other* half of the pair a cache could confuse. See
+   * {@link GatewayOptions.pierceCacheControl}.
    */
   async function handleShellRequest(
     request: Request,
@@ -425,12 +463,13 @@ export function createGateway(options: GatewayOptions): BraidGateway {
     const shell = await next();
     const passthrough = new Response(shell.body, shell);
     passthrough.headers.append('vary', 'sec-fetch-dest');
+    applyPierceCacheControl(passthrough.headers);
     return passthrough;
   }
 
   /**
    * Composes a document response: the shell, with every fragment that declares this page URL
-   * pierced into the slot that names it (C7).
+   * pierced into the slot that names it.
    *
    * The shell and all matching fragments are fetched concurrently, and the fragments' HTML is
    * interleaved into the shell's stream as it arrives — so a fragment never serializes behind
@@ -451,6 +490,7 @@ export function createGateway(options: GatewayOptions): BraidGateway {
 
     const shell = new Response(shellResponse.body, shellResponse);
     shell.headers.append('vary', 'sec-fetch-dest');
+    applyPierceCacheControl(shell.headers);
 
     const isHtml = shell.headers.get('content-type')?.toLowerCase().includes('text/html');
 
@@ -522,6 +562,29 @@ export function createGateway(options: GatewayOptions): BraidGateway {
 
   function describeEndpoint(fragment: ResolvedFragmentManifest): string {
     return typeof fragment.endpoint === 'function' ? '[fetcher function]' : String(fragment.endpoint);
+  }
+
+  /**
+   * Keeps a pierce-matched page URL out of shared caches, unless the app opted out.
+   *
+   * Rewrites rather than replaces: an app's own `max-age`, `no-store`, or
+   * `stale-while-revalidate` is its business — only the *shared*-cacheability directives are
+   * touched, because those are the ones that can hand one representation of this URL to a
+   * request that asked for the other.
+   */
+  function applyPierceCacheControl(headers: Headers): void {
+    if (pierceCacheControl === 'preserve') return;
+
+    const directives = (headers.get('cache-control') ?? '')
+      .split(',')
+      .map((directive) => directive.trim())
+      .filter((directive) => directive && !/^(public|s-maxage=.*|proxy-revalidate)$/i.test(directive));
+
+    if (!directives.some((directive) => /^(private|no-store)$/i.test(directive))) {
+      directives.unshift('private');
+    }
+
+    headers.set('cache-control', directives.join(', '));
   }
 
   /**
@@ -642,6 +705,31 @@ function stringStream(content: string): ReadableStream<Uint8Array> {
       controller.close();
     },
   });
+}
+
+/**
+ * The manifest fields an adapter needs, serialized onto the realm stub.
+ *
+ * Only fields that mean something to *some* adapter travel here — the runtime itself never reads
+ * them. Emitted only when there is something to say, so a compat fragment's stub is unchanged.
+ */
+function adapterOptionsMeta(fragment: ResolvedFragmentManifest): string {
+  const options: Record<string, unknown> = {};
+
+  // `entry` is a path on the fragment's *own* origin, so it is re-rooted into the fragment's
+  // namespace exactly as the subresource URLs in its HTML are — a manifest never has to know
+  // the gateway's URL layout. URLs with a scheme are somebody else's origin; left alone.
+  if (fragment.entry) {
+    options['entry'] = /^[a-z][a-z0-9+.-]*:|^\/\//i.test(fragment.entry)
+      ? fragment.entry
+      : braidFragmentUrl(fragment.id, fragment.entry.startsWith('/') ? fragment.entry : `/${fragment.entry}`);
+  }
+  if (fragment.element) options['element'] = fragment.element;
+  if (fragment.events) options['events'] = Object.keys(fragment.events);
+
+  if (Object.keys(options).length === 0) return '';
+
+  return `<meta name="${BRAID_ADAPTER_OPTIONS_META}" content="${escapeHtml(JSON.stringify(options))}">`;
 }
 
 function escapeHtml(value: string): string {

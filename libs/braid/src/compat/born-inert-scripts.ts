@@ -1,5 +1,5 @@
 /**
- * Born-inert scripts (ledger entry M4).
+ * Born-inert scripts.
  *
  * Every script element created by fragment code (via the document facade's
  * `createElement`/`createElementNS`) is neutralized at creation: its `type` attribute is set to

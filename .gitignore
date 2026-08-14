@@ -44,6 +44,10 @@ Thumbs.db
 .claude/worktrees
 .claude/settings.local.json
 plan.md
+plans/
+docs/plans/
+docs/plan/
+docs/plans/*
 
 .angular
 

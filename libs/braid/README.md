@@ -11,16 +11,37 @@ Also see: [failure modes](../../docs/braid-failure-modes.md) ·
 [working POC](../../docs/braid-poc.md) ·
 [using Braid without the gateway](../../docs/braid-without-gateway.md)
 
-## This build: compat adapter only, and by default
+## Adapters in this build
 
-This build ships **C5, the compat adapter** — the contained, web-fragments-style emulation layer
-for apps that cannot be told anything (the legacy monolith mid-migration) — and makes it the
-**default adapter**: a fragment manifest that doesn't declare an adapter gets compat. Being a
-fragment requires zero app-code changes; config only.
+| Adapter | Manifest | For | Needs a document? |
+| --- | --- | --- | --- |
+| `compat` | omit `adapter` — this is the default | whole apps that cannot be modified | yes |
+| `custom-element` | `"adapter": "custom-element"` | a fragment that *is* a web component | no |
 
-The contract runtime surface (`FragmentEnv`, the `BraidAdapter` interface) is defined and
-exported, and **contract-blob realms work** (see below), but no contract adapters
-(react/angular/vue/vanilla) ship yet, so nothing routes to them automatically.
+The **compat adapter** is the contained emulation layer for apps that cannot be told anything
+(a legacy monolith mid-migration), and it is the default: a manifest that doesn't declare an
+adapter gets it. Being a fragment requires zero app-code changes; config only.
+
+The **custom-element adapter** is the other end of the spectrum, and the first adapter to use the
+contract surface. Registering a fragment that already ships a custom element takes three manifest
+fields and no emulation at all:
+
+```ts
+{ id: 'rating', endpoint: 'http://localhost:4503',
+  adapter: 'custom-element', entry: '/star-rating.js', element: 'star-rating',
+  events: ['rating:change'] }
+```
+
+The element is created **inside the realm**, where it upgrades against the fragment's own
+definition, then moved into the host's DOM — adoption across documents preserves the element's
+class, so the fragment's implementation keeps running while its custom element registry stays out
+of the host's. `env.props` are applied as DOM properties; the listed `events` are republished as
+`braid:event` on the slot. Such a fragment serves no document at all, which is what
+`needsDocument: false` on the adapter declares.
+
+The rest of the contract surface (`FragmentEnv`, `BraidAdapter`) is defined and exported, and
+**contract-blob realms work** (see below), but no framework contract adapters (react/angular/vue)
+ship yet, so nothing routes to them automatically.
 
 ## Realms
 
@@ -35,16 +56,16 @@ gateway stub, and zero interaction with the joint session history. Each carries 
 the fragment's namespace and its own import map, which is how two fragments ship different
 majors of the same dependency without a shared resolution namespace.
 
-Verified empirically in Chromium (assumption A2): same-origin and DOM-capable, five realms add
+Verified empirically in Chromium: same-origin and DOM-capable, five realms add
 **zero** history entries, per-realm import maps resolve, module evaluation works, and globals do
 not leak between realms. Firefox and WebKit remain unverified here.
 
 **Known platform limitation.** `window.location` and `document.location` are
 `[LegacyUnforgeable]` — own, non-configurable properties that cannot be intercepted in any
-realm, including one we authored. So the dev-mode guidance toward `env.*` (ledger entry M5)
+realm, including one we authored. So the dev-mode guidance toward `env.*`
 covers `document` members but *cannot* cover `location`: a contract fragment reading `location`
 silently gets the blob URL. This is the same platform rule that stops a blob document from
-faking an http URL (assumption A3), and it is why compat mode keeps http realms.
+faking an http URL, and it is why compat mode keeps http realms.
 
 ## Piercing
 
@@ -84,16 +105,15 @@ manifest for `legacy-billing`. No fragment code is required.
   in dev mode.
 - Confines all main-realm interception to the fragment boundary: per-node prototype stamping,
   born-inert scripts, and a shadow-root-scoped observer safety net.
-- **Never patches a host-page global or prototype. In any mode. Ever.** (Ledger invariant M0.)
+- **Never patches a host-page global or prototype. In any mode. Ever.**
 
-## Monkey-patch ledger
+## Isolation boundaries
 
-| #   | Where                   | What                                                                     |
-| --- | ----------------------- | ------------------------------------------------------------------------ |
-| M1  | compat realm (window)   | constructor `hasInstance`, observer/CSSOM constructor swaps, size getters, history proxy |
-| M2  | compat realm (document) | proxy facade over the document prototype chain (WebIDL-audited)          |
-| M3  | fragment DOM nodes      | per-node prototype stamping (insertion/clone/ownerDocument/getRootNode)  |
-| M4  | fragment scripts        | born-inert `type` shadowing traps until activation                       |
+| Scope                   | Isolation mechanism                                                                      |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| compat realm (window)   | constructor `hasInstance`, observer/CSSOM constructor swaps, size getters, history proxy |
+| compat realm (document) | proxy facade over the document prototype chain (WebIDL-audited)                          |
+| fragment DOM nodes      | per-node prototype stamping (insertion/clone/ownerDocument/getRootNode)                  |
+| fragment scripts        | born-inert `type` shadowing traps until activation                                       |
 
-All four are confined to the fragment's own realm and boundary; provenance is the
-matrix-tested `Jefftopia/web-fragments` fork (4 configurations x 3 engines, 1,150 executions).
+All interception is strictly confined to the fragment's own realm and shadow DOM boundary.

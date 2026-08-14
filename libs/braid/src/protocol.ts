@@ -1,5 +1,5 @@
 /**
- * Client side of the Braid composition protocol (C7).
+ * Client side of the Braid composition protocol.
  *
  * These constants are deliberately duplicated in `@skewkit/braid-gateway/src/protocol.ts`:
  * the client and gateway bundles do not share modules, but always ship in the same package
@@ -30,6 +30,9 @@ export const BRAID_PROTOCOL_META = 'braid-protocol';
 
 /** Name of the `<meta>` element carrying the fragment's manifest-declared adapter in the realm stub. */
 export const BRAID_ADAPTER_META = 'braid-adapter';
+
+/** Name of the `<meta>` carrying adapter-specific options as JSON (see the gateway's copy). */
+export const BRAID_ADAPTER_OPTIONS_META = 'braid-adapter-options';
 
 /** Response/request header carrying a fragment id for diagnostics. */
 export const BRAID_FRAGMENT_ID_HEADER = 'x-braid-fragment-id';

@@ -1,10 +1,10 @@
 /**
- * The owned streaming HTML rewriter (D7 — zero forked dependencies).
+ * The owned streaming HTML rewriter (zero forked dependencies).
  *
  * Braid's streaming needs are narrow and known: rename three elements, neutralize scripts and
  * script-preload links, inject content at slot elements, and interleave two HTML streams. That
  * is a small enough surface to own outright rather than inherit a forked HTMLRewriter wasm
- * build — and owning it is what makes the composition protocol (C7) testable as a spec.
+ * build — and owning it is what makes the composition protocol testable as a spec.
  *
  * Properties this implementation guarantees:
  *

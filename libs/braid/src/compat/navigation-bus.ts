@@ -1,7 +1,7 @@
 import { getBraidConfig } from '../config.js';
 
 /**
- * Host navigation detection — without host patches, ever (invariant M0/D3).
+ * Host navigation detection — without host patches, ever.
  *
  * Fragment-initiated navigations are broadcast via a synthetic popstate event dispatched on the
  * main window — that mechanism mutates no host globals and is part of the observable contract

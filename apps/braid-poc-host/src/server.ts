@@ -37,6 +37,37 @@ const gateway = createGateway({
       description: 'Invoices and billing settings, deployed independently of the shell.',
       tags: ['finance'],
     },
+
+    /**
+     * A React app, composed into an Angular page. No adapter declared, so it gets compat — the
+     * same default that made the Angular remote work, and the reason a fragment's framework is
+     * the gateway's business only insofar as it names an endpoint.
+     */
+    {
+      id: 'reviews',
+      endpoint: process.env['BRAID_REACT_ORIGIN'] ?? 'http://localhost:4502',
+      pierce: ['/billing', '/billing/*'],
+      title: 'Customer reviews',
+      description: 'A React 19 application running in its own realm.',
+      tags: ['feedback'],
+    },
+
+    /**
+     * A plain custom element. `custom-element` is a *contract* adapter: no document facade, no
+     * window patches — the fragment gets a mount point, its props, and a teardown signal.
+     * `events` is what the adapter republishes to the host as `braid:event`.
+     */
+    {
+      id: 'rating',
+      endpoint: process.env['BRAID_WIDGET_ORIGIN'] ?? 'http://localhost:4503',
+      adapter: 'custom-element',
+      entry: '/star-rating.js',
+      element: 'star-rating',
+      events: { 'rating:change': { detail: 'object' } },
+      title: 'Star rating',
+      description: 'A framework-free web component, mounted through the contract adapter.',
+      tags: ['widget'],
+    },
   ],
   mode: 'development',
   // `GET /__braid/registry` — in development this lists everything, endpoints included

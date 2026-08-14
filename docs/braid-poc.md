@@ -10,11 +10,16 @@ node tools/braid-poc/run.mjs
 
 Then open <http://localhost:4500/billing/invoices>.
 
-| Piece  | Where                    | What it is                                                       |
-| ------ | ------------------------ | ---------------------------------------------------------------- |
-| Host   | `apps/braid-poc-host`    | Angular SSR app; its Express server mounts the gateway in front  |
-| Remote | `apps/braid-poc-remote`  | Stock Angular SPA with its own router; **zero** Braid code       |
-| Gateway| in the host's `server.ts`| routes `/__braid/frag/billing/*`, pierces `/billing/*` documents |
+| Piece | Where | What it is | Adapter |
+| --- | --- | --- | --- |
+| Host | `apps/braid-poc-host` | Angular SSR app; its Express server mounts the gateway in front | — |
+| billing | `apps/braid-poc-remote` | Stock Angular SPA with its own router | compat (default) |
+| reviews | `apps/braid-poc-react-remote` | A React 19 app, built with esbuild | compat (default) |
+| rating | `apps/braid-poc-widget` | A single custom element, no build step, no framework | `custom-element` |
+
+**Three frameworks on one page.** Angular hosts, Angular and React fragments render inside it,
+and a framework-free web component sits beside them — none of them imported by the host, each in
+its own realm with its own dependency graph.
 
 ## What the POC actually proves
 
@@ -37,8 +42,16 @@ its scripts are `type="inert"`, and its `styles.css` has been re-rooted to
 | Fragment `routerLink` → `/billing/…`    | host URL changes, host nav highlights update      |
 | Browser back / forward                  | both stay in sync, natively via `popstate`        |
 
-**The host page stays pristine.** `Node.prototype` and the History API are untouched; the
-remote's globals stay in its realm.
+**The host page stays pristine.** `Node.prototype` and the History API are untouched; each
+remote's globals stay in its own realm. Verified on the composed page: `window.React` is
+`undefined` in the host, and `star-rating` is defined in the *fragment's* custom element registry
+and not the host's — yet the upgraded element lives in the host's DOM. That is how the
+`custom-element` adapter works: the element is created in the realm, where it upgrades against
+the fragment's own definition, then moved into the host page, which preserves its class.
+
+**A web component's events cross the boundary.** Clicking a star in the widget dispatches its own
+`rating:change`, which the adapter republishes as a `braid:event`, which the Angular host receives
+as a typed output and writes into a signal. Props go the other way as element properties.
 
 **Incremental hydration coexists with fragments.** The billing page also carries a
 `@defer (hydrate on interaction)` block. It is server-rendered but dehydrated; its JavaScript

@@ -8,7 +8,7 @@ import { isDevMode } from '../config.js';
 export type FragmentSlotState = 'idle' | 'loading' | 'ready' | 'error';
 
 /**
- * Finds server-rendered fragment content the gateway pierced into a slot (C7).
+ * Finds server-rendered fragment content the gateway pierced into a slot.
  *
  * Deliberately a direct-children scan rather than `querySelector(':scope > braid-document')`:
  * `:scope` has no element to match against on a ShadowRoot, so that selector silently never
@@ -24,7 +24,7 @@ export function findPiercedContentRoot(shadowRoot: ShadowRoot | null): HTMLEleme
 }
 
 /**
- * `<fragment-slot>` (C1) — the custom element a host renders to mount a fragment.
+ * `<fragment-slot>` — the custom element a host renders to mount a fragment.
  *
  * ```html
  * <fragment-slot name="checkout"></fragment-slot>
@@ -42,7 +42,7 @@ export function findPiercedContentRoot(shadowRoot: ShadowRoot | null): HTMLEleme
  */
 export class FragmentSlot extends HTMLElement {
   static get observedAttributes() {
-    return ['props'];
+    return ['name', 'src', 'props'];
   }
 
   #state: FragmentSlotState = 'idle';
@@ -50,6 +50,7 @@ export class FragmentSlot extends HTMLElement {
   #propsListeners = new Set<(props: Readonly<Record<string, unknown>>) => void>();
   #abortController: AbortController | undefined;
   #booted = false;
+  #bootScheduled = false;
   /** Set by reload(): a reload must re-fetch, never re-adopt the pierced content. */
   #forceFetch = false;
 
@@ -70,25 +71,46 @@ export class FragmentSlot extends HTMLElement {
     this.#propsListeners.forEach((listener) => listener(this.#props));
   }
 
-  attributeChangedCallback(attribute: string, _oldValue: string | null, newValue: string | null) {
+  attributeChangedCallback(attribute: string, oldValue: string | null, newValue: string | null) {
     if (attribute === 'props') {
       try {
         this.props = newValue ? JSON.parse(newValue) : {};
       } catch (error) {
         console.warn(`[braid:${this.name}] ignoring unparsable props attribute`, error);
       }
+    } else if (attribute === 'name' && oldValue !== newValue) {
+      if (this.isConnected && this.#booted) {
+        void this.reload();
+      } else if (this.isConnected && !this.#booted && !this.#bootScheduled) {
+        this.#bootScheduled = true;
+        queueMicrotask(() => {
+          this.#bootScheduled = false;
+          if (this.isConnected && !this.#booted) {
+            this.#booted = true;
+            void this.#boot();
+          }
+        });
+      }
     }
   }
 
   connectedCallback() {
-    if (this.#booted) {
+    if (this.#booted || this.#bootScheduled) {
       return;
     }
-    this.#booted = true;
-    void this.#boot();
+    this.#bootScheduled = true;
+    queueMicrotask(() => {
+      this.#bootScheduled = false;
+      if (!this.isConnected || this.#booted) {
+        return;
+      }
+      this.#booted = true;
+      void this.#boot();
+    });
   }
 
   disconnectedCallback() {
+    this.#bootScheduled = false;
     this.#teardown();
     this.#booted = false;
   }
@@ -141,7 +163,7 @@ export class FragmentSlot extends HTMLElement {
       /**
        * Pierced fragments arrive with their content already in the DOM: the gateway wrote a
        * declarative shadow root into this element, and the browser parsed it at the same time
-       * as the rest of the page (C7). Adopting it is strictly better than fetching — the
+       * as the rest of the page. Adopting it is strictly better than fetching — the
        * content is already painted, and re-fetching it would replace live DOM with identical
        * DOM. `#forceFetch` is set by reload(), which must go back to the network.
        */
@@ -162,16 +184,31 @@ export class FragmentSlot extends HTMLElement {
         shadowRoot.replaceChildren(styleSheet, contentRoot);
       }
 
-      // Boot the realm, and fetch the fragment's HTML unless it was already pierced in. Both
-      // go through the gateway's fragment namespace, addressed by id (D4).
-      const [html, realm] = await Promise.all([
-        piercedContentRoot ? null : this.#fetchFragmentHtml(fragmentId, routeSrcUrl, signal),
+      /**
+       * Boot the realm and fetch the fragment's document at the same time, unless it was
+       * already pierced in. Both go through the gateway's namespaces, addressed by id.
+       *
+       * Which adapter a fragment uses is only known once the realm stub has loaded, so the
+       * document request is started optimistically and its failure is held rather than thrown:
+       * an adapter that builds its own UI from an entry module (a lone custom element, say) has
+       * no document to fetch, and must not be reported as broken for not serving one.
+       */
+      const [htmlResult, realm] = await Promise.all([
+        piercedContentRoot
+          ? Promise.resolve({ ok: true as const, html: null })
+          : this.#fetchFragmentHtml(fragmentId, routeSrcUrl, signal).then(
+              (html) => ({ ok: true as const, html }),
+              (error: unknown) => ({ ok: false as const, error }),
+            ),
         createRealm('compat-http', { fragmentId, routeUrl, bound, signal }),
       ]);
 
       // The gateway stamps the manifest-declared adapter onto the realm stub; unknown adapters
       // fail as a named error, and an undeclared adapter resolves to the default (compat).
       const adapter = resolveAdapter(realm.manifestAdapter, fragmentId);
+
+      if (!htmlResult.ok && adapter.needsDocument !== false) throw htmlResult.error;
+      const html = htmlResult.ok ? htmlResult.html : null;
 
       const env = createFragmentEnv({
         contentRoot,

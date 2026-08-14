@@ -26,10 +26,10 @@ function parseEnvLocation(routeUrl: string): EnvLocation {
 }
 
 /**
- * Builds the FragmentEnv (C3) for a fragment instance.
+ * Builds the FragmentEnv for a fragment instance.
  *
  * Compat fragments never consume the env — the compat adapter installs the full illusion
- * instead — but the runtime constructs one uniformly so the adapter interface (C4) is the same
+ * instead — but the runtime constructs one uniformly so the adapter interface is the same
  * for every adapter, and contract adapters can land later without touching the slot.
  */
 export function createFragmentEnv(options: CreateEnvOptions): FragmentEnv {

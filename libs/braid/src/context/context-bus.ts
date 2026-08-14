@@ -1,5 +1,5 @@
 /**
- * Context bus (C9) — minimal v0: host-published shared context with subscriptions.
+ * Context bus — minimal v0: host-published shared context with subscriptions.
  *
  * Values are structured-cloned at the boundary: shared live objects would create cross-realm
  * retention (GC leaks) and accidental coupling; clone-at-the-boundary keeps fragment instances

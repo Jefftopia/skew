@@ -3,7 +3,7 @@ import { FragmentEnv } from '../env/fragment-env.js';
 import { RealmHandle, RealmKind } from '../realm/realm-manager.js';
 
 /**
- * The adapter authoring surface (C4): framework adapters map a `FragmentEnv` into the
+ * The adapter authoring surface: framework adapters map a `FragmentEnv` into the
  * framework's own extension points (Angular's `DOCUMENT` DI token, React's `createRoot`, …).
  * Teardown is signal-driven via `env.signal`.
  */
@@ -14,7 +14,7 @@ export interface BraidAdapter {
 /**
  * Everything the runtime hands an installed adapter to boot a fragment instance. This is the
  * internal counterpart of {@link BraidAdapter}: contract adapters only need `env` + `entry`,
- * while the compat adapter (C5) — which owns the full emulation layer — additionally drives the
+ * while the compat adapter — which owns the full emulation layer — additionally drives the
  * realm and the fragment's DOM directly.
  */
 export interface AdapterBootContext {
@@ -31,7 +31,7 @@ export interface AdapterBootContext {
    */
   html: string | null;
   /**
-   * Whether the fragment's content was server-rendered into the page by the gateway (C7). It is
+   * Whether the fragment's content was server-rendered into the page by the gateway. It is
    * already neutralized (scripts inert, singletons renamed) and already in the DOM; the adapter
    * activates it in place instead of building it.
    */
@@ -51,13 +51,22 @@ export interface AdapterBootContext {
 export interface InstalledAdapter {
   readonly name: string;
   readonly realmKind: RealmKind;
+  /**
+   * Whether the adapter needs the fragment's *document* — the markup the gateway prepares for
+   * the host's DOM. True unless stated otherwise.
+   *
+   * Contract adapters generally build their own UI from an entry module and never look at
+   * fragment HTML. Saying so here means a fragment that serves no document (a lone custom
+   * element, say) is not reported as broken for failing to serve one.
+   */
+  readonly needsDocument?: boolean;
   boot(ctx: AdapterBootContext): Promise<void>;
 }
 
 /**
  * The adapter every fragment runs under when its manifest does not declare one.
  *
- * This build ships only the compat adapter (C5) — the contained, web-fragments-style emulation
+ * This build ships only the compat adapter — the contained emulation
  * layer — and makes it the default, so legacy apps compose with zero app-code changes.
  */
 export const DEFAULT_ADAPTER = 'compat';

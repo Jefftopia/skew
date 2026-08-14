@@ -1,28 +1,41 @@
 /**
- * One command to run the POC: builds both apps, starts the remote's origin and the host's SSR
- * server, and waits until both answer.
+ * One command to run the POC: builds every app, starts each fragment's origin and the host's SSR
+ * server, and waits until they answer.
  *
- * Host  → http://localhost:4500  (Angular SSR + the Braid gateway in front of it)
- * Remote→ http://localhost:4501  (a stock Angular SPA, reached only through the gateway)
+ * Host    → http://localhost:4500  Angular SSR + the Braid gateway in front of it
+ * billing → http://localhost:4501  Angular SPA          (compat adapter)
+ * reviews → http://localhost:4502  React 19 app         (compat adapter)
+ * rating  → http://localhost:4503  a custom element     (contract custom-element adapter)
  */
-import { spawn } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
 
 const WORKSPACE = new URL('../../', import.meta.url).pathname;
 
 const HOST_PORT = 4500;
-const REMOTE_PORT = 4501;
+const FRAGMENTS = [
+  { label: 'billing', dir: 'dist/apps/braid-poc-remote/browser', port: 4501, spa: true },
+  { label: 'reviews', dir: 'dist/apps/braid-poc-react-remote', port: 4502, spa: true },
+  { label: 'rating', dir: 'dist/apps/braid-poc-widget', port: 4503, spa: false },
+];
+
+// Clean up any stale processes from earlier runs holding our ports
+for (const port of [HOST_PORT, ...FRAGMENTS.map((f) => f.port)]) {
+  try {
+    const pids = execSync(`lsof -t -i :${port}`, { encoding: 'utf-8' }).trim();
+    if (pids) {
+      for (const pid of pids.split('\n')) {
+        if (pid) {
+          try {
+            process.kill(Number(pid), 'SIGKILL');
+          } catch {}
+        }
+      }
+    }
+  } catch {}
+}
 
 function run(command, args, options = {}) {
   return spawn(command, args, { cwd: WORKSPACE, stdio: 'inherit', shell: false, ...options });
-}
-
-/**
- * Children get their port explicitly. Inheriting `PORT` from whatever launched this script
- * would silently point both servers at the same port — the second one dies, and the survivor
- * answers for both, which looks like a Braid bug and is not one.
- */
-function runServer(script, port) {
-  return run('node', [script], { env: { ...process.env, PORT: String(port) } });
 }
 
 function runToCompletion(command, args) {
@@ -33,8 +46,17 @@ function runToCompletion(command, args) {
   });
 }
 
+/**
+ * Children get their port explicitly. Inheriting `PORT` from whatever launched this script would
+ * silently point two servers at the same port — the second dies, and the survivor answers for
+ * both, which looks like a Braid bug and is not one.
+ */
+function runServer(script, args, port) {
+  return run('node', [script, ...args], { env: { ...process.env, PORT: String(port) } });
+}
+
 async function waitFor(url, label) {
-  for (let attempt = 0; attempt < 60; attempt++) {
+  for (let attempt = 0; attempt < 80; attempt++) {
     try {
       await fetch(url);
       console.log(`✔ ${label} ready at ${url}`);
@@ -46,32 +68,41 @@ async function waitFor(url, label) {
   throw new Error(`${label} never came up at ${url}`);
 }
 
-console.log('building the remote and host apps…');
-await runToCompletion('npx', ['nx', 'run-many', '-t', 'build', '-p', 'braid-poc-remote', 'braid-poc-host']);
+console.log('building the host and every fragment…');
+await runToCompletion('npx', [
+  'nx',
+  'run-many',
+  '-t',
+  'build',
+  '-p',
+  'braid-poc-remote',
+  'braid-poc-react-remote',
+  'braid-poc-widget',
+  'braid-poc-host',
+]);
 
-const remote = runServer('tools/braid-poc/serve-remote.mjs', REMOTE_PORT);
-const host = runServer('dist/apps/braid-poc-host/server/server.mjs', HOST_PORT);
+const children = FRAGMENTS.map((fragment) =>
+  runServer(
+    'tools/braid-poc/serve-static.mjs',
+    [fragment.dir, String(fragment.port), ...(fragment.spa ? ['--spa'] : [])],
+    fragment.port,
+  ),
+);
+children.push(runServer('dist/apps/braid-poc-host/server/server.mjs', [], HOST_PORT));
 
-for (const [name, child] of [
-  ['remote', remote],
-  ['host', host],
-]) {
-  child.on('exit', (code) => {
-    if (code !== 0 && code !== null) console.error(`✘ the ${name} server exited with code ${code}`);
-  });
-}
-
-const shutdown = () => {
-  remote.kill();
-  host.kill();
-};
-process.on('SIGINT', shutdown);
+const shutdown = () => children.forEach((child) => child.kill());
+process.on('SIGINT', () => {
+  shutdown();
+  process.exit(0);
+});
 process.on('SIGTERM', shutdown);
 process.on('exit', shutdown);
 
-await waitFor(`http://localhost:${REMOTE_PORT}/`, 'remote (fragment origin)');
+for (const fragment of FRAGMENTS) {
+  await waitFor(`http://localhost:${fragment.port}/`, `${fragment.label} (fragment origin)`);
+}
 await waitFor(`http://localhost:${HOST_PORT}/`, 'host (SSR + gateway)');
 
 console.log(
-  `\nOpen http://localhost:${HOST_PORT}/billing/invoices — the billing UI is a separate Angular app.\n`,
+  `\nOpen http://localhost:${HOST_PORT}/billing/invoices — Angular, React and a web component on one page.\n`,
 );

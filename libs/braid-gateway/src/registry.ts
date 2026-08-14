@@ -1,5 +1,5 @@
 /**
- * Registry & manifests (C8): the registry is data, not code. Fragments register via manifest
+ * Registry & manifests: the registry is data, not code. Fragments register via manifest
  * documents; deploying a fragment never redeploys the gateway.
  */
 
@@ -28,7 +28,14 @@ export interface FragmentManifest {
   /** Module entry for contract-mode fragments (unused by the compat adapter). */
   entry?: string;
   /**
-   * Route-pattern sugar (D4): the page URLs whose server-rendered HTML this fragment is pierced
+   * For the `custom-element` adapter: the tag name the fragment's entry module defines.
+   *
+   * The fragment ships an ordinary custom element and knows nothing about Braid; this is how
+   * the gateway tells the client what to mount.
+   */
+  element?: string;
+  /**
+   * Route-pattern sugar: the page URLs whose server-rendered HTML this fragment is pierced
    * into. Patterns are URLPattern pathname syntax (`/checkout/*`, `/orders/:id`).
    *
    * This is *only* the "which page URLs pierce which fragment" mapping — it is never the
@@ -64,7 +71,7 @@ export interface FragmentManifest {
   tags?: string[];
 
   /**
-   * Who may list this fragment, and who may load it (C8 + §7). Declared at registration, so a
+   * Who may list this fragment, and who may load it. Declared at registration, so a
    * fragment's own team decides its exposure rather than every host re-deciding it.
    *
    * **Both are public by default.** Omit `access` entirely and anyone can discover and load the

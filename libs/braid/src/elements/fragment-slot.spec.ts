@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findPiercedContentRoot } from './fragment-slot.js';
+import { findPiercedContentRoot, FragmentSlot } from './fragment-slot.js';
 
 /** Builds the shadow root shape the gateway pierces into a slot. */
 function piercedSlot(): ShadowRoot {
@@ -44,5 +44,11 @@ describe('findPiercedContentRoot()', () => {
     shadowRoot.append(wrapper);
 
     expect(findPiercedContentRoot(shadowRoot)).toBeNull();
+  });
+});
+
+describe('FragmentSlot element', () => {
+  it('observes name, src, and props attributes', () => {
+    expect(FragmentSlot.observedAttributes).toEqual(['name', 'src', 'props']);
   });
 });

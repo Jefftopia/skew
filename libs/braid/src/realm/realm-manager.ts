@@ -2,6 +2,7 @@ import { BraidError } from '../errors.js';
 import { isDevMode } from '../config.js';
 import {
   BRAID_ADAPTER_META,
+  BRAID_ADAPTER_OPTIONS_META,
   BRAID_PROTOCOL_META,
   BRAID_PROTOCOL_VERSION,
   braidFragmentUrl,
@@ -9,7 +10,7 @@ import {
 } from '../protocol.js';
 
 /**
- * Realm manager (C2). A realm is the isolated JS context a fragment executes in — a hidden
+ * Realm manager. A realm is the isolated JS context a fragment executes in — a hidden
  * same-origin iframe, the only browser primitive providing a synchronous, DOM-capable second
  * JavaScript context.
  *
@@ -57,6 +58,11 @@ export interface RealmHandle {
    * Null for realms the runtime authors itself (there is no stub to read it from).
    */
   readonly manifestAdapter: string | null;
+  /**
+   * Adapter-specific options the gateway stamped onto the realm stub from the manifest — which
+   * custom element to mount, which entry module to evaluate. Empty for realms with no stub.
+   */
+  readonly adapterOptions: Readonly<Record<string, unknown>>;
   /** Loads and evaluates a module by URL inside the realm. */
   evaluate(entryUrl: string): Promise<void>;
   /** Evaluates module source inside the realm. Resolves once the module has run. */
@@ -85,18 +91,18 @@ export async function createRealm(kind: RealmKind, init: RealmInit): Promise<Rea
 }
 
 /**
- * Creates a contract-mode realm from a `blob:` URL the runtime authors itself (D2).
+ * Creates a contract-mode realm from a `blob:` URL the runtime authors itself.
  *
  * Booting from a blob costs no network round trip, needs no gateway stub, and — because the
  * realm never navigates — has **zero interaction with the joint session history**, which
  * eliminates the whole class of back/forward corruption that http-booted realms have to work
  * around. The realm document carries the fragment's `<base>` (so relative URLs resolve into the
- * fragment's namespace, D4) and the fragment's own import map.
+ * fragment's namespace) and the fragment's own import map.
  *
  * Contract-mode code never reads realm globals — it receives `env.location`/`env.document` — so
  * the realm has no illusion to maintain and needs no patches. That is exactly why blob realms
  * are safe here and forbidden in compat mode, where `history.replaceState` must be able to
- * rewrite the realm's URL to the fragment's route (which a blob document cannot do; see A3).
+ * rewrite the realm's URL to the fragment's route (which a blob document cannot do).
  */
 async function createContractBlobRealm(init: RealmInit): Promise<RealmHandle> {
   const { fragmentId, importMap } = init;
@@ -155,7 +161,7 @@ async function createContractBlobRealm(init: RealmInit): Promise<RealmHandle> {
     });
   }
 
-  const handle = createRealmHandle('contract-blob', iframe, realmWindow, realmDocument, null, init);
+  const handle = createRealmHandle('contract-blob', iframe, realmWindow, realmDocument, null, {}, init);
 
   if (isDevMode()) {
     installContractRealmGuidance(realmDocument, fragmentId);
@@ -171,6 +177,29 @@ async function createContractBlobRealm(init: RealmInit): Promise<RealmHandle> {
 }
 
 /**
+ * Reads the adapter's manifest options off the realm stub.
+ *
+ * Malformed JSON is a gateway bug rather than something an app can fix, so it warns and yields
+ * nothing instead of failing the boot — an adapter that needs an option reports its own absence
+ * with a far more useful message than a parse error would.
+ */
+function readAdapterOptions(realmDocument: Document, fragmentId: string): Readonly<Record<string, unknown>> {
+  const raw = realmDocument
+    .querySelector(`meta[name="${BRAID_ADAPTER_OPTIONS_META}"]`)
+    ?.getAttribute('content');
+
+  if (!raw) return {};
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    console.warn(`[braid:${fragmentId}] the gateway sent unparsable adapter options; ignoring them`);
+    return {};
+  }
+}
+
+/**
  * Builds the shared part of a realm handle: module evaluation and disposal.
  *
  * Module evaluation injects a module script built with the realm's *native* `createElement` and
@@ -183,6 +212,7 @@ function createRealmHandle(
   realmWindow: Window & typeof globalThis,
   realmDocument: Document,
   manifestAdapter: string | null,
+  adapterOptions: Readonly<Record<string, unknown>>,
   init: RealmInit,
 ): RealmHandle {
   // captured before any facade or dev guidance is spliced into the document's prototype chain
@@ -241,6 +271,7 @@ function createRealmHandle(
     window: realmWindow,
     document: realmDocument,
     manifestAdapter,
+    adapterOptions,
     evaluateModule,
     async evaluate(entryUrl: string) {
       // resolved against the realm's <base>, so it lands in the fragment's namespace
@@ -253,14 +284,14 @@ function createRealmHandle(
 }
 
 /**
- * Dev-only guidance for contract realms (ledger entry M5): warns once when fragment code reads
+ * Dev-only guidance for contract realms: warns once when fragment code reads
  * the realm's `document` instead of the `env` it was handed, and points at the contract.
  *
  * Known limitation, verified against the platform: `window.location` and `document.location`
  * are `[LegacyUnforgeable]` — own, non-configurable properties that cannot be intercepted in
  * any realm, ours included. So a fragment reaching for `location` gets the blob URL with no
- * warning. This is the same platform rule that makes blob realms unable to fake an http URL
- * (assumption A3), and it is why compat mode keeps http realms.
+ * warning. This is the same platform rule that makes blob realms unable to fake an http URL,
+ * and it is why compat mode keeps http realms.
  */
 function installContractRealmGuidance(realmDocument: Document, fragmentId: string): void {
   const originalPrototype = Object.getPrototypeOf(realmDocument);
@@ -366,6 +397,7 @@ async function createCompatHttpRealm(init: RealmInit): Promise<RealmHandle> {
     iframe.contentWindow as Window & typeof globalThis,
     iframe.contentDocument!,
     iframe.contentDocument!.querySelector(`meta[name="${BRAID_ADAPTER_META}"]`)?.getAttribute('content') ?? null,
+    readAdapterOptions(iframe.contentDocument!, fragmentId),
     init,
   );
 
@@ -376,7 +408,7 @@ async function createCompatHttpRealm(init: RealmInit): Promise<RealmHandle> {
 
 /**
  * Verifies the loaded iframe document is the gateway's realm stub for this protocol version.
- * This replaces title-check heuristics with explicit version negotiation (C7): mismatches and
+ * This replaces title-check heuristics with explicit version negotiation: mismatches and
  * misconfigurations produce named errors with the likely fix.
  */
 function verifyRealmStub(iframe: HTMLIFrameElement, fragmentId: string): void {

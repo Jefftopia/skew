@@ -2,7 +2,7 @@ import { BRAID_FRAGMENT_PREFIX } from '../protocol.js';
 import { concatStreams, Injection, rewriteHtmlStream, StartTag } from './html-rewrite-stream.js';
 
 /**
- * The composition protocol's HTML transforms (C7), expressed against the owned rewriter.
+ * The composition protocol's HTML transforms, expressed against the owned rewriter.
  *
  * These are the normative behaviors a Braid gateway must implement; the conformance vectors in
  * `transforms.spec.ts` are their oracle, and any second implementation (a native `HTMLRewriter`

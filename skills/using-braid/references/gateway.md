@@ -39,6 +39,18 @@ run the same library as an edge worker or reverse proxy in front of it.
 `adapter` defaults to `compat`. An endpoint **path** is a boundary: `https://internal/apps/billing/`
 cannot be used to reach the rest of that origin.
 
+A fragment that is a **web component** declares the adapter and what to load, and serves no
+document at all (the gateway answers its document request with `204`):
+
+```jsonc
+{ "id": "rating", "endpoint": "https://widgets.example.com",
+  "adapter": "custom-element", "entry": "/star-rating.js", "element": "star-rating",
+  "events": ["rating:change"] }
+```
+
+A relative `entry` is re-rooted into the fragment's namespace, so the module and everything it
+imports are fetched through the gateway rather than from the host's own root.
+
 The registry is data: inline manifests, a URL to JSON, or an async loader. Deploying a fragment
 never redeploys the gateway.
 
@@ -50,8 +62,15 @@ never redeploys the gateway.
 | `/__braid/realm/:id/*` | the realm stub the iframe boots from | carries protocol version + adapter |
 | `/__braid/doc/:id/*` | the fragment's document, prepared for the host DOM | what piercing injects |
 
-**None of them vary on a request header** — they cache on URL alone. Only a *page* URL that a
-fragment pierces varies, on `sec-fetch-dest`.
+**None of them vary on a request header** — they cache on URL alone; cache them aggressively at
+the edge. Only a *page* URL that a fragment pierces varies, on `sec-fetch-dest`, and the gateway
+keeps those out of shared caches for you: `public`/`s-maxage` dropped, `private` added, the app's
+own `max-age`/`no-store` left alone. `Vary` is not sufficient on its own — most CDNs honor it only
+for `Accept-Encoding`, and a cache that ignores it will serve a composed page to a router's fetch
+or an unpierced shell to a navigation.
+
+`pierceCacheControl: 'preserve'` opts out; only correct if the pages are anonymous *and*
+`sec-fetch-dest` is in the edge's cache key.
 
 ## Piercing
 

@@ -4,8 +4,12 @@ Short version: **cache `/__braid/frag/*` and `/__braid/realm/*` aggressively, an
 pierced pages.** No custom cache keys, no `Vary` configuration, nothing your CDN has to support
 beyond ordinary URL-keyed caching.
 
-That is only true because the protocol was designed for it. If you are curious why, or you want
-to cache pages too, read on.
+This is the gateway's default, and it enforces its own half: pages that some fragment pierces are
+marked `private`, so a correct shared cache will not store them even if your shell says `public`.
+You configure the aggressive half — the `/__braid/*` namespaces — at the edge.
+
+That default is only *simple* because the protocol was designed for it. If you are curious why,
+or you want to cache pages too, read on.
 
 ---
 
@@ -38,17 +42,30 @@ A page URL that some fragment declares in its `pierce` list returns:
 - the plain shell, for anything else — a client-side router prefetching the same URL, say.
 
 That variance is inherent: those are genuinely different things to ask for, and we don't control
-what a host's router fetches. The gateway sends `Vary: sec-fetch-dest` on them.
+what a host's router fetches. The gateway sends `Vary: sec-fetch-dest` on both representations.
 
-**The simple answer is not to cache them.** Composed pages are usually personalized anyway (the
-gateway forwards cookies to fragment endpoints), and composition couples lifetimes — a cached
-composed page freezes the fragment's HTML at the shell's TTL, so a fragment deploy stays invisible
-until the page expires.
+**`Vary` is not enough on its own, so the gateway also keeps them out of shared caches.** Most
+CDNs — Cloudflare among them — honor `Vary` only for `Accept-Encoding`, so a shared cache that
+ignores it stores one representation and serves it as the other: the fragment silently vanishes
+from a navigated page, or a declarative shadow root turns up inside a payload a router is trying
+to parse. On top of that, composed pages are usually personalized (the gateway forwards cookies to
+fragment endpoints), and composition couples lifetimes — a cached composed page freezes the
+fragment's HTML at the shell's TTL, so a fragment deploy stays invisible until the page expires.
 
-If your pages are genuinely anonymous and you want them cached, then — and only then — you need
-`sec-fetch-dest` in the cache key for those routes, because most CDNs (Cloudflare among them)
-honor `Vary` only for `Accept-Encoding`. Use a short TTL with `stale-while-revalidate`, and
-confirm the edge does not strip `Sec-*` request headers before they reach the origin.
+So on any page URL a fragment pierces, the gateway rewrites `Cache-Control`: `public` and
+`s-maxage` are dropped and `private` added. Your own `max-age`, `no-store`, and
+`stale-while-revalidate` are left alone — only shared cacheability is overridden, and only on
+these URLs. Browser caching still works.
+
+**To cache them anyway**, opt out and take on the cache key yourself:
+
+```ts
+createGateway({ registry, pierceCacheControl: 'preserve' });
+```
+
+Only do this if the pages are genuinely anonymous. You then must put `sec-fetch-dest` into the
+edge's cache key for those routes, use a short TTL with `stale-while-revalidate`, and confirm the
+edge does not strip `Sec-*` request headers before they reach the origin.
 
 ---
 
@@ -99,6 +116,15 @@ curl -s -H 'sec-fetch-dest: document' https://edge/billing/invoices | grep -c sh
 curl -s -H 'sec-fetch-dest: empty'    https://edge/billing/invoices | grep -c shadowrootmode  # 0
 ```
 
+```bash
+# 4. pierced pages are not shared-cacheable (expect "private", and no "public"/"s-maxage")
+#    note: a GET, not `curl -I` — the gateway only composes GET, so HEAD passes straight through
+curl -s -D - -o /dev/null -H 'sec-fetch-dest: document' https://edge/billing/invoices \
+  | grep -iE '^cache-control|^vary'
+```
+
 (1) and (2) failing means something at the edge is adding variance Braid did not ask for. (3)
 returning the same count twice means pierced pages are being cached without `sec-fetch-dest` in
-the key — stop caching them, or add it.
+the key — stop caching them, or add it. (4) showing `public` means either the edge is rewriting
+the origin's `Cache-Control`, or you set `pierceCacheControl: 'preserve'` — in which case (3) is
+the test that matters.

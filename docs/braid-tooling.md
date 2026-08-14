@@ -84,7 +84,7 @@ Static checks for the failure modes we have actually hit:
 - a fragment dev server whose serve path and endpoint path disagree
 - client and gateway package versions that disagree on the protocol
 
-### `braid certify` (C10, further out)
+### `braid certify` (future)
 
 The conformance kit: run a fragment standalone and slotted, diff the behavior, and report
 wrong-realm executions, host-purity violations, and unaudited API usage.

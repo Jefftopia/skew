@@ -1,7 +1,7 @@
 /**
  * Library-wide configuration for the Braid client runtime, set via `initBraid(options)`.
  *
- * Note there is no host-isolation mode switch: host purity is an invariant, not a mode (D3).
+ * Note there is no host-isolation mode switch: host purity is an invariant, not a mode.
  * Braid never mutates a host-page global or prototype — in any mode, ever. The compat adapter
  * achieves its interception with fragment-boundary techniques confined to each fragment's own
  * realm and shadow DOM subtree.

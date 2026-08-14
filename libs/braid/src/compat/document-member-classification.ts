@@ -1,6 +1,6 @@
 /**
  * Classification of the Document API surface for compat fragment contexts (the WebIDL audit
- * manifest, M2 in the monkey-patch ledger).
+ * manifest for the document facade).
  *
  * Every entry records the result of auditing a Document member for use by application code
  * running inside a compat fragment:

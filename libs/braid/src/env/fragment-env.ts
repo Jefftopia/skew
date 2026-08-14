@@ -1,5 +1,5 @@
 /**
- * `FragmentEnv` (C3) — the contract object graph a fragment sees instead of patched globals.
+ * `FragmentEnv` — the contract object graph a fragment sees instead of patched globals.
  *
  * Contract-mode fragments receive this env through their adapter's `mount(env, entry)` call and
  * never touch realm globals. Compat-mode fragments (the only adapter shipped in this build) do

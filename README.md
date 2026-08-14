@@ -133,6 +133,11 @@ under the running host.
 | **[`@skewkit/angular-router`](libs/angular/router)**     | Chunk-load recovery for lazy routes, without reload loops or lost work.                                 |
 | **[`@skewkit/angular-data`](libs/angular/data)**         | Normalized entity store, tag invalidation, and a durable mutation outbox.                               |
 | **[`@skewkit/angular-workflow`](libs/angular/workflow)** | Multi-step flows whose drafts survive refresh, deploys, and device changes.                             |
+| **[`@skewkit/braid`](libs/braid)**                       | Braid client runtime: isolated iframe realms, declarative shadow DOM, and compat adapter for microfrontends. |
+| **[`@skewkit/braid-gateway`](libs/braid-gateway)**       | Fetch-native origin-front middleware with manifest routing, clean namespaces, and server-side piercing.      |
+| **[`@skewkit/braid-angular`](libs/braid-angular)**       | Angular binding for Braid: typed `<braid-fragment>` component and router integration.                        |
+| **[`@skewkit/braid-react`](libs/braid-react)**           | React binding for Braid: `<BraidFragment>` component and router integration.                                 |
+| **[`@skewkit/braid-cli`](libs/braid-cli)**               | Braid CLI (`braid dev`): local dev server orchestration with live reload.                                   |
 
 Every package depends on `@skewkit/core` and never on a sibling. You can adopt
 one, several, or none of the Angular ones; nothing is load-bearing for
@@ -450,13 +455,15 @@ READMEs linked in the table above.
 
 ## Demos
 
-Two demo applications (one simulated, one using real separate deployments
-and real redeploys) plus a mock NestJS API exercise every scenario above.
-See **[apps/README.md](apps/README.md)** for how to run them.
+Three demo setups (simulated, production federated, and Braid microfrontends)
+plus a mock NestJS API exercise every scenario above. See
+**[apps/README.md](apps/README.md)** and **[docs/braid-poc.md](docs/braid-poc.md)**
+for how to run them.
 
 ```sh
 npm run demo         # simulated, single build, fastest way to look around
 npm run demo:prod    # two production builds, real deploys, real failures
+npm run braid:demo   # Braid microfrontend POC (host + 3 remotes on one page)
 ```
 
 ## Development

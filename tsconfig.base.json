@@ -21,6 +21,7 @@
       "@skewkit/braid": ["./libs/braid/src/index.ts"],
       "@skewkit/braid-angular": ["./libs/braid-angular/src/index.ts"],
       "@skewkit/braid-cli": ["./libs/braid-cli/src/index.ts"],
+      "@skewkit/braid-react": ["./libs/braid-react/src/index.ts"],
       "@skewkit/braid-gateway": ["./libs/braid-gateway/src/index.ts"],
       "@skewkit/braid-gateway/node": ["./libs/braid-gateway/src/node.ts"],
       "@skewkit/build": ["./libs/build/src/index.ts"],
