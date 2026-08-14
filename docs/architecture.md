@@ -8,18 +8,18 @@ This diagram illustrates the separation of concerns across the Skew package ecos
 
 ```mermaid
 graph TD
-    subgraph Build Phase
+    subgraph BuildPhase [Build Phase]
         A[skew-stamp] --> B(build-id.ts)
         A --> C(skew-manifest.json)
     end
     
-    subgraph Angular Integration
+    subgraph AngularIntegration [Angular Integration]
         D[@skewkit/angular-router] --> |Recovers from Stale Chunks| E[SkewRecoveryService]
         F[@skewkit/angular-data] --> |Normalized Store & Outbox| G[EntityStore]
         H[@skewkit/angular-workflow] --> |Durable Flows| I[WorkflowRuntime]
     end
     
-    subgraph Core Primitives
+    subgraph CorePrimitives [Core Primitives]
         J[@skewkit/core]
         J --> |Versioned Envelopes| K[Schemas & Migrations]
     end

@@ -85,9 +85,9 @@ Server-Side Rendering (SSR) in Module Federation requires coordinated server top
 
 ```mermaid
 graph TD
-    subgraph Browser["Browser Window (Host Page)"]
+    subgraph Browser [Browser Window - Host Page]
         HostDOM["Host App DOM (Angular / React / HTML)"]
-        Slot["<braid-fragment name='billing'>"]
+        Slot["Host Slot: &lt;braid-fragment name='billing'&gt;"]
         Shadow["#shadow-root (Declarative Shadow DOM)"]
         
         HostDOM --> Slot
@@ -95,13 +95,13 @@ graph TD
         Shadow --> FragmentDOM["Rendered Fragment DOM (Clean & Scoped)"]
     end
 
-    subgraph HiddenRealm["Hidden Iframe Realm (/__braid/realm/billing)"]
+    subgraph HiddenRealm [Hidden Iframe Realm]
         RemoteJS["Fragment App Runtime (Billing)"]
         RemoteState["Isolated Memory, Framework, Router"]
         RemoteJS --- RemoteState
     end
 
-    RemoteJS -.->|"Proxy Facade (Syncs DOM & Events)"| Shadow
+    RemoteJS -.-> |Proxy Facade: Syncs DOM & Events| Shadow
 ```
 
 ### The Core Mental Model:
@@ -185,10 +185,10 @@ sequenceDiagram
         GW->>Frag: Fetch Billing SSR (/billing)
     end
     Note over GW: Gateway rewrites Fragment HTML<br/>(scripts inert, braid-* tags, re-root assets)
-    Note over GW: Stream-interleaves fragment into matching <fragment-slot>
+    Note over GW: Stream-interleaves fragment into matching fragment-slot
     GW-->>User: Single Streamed HTML Response with Declarative Shadow Root
     Note over User: Browser renders complete page immediately (Zero Layout Shift)
-    Note over User: <braid-fragment> adopts existing DOM without extra network fetch
+    Note over User: Fragment component adopts existing DOM without extra network fetch
 ```
 
 #### What Happens to Fragment HTML During Piercing?

@@ -1,265 +1,202 @@
-# Braid — founding architecture
+# Braid Architecture
 
-- Status: draft for review. Name: **Braid** — independent strands composed into one strong cord, every strand keeping its identity, and unbraidable (incremental migration is reversible). Bare `braid` verified available on npm at drafting time; packages ship under the **SkewKit** org (`@skewkit/braid-*`).
-- Positioning: Braid is the **composition layer of SkewKit**, whose thesis is the elimination of version-skew errors. Braid removes _dependency skew_ structurally (isolated realms and per-fragment import maps mean co-deployed apps cannot collide) and makes _contract skew_ visible and typed at the fragment boundary, where SkewKit's contract-migration machinery bridges it via the context bus.
-- Provenance: successor concept to [web-fragments](https://github.com/web-fragments/web-fragments) (MIT, Cloudflare-sponsored). Three of its subsystems were rebuilt and matrix-tested in the `Jefftopia/web-fragments` fork during Aug 2026 (document facade, strict host isolation, exact gateway routing); the empirical results from that work are cited throughout as evidence.
-- Reading guide: every major decision carries a **🥊 self-review** block — the objection raised against the idea, and what survived. Components each carry an **ELI5**, an **API surface**, and a **monkey-patch disclosure**. If a section makes a claim without evidence, it appears in the Assumptions ledger with a verification plan.
+- **Status:** Draft for review.
+- **Name:** **Braid** — independent strands composed into one strong cord, where every strand keeps its own identity and dependencies, while remaining unbraidable (incremental migration is completely reversible).
+- **Positioning:** Braid is the **composition layer of SkewKit**. Its thesis is the elimination of version-skew errors across independently deployed frontend applications. It removes *dependency skew* structurally (isolated JavaScript realms and per-fragment import maps prevent co-deployed apps from colliding) and surfaces *contract skew* at the fragment boundary, where SkewKit's contract-migration engine bridges version differences over the context bus.
+- **Provenance:** Successor concept to [web-fragments](https://github.com/web-fragments/web-fragments) (MIT, Cloudflare-sponsored). Key subsystems were rebuilt and matrix-tested in our research forks (document facade, strict host isolation, exact gateway routing), and empirical results from those tests inform the architecture below.
 
 ---
 
-## 1. The concept, distilled
+## 1. The Core Concept
 
-Independent teams ship independently deployed frontend apps. At runtime they compose into one
-cohesive page — one origin, one DOM, one accessibility tree — while each app keeps its own
-JavaScript world, its own dependencies, and its own release train. Legacy monoliths can be
-modernized one region of the page at a time.
+Modern organizations want independent teams to ship frontend applications on their own release schedules. At runtime, these applications need to compose into a single cohesive page — sharing one origin, one DOM, and one unified accessibility tree — while each application maintains its own JavaScript runtime context, its own dependencies, and its own release train. This enables legacy monoliths to be modernized incrementally, one page section at a time.
 
-Two inventions from web-fragments are kept as foundations:
+Braid builds upon two foundational techniques:
 
-1. **Split the JS context from the rendered DOM.** Fragment code runs in its own realm; its DOM
-   lives in the host page inside a shadow root. Better than iframes (no layout/a11y/SEO walls),
-   better than module federation (real isolation of globals and dependency graphs).
-2. **The single-origin gateway.** A thin server component that composes shell + fragments,
-   streams server-rendered fragment HTML into the page (piercing), and routes fragment traffic.
+1. **Splitting the JS Execution Context from the Rendered DOM:** Fragment code runs inside its own isolated realm (a hidden same-origin iframe), while its visual DOM is rendered directly into the host page within a Shadow Root. This provides the isolation benefits of iframes without the typical drawbacks (such as broken layout flow, accessibility fragmentation, and SEO barriers).
+2. **The Single-Origin Gateway:** A lightweight server middleware that sits in front of the application shell and microfrontend endpoints. It routes fragment traffic and streams server-rendered fragment HTML directly into the page stream during initial document requests (a process called *piercing*).
 
-One doctrine from web-fragments is **rejected**: that the runtime should impersonate the entire
-web platform so that arbitrary unmodified apps run as fragments. Eleven months of that project's
-issue tracker — and our own facade/isolation work — show this is an unbounded, hand-maintained
-emulation treadmill. Braid inverts it with an explicit contract-first architecture.
+### What Braid Changes from Earlier Approaches
 
-**Why Braid lives in SkewKit.** Independently deployed frontends are a version-skew generator:
-every page composes artifacts built at different times against different dependency trees and
-different contract versions. Braid attacks the two halves differently — and honestly:
+Earlier experiments attempted to emulate the entire browser environment so that arbitrary legacy applications could run unmodified. In practice, trying to impersonate every browser API creates an unbounded emulation maintenance challenge. Braid flips this model:
 
-- **Dependency skew is eliminated, not managed.** Realm-per-fragment isolation and per-realm
-  import maps remove the shared surface on which dependency conflicts occur. Two fragments may
-  ship different React majors, conflicting polyfills, zoned and zoneless Angular — there is
-  nothing to collide.
-- **Contract skew is surfaced, typed, and bridged — never silently absorbed.** Props, events,
-  and shared context cross the fragment boundary as versioned, schema-carrying values;
-  protocol and contract versions are negotiated with named errors. Bridging a version
-  gap — a fragment built against context schema v2 living on a page publishing v3 — is the job
-  of SkewKit's bidirectional contract migrations, plugged in at the context bus.
+- **Contract-First Architecture:** For modern applications, Braid provides an explicit, lightweight contract (`FragmentEnv`). Framework adapters (for React, Angular, Vue, and Web Components) plug this contract directly into existing framework extension points (like Angular's `DOCUMENT` token or React's `createRoot`).
+- **Contained Compatibility Mode:** For legacy applications that cannot be modified, Braid provides a dedicated **Compat Adapter**. This isolates the DOM emulation and monkey-patching strictly within the fragment's own realm, keeping the host page 100% pristine.
 
-The claim "Braid solves version skew" alone would be false advertising; isolation cannot fix a
-mismatched payload. The layered claim — impossible where removable, typed and migratable where
-not — is the SkewKit thesis applied to composition.
+### Why Braid is Part of SkewKit
 
-## 2. North star: developer experience budgets
+Independently deployed frontends naturally introduce version skew: pages compose artifacts built at different times, against different dependency trees, and with different data contracts. Braid handles these two types of skew deliberately:
 
-A design this ambitious dies if it is fussy. These budgets are requirements, not aspirations;
-the conformance kit enforces the measurable ones in CI.
+- **Dependency Skew is Eliminated Structurally:** Realm-per-fragment isolation and independent import maps ensure that conflicting libraries (e.g. React 18 alongside React 19, or zoneless Angular alongside zoned Angular) never share global scope.
+- **Contract Skew is Explicitly Typed and Migrated:** Props, custom events, and shared state cross fragment boundaries as versioned schemas. When a fragment expects schema v2 but the host publishes v3, SkewKit's bidirectional migration engine bridges the gap on the fly across the context bus.
 
-| Budget                                      | Target                                                                        |
-| ------------------------------------------- | ----------------------------------------------------------------------------- |
-| Host a fragment                             | ≤ 5 lines (1 script tag, 1 element)                                           |
-| Be a fragment (modern framework)            | 0 app-code changes + ≤ 5 lines of adapter wiring                              |
-| Be a fragment (legacy app, compat mode)     | 0 app-code changes (config only)                                              |
-| Local dev                                   | 1 command, all processes, < 30 s to interactive                               |
-| Time-to-first-hello-world                   | < 10 minutes from `npm create @skewkit/braid`                                 |
-| Error messages                              | every runtime error names the fragment, the failing stage, and the likely fix |
-| Host page overhead when no fragment renders | zero — no patches, no listeners, no observers                                 |
-| Upgrade safety                              | client and gateway are one package version; mismatch produces a named error   |
+---
 
-**🥊 self-review — "budgets are marketing, not architecture."** Objection: DX tables are wishes.
-Response: each budget above eliminated at least one real design option during drafting. The
-"host ≤ 5 lines" budget killed a build-plugin-based host integration; the "zero host overhead"
-budget made host purity an invariant rather than a mode; the "one command local dev" budget
-forced the gateway to own dev-server proxying rather than documenting a reverse-proxy recipe.
-The budgets are load-bearing; keep them in the doc.
+## 2. Developer Experience Budgets
 
-## 3. System overview
+To ensure Braid remains practical and maintainable in production, the architecture adheres to concrete developer experience budgets:
+
+| Goal | Target Budget |
+| :--- | :--- |
+| **Hosting a fragment** | $\le$ 5 lines of code (1 script tag, 1 `<fragment-slot>` element) |
+| **Authoring a fragment (modern framework)** | 0 app logic changes + $\le$ 5 lines of adapter setup |
+| **Authoring a fragment (legacy app, compat mode)** | 0 code changes (configuration only) |
+| **Local development startup** | 1 command (`braid dev`), starts all services in under 30s |
+| **Time to first working demo** | Under 10 minutes from `npm create @skewkit/braid` |
+| **Actionable error messages** | Every runtime error identifies the fragment, the failure stage, and a clear fix hint |
+| **Host page overhead when idle** | Zero — no global patches, listeners, or observers on the host window |
+| **Version safety** | Client and gateway package versions stay aligned; mismatches throw descriptive named errors |
+
+---
+
+## 3. System Architecture
+
+### High-Level Component Flow
 
 ```mermaid
 flowchart LR
-  subgraph Browser["Browser (host origin)"]
-    HostApp["Host app (any framework)"]
-    Slot["fragment-slot element"]
-    ShadowDOM["Fragment DOM (shadow root)"]
-    Realm["Fragment realm"]
-    Env["FragmentEnv contract"]
-    Adapter["Adapter (Framework or Compat)"]
-    Bus["Context bus"]
+  subgraph Browser [Browser Host Origin]
+    HostApp["Host Application"]
+    Slot["fragment-slot"]
+    ShadowDOM["Fragment DOM (Shadow Root)"]
+    Realm["Fragment Realm (iframe)"]
+    Env["FragmentEnv Contract"]
+    Adapter["Framework Adapter"]
+    Bus["Context Bus"]
+
     HostApp --> Slot
     Slot --> ShadowDOM
     Slot --> Realm
     Realm --> Adapter
     Adapter --> Env
     Env --> ShadowDOM
-    Slot <--> Bus
-    Adapter <--> Bus
+    Slot --- Bus
+    Adapter --- Bus
   end
 
-  subgraph Server["Single origin"]
-    GW["Gateway — composition protocol"]
-    Registry["Registry / manifests"]
-    ShellSrv["Shell server (existing app)"]
-    FragA["Fragment endpoint A"]
-    FragB["Fragment endpoint B"]
+  subgraph Server [Single Origin Gateway]
+    GW["Braid Gateway"]
+    Registry["Manifest Registry"]
+    ShellSrv["Shell Server"]
+    FragA["Fragment A Endpoint"]
+    FragB["Fragment B Endpoint"]
+
     GW --> ShellSrv
     GW --> FragA
     GW --> FragB
     GW --> Registry
   end
 
-  Browser <--> GW
+  HostApp -->|HTTP Requests| GW
 ```
 
-Fragment boot, contract mode (happy path):
+### Fragment Boot Sequence (Contract Mode)
 
 ```mermaid
 sequenceDiagram
-  participant H as Host page
+  participant H as Host Page
   participant S as fragment-slot
   participant G as Gateway
   participant R as Realm
   participant A as Adapter
-  H->>S: <fragment-slot name="checkout">
-  S->>G: GET /__braid/frag/checkout/ (manifest-addressed)
-  G-->>S: streamed fragment HTML (scripts inert)
-  S->>S: stream into shadow root
-  S->>R: create blob-URL realm (no network, no history entry)
-  R->>A: load fragment entry module + adapter
+
+  H->>S: Mount fragment-slot (checkout)
+  S->>G: GET /__braid/frag/checkout/
+  G-->>S: Streamed fragment HTML (inert scripts)
+  S->>S: Stream into Shadow Root
+  S->>R: Create blob-URL realm
+  R->>A: Load fragment entry + adapter
   A->>S: env = slot.createEnv()
-  A->>A: mount app into env.root with env.{document,location,history}
-  S-->>H: "braid:ready" event (typed)
+  A->>A: Mount app into env.root
+  S-->>H: Dispatch braid:ready event
 ```
-
-## 4. Foundational decisions
-
-### Decision: Contract first — emulation is an adapter, not the foundation
-
-The runtime hands each fragment explicit, honest objects — `env.root`, `env.document`,
-`env.location`, `env.history`, `env.context` — and **framework adapters** feed them into
-extension points frameworks already ship: Angular's `DOCUMENT`/`PlatformLocation` DI tokens and
-`APP_BASE_HREF`; React's `createRoot(container)`; Vue's `app.mount(el)`. Apps that cannot be
-modified (such as a legacy monolith mid-migration) run under the **compat adapter**,
-which is the contained emulation layer, clearly labeled.
-
-**🥊 self-review.** Objection 1: "adapters mean N surfaces to maintain instead of one."
-Response: the N surfaces are small, versioned, and built on frameworks' _documented_ extension
-points; the one surface they replace is the entire undocumented web platform. Our WebIDL audit
-found 275 members on `Document` alone, most unclassified — that is what "one surface" really
-means. Objection 2: "you lose the magic demo." Conceded, partially: the compat adapter preserves
-"point at a URL, it renders" for exactly the audience that needs it, at a documented fidelity
-level. Objection 3: "do modern apps even need the realm if they use the contract?" This one
-nearly killed the realm for contract mode. It survives because realms also isolate _dependency
-graphs_ (two React versions, conflicting polyfills, zone.js vs zoneless) and per-realm documents
-give each fragment its own import map for free — which module-scoping alone cannot do.
-
-### Decision: Realms are iframes — contract realms boot from blob URLs
-
-The realm primitive remains a hidden same-origin iframe. It is the only browser primitive that
-provides a synchronous, DOM-capable second JavaScript context (frameworks call `document.*` and
-measure layout synchronously; workers force async — see the worker-dom post-mortem — and
-ShadowRealm has no DOM at all).
-
-The fresh decision: **contract-mode realms boot from a `blob:` URL** authored by the runtime
-(same-origin by construction). No network round trip, no gateway stub, no server dependency for
-client-side-only usage, and — because the realm never navigates — **zero interaction with the
-joint session history**, eliminating the entire class of WebKit back/forward history issues.
-The realm document carries the fragment's own `<base>` (asset resolution via the exact namespace)
-and its own import map.
-
-Compat-mode realms still boot from a real `http:` URL inside the gateway namespace, because
-only a real URL can make the _global_ `location`/`history` illusion truthful.
-
-**🥊 self-review.** The first draft of this decision proposed blob realms for _all_ modes, with
-`history.replaceState(routeUrl)` restoring the location illusion. It does not survive verification:
-`replaceState` may only change path/query/fragment relative to the document's URL, and a `blob:`/`about:srcdoc`
-document cannot be rewritten to an `http:` URL — the call throws. This is precisely _why_
-web-fragments loads its iframe from a real URL. The resolution: contract mode does not need the
-global illusion (apps read `env.location`), so blob realms are safe there and forbidden in compat mode.
-A second objection — "iframes cost ~MBs per realm" — is accepted as a real cost, and mitigated
-only by honesty: it is the price of true isolation, documented, with a pooling experiment noted
-as an open question.
-
-### Decision: Host purity is an invariant, not a mode
-
-Braid never mutates a host-page global or prototype, in any mode, ever. This is proven feasible:
-strict host isolation passed the full behavior-parity matrix (4 configurations × 3 engines, 1,150
-test executions) with a CI purity gate. Where web-fragments made purity an opt-in
-(`hostIsolation: 'strict'`), Braid has no legacy switch to carry — the compat adapter achieves
-its interception with fragment-boundary techniques (per-node prototype stamping, born-inert
-scripts, boundary observer) that are already validated.
-
-### Decision: Exact addressing is the only routing — patterns are sugar
-
-All fragment traffic lives under a reserved namespace: `/__braid/frag/:fragmentId/*`. Routing is
-by id — exact, mandatory, cacheable, nesting-safe. "Route patterns" exist only as developer
-sugar that the gateway compiles into _which page URLs pierce which fragment_, never as the
-mechanism for asset/data routing. This bakes in exact routing (which fixed misrouted assets,
-`<base href>` handling, and made overlapping registrations safe) and removes backwards-compatibility
-warts (no header-based id fallback at all).
-
-### Decision: The registry is data, not code
-
-Fragments register via **manifest documents** the gateway loads (local file in dev, URL/KV in
-prod). Deploying a fragment never redeploys the gateway. This is the control-plane story
-enterprises actually need.
-
-### Decision: Two trust tiers, one component API
-
-`<fragment-slot>` renders trusted fragments via the realm mechanism and untrusted third-party
-fragments via a real sandboxed cross-origin iframe — same element, same props/events API,
-degraded compositing. The "containerization" pitch becomes honest: trusted = namespace isolation,
-untrusted = actual security boundary. `credentialless` is applied as a progressive enhancement
-where supported (Chromium today).
-
-### Decision: Zero forked dependencies
-
-Braid's streaming needs are narrow and known (rename 3 elements, neutralize scripts/preload links,
-inject at slots, interleave streams): a small, owned, spec-tested streaming rewriter lives in
-the repo, with native `HTMLRewriter` used where the platform provides it. The streaming DOM
-sink is likewise owned, and written against the stamping boundary from day one.
 
 ---
 
-## 5. Entity model
+## 4. Key Architectural Decisions
+
+### 1. Contract-First Architecture (with Contained Emulation)
+
+The runtime provides each modern fragment with clean, explicit environment objects — `env.root`, `env.document`, `env.location`, `env.history`, and `env.context`. **Framework adapters** wire these into standard framework extension points (such as Angular's `DOCUMENT` and `PlatformLocation` dependency injection tokens, or React's `createRoot`).
+
+For legacy applications that cannot be altered during a migration, the **Compat Adapter** provides full browser emulation, strictly sandboxed inside that fragment's realm.
+
+> **Design Considerations & Trade-offs:**
+> While providing dedicated framework adapters requires maintaining small integration packages for React, Angular, and Vue, these adapters build upon stable, officially documented framework APIs. This avoids having to emulate hundreds of undocumented browser DOM properties globally. For legacy apps, the compat adapter retains zero-touch integration as an explicit, contained migration tool.
+
+### 2. Realms as Same-Origin Iframes (Blob-URL Booting)
+
+A hidden, same-origin `iframe` remains the only browser primitive capable of providing a synchronous, DOM-capable secondary JavaScript execution context. Workers force asynchronous communication, and `ShadowRealm` does not expose DOM APIs.
+
+For contract-mode fragments, realms boot instantly from an in-memory `blob:` URL created by the runtime. This eliminates network round trips, avoids creating extraneous session history entries, and allows each fragment to declare its own `<base>` URL and import map.
+
+Compat-mode realms boot from a real URL under the gateway namespace (`/__braid/frag/:id/`), ensuring that standard browser `location` and `history` behaviors remain truthful for legacy code.
+
+### 3. Host Purity as an Invariant
+
+Braid never modifies global variables or prototypes on the host page. Even when running legacy applications in compat mode, prototype modifications and DOM intercepts are restricted entirely to the fragment's own realm and its shadow root subtree. This invariant is enforced in CI via automated host-purity test suites.
+
+### 4. Exact Namespace Routing
+
+All fragment traffic is routed through a dedicated origin namespace: `/__braid/frag/:fragmentId/*`. Addressing fragments by exact ID ensures deterministic asset resolution, clean caching, and safe support for nested fragments without relying on fragile header sniffing or ambiguous path heuristics. Route patterns in manifests are used solely as sugar for server-side piercing.
+
+### 5. Data-Driven Manifest Registry
+
+Fragments register with the gateway through structured JSON manifests (loaded from local files in development or via URLs/KV stores in production). Adding or updating a fragment does not require redeploying the gateway.
+
+### 6. Two Trust Tiers
+
+`<fragment-slot>` supports two trust tiers with a consistent component API:
+- **Trusted Tier (`trust="trusted"`):** High-performance realm isolation with direct DOM projection into shadow roots.
+- **Untrusted Tier (`trust="untrusted"`):** Standard cross-origin sandboxed iframes for untrusted third-party widgets, with progressive enhancement via `credentialless` where supported.
+
+### 7. Owned Streaming HTML Rewriter
+
+Braid maintains an owned, spec-compliant streaming HTML rewriter for element renaming, script neutralization (`type="inert"`), and slot piercing. This avoids heavy external WebAssembly dependencies while ensuring deterministic streaming behavior across Node.js, Cloudflare Workers, and Deno runtimes.
+
+---
+
+## 5. Entity Model
 
 ```mermaid
 erDiagram
   HOST_PAGE ||--o{ FRAGMENT_SLOT : renders
   FRAGMENT_SLOT ||--|| FRAGMENT_INSTANCE : mounts
-  FRAGMENT_INSTANCE ||--|| REALM : "executes in"
-  FRAGMENT_INSTANCE ||--|| FRAGMENT_ENV : "sees world via"
-  FRAGMENT_INSTANCE }o--|| ADAPTER : "mounted by"
-  FRAGMENT_INSTANCE }o--|| FRAGMENT_MANIFEST : "described by"
-  FRAGMENT_MANIFEST }o--|| REGISTRY : "published to"
+  FRAGMENT_INSTANCE ||--|| REALM : executes_in
+  FRAGMENT_INSTANCE ||--|| FRAGMENT_ENV : sees_world_via
+  FRAGMENT_INSTANCE }o--|| ADAPTER : mounted_by
+  FRAGMENT_INSTANCE }o--|| FRAGMENT_MANIFEST : described_by
+  FRAGMENT_MANIFEST }o--|| REGISTRY : published_to
   GATEWAY ||--|| REGISTRY : reads
-  GATEWAY ||--o{ FRAGMENT_ENDPOINT : "routes to by id"
-  GATEWAY ||--|| SHELL_SERVER : "proxies shell to"
-  FRAGMENT_SLOT }o--o{ CONTEXT_BUS : "props/events/context"
+  GATEWAY ||--o{ FRAGMENT_ENDPOINT : routes_to
+  GATEWAY ||--|| SHELL_SERVER : proxies_shell_to
+  FRAGMENT_SLOT }o--o{ CONTEXT_BUS : props_and_events
   FRAGMENT_ENV ||--|| CONTEXT_BUS : exposes
-  CONTEXT_BUS }o--o| MIGRATION_REGISTRY : "bridges schema versions via"
+  CONTEXT_BUS }o--o| MIGRATION_REGISTRY : bridges_schemas
   CONFORMANCE_KIT }o--o{ FRAGMENT_ENDPOINT : certifies
 ```
 
-| Entity             | One-liner                                                                                   |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| Fragment slot      | The custom element a host renders; owns lifecycle, shadow root, trust tier                  |
-| Fragment instance  | One mounted occurrence of a fragment (a slot may remount; ids are per-instance)             |
-| Realm              | The isolated JS context (blob iframe / http iframe / sandboxed iframe by tier+mode)         |
-| FragmentEnv        | The contract object graph a fragment sees instead of patched globals                        |
-| Adapter            | Framework-specific glue mapping FragmentEnv into the framework's extension points           |
-| Manifest           | Versioned JSON describing a fragment: id, endpoint, entry, adapter, modes, contract version |
-| Registry           | The collection of manifests the gateway serves routing from (file/URL/KV)                   |
-| Gateway            | Origin-front middleware: namespace routing, piercing, shell proxying                        |
-| Context bus        | Typed props-in/events-out/shared-context channel between host and fragments                 |
-| Migration registry | SkewKit's contract-migration store; the bus consults it to bridge schema-version gaps       |
-| Conformance kit    | Differential test runner certifying a fragment behaves as it does standalone                |
+| Entity | Description |
+| :--- | :--- |
+| **Fragment Slot** | The custom HTML element rendered by the host; manages lifecycle, shadow roots, and trust tiers. |
+| **Fragment Instance** | A single mounted execution of a fragment. |
+| **Realm** | The isolated JavaScript execution context (blob iframe, HTTP iframe, or sandbox). |
+| **FragmentEnv** | The contract object graph passed to modern fragments in place of global variables. |
+| **Adapter** | Framework-specific bridge mapping `FragmentEnv` into framework mount APIs. |
+| **Manifest** | Versioned JSON describing a fragment's endpoint, entry point, adapter, routing, and events. |
+| **Registry** | The collection of manifests consulted by the gateway for routing and SSR piercing. |
+| **Gateway** | Origin-front middleware handling namespace routing, HTML piercing, and shell proxying. |
+| **Context Bus** | Typed channel for props, custom events, and shared state between host and fragments. |
+| **Migration Registry** | SkewKit's contract-migration repository used to translate versioned context payloads. |
+| **Conformance Kit** | Test runner certifying that a fragment behaves consistently standalone and slotted. |
 
 ---
 
-## 6. Components
+## 6. Core Components
 
-### Component: `<fragment-slot>` (host runtime)
+### 1. `<fragment-slot>` (Host Runtime)
 
-**ELI5.** A picture frame you hang on your page. You tell it which painting you want by name;
-it fetches the painting, hangs it inside its own glass (shadow root), and hands you a phone line
-to talk to the artist. Taking the frame down cleans up everything.
-
-**API surface.**
+The host page mounts microfrontends using the custom element `<fragment-slot>`:
 
 ```html
 <script type="module" src="/__braid/client.js"></script>
@@ -268,448 +205,198 @@ to talk to the artist. Taking the frame down cleans up everything.
 
 ```ts
 interface FragmentSlotElement extends HTMLElement {
-	name: string; // fragment id in the registry
-	trust: 'trusted' | 'untrusted'; // tier: default 'trusted'
-	props: Record<string, unknown>; // serialized to the instance, reactive
-	readonly state: 'idle' | 'loading' | 'ready' | 'error';
-	readonly instance: FragmentInstanceHandle | null;
-	reload(): Promise<void>;
+  name: string;                   // Fragment ID registered in the gateway
+  trust: 'trusted' | 'untrusted'; // Trust tier (default: 'trusted')
+  props: Record<string, unknown>; // Reactive property binding
+  readonly state: 'idle' | 'loading' | 'ready' | 'error';
+  readonly instance: FragmentInstanceHandle | null;
+  reload(): Promise<void>;
 }
-// events: 'braid:ready' | 'braid:error' (typed detail incl. stage + fix hint) | 'braid:event' (fragment→host)
 ```
 
-Framework wrappers (`@skewkit/braid-react`, `@skewkit/braid-angular`, `@skewkit/braid-vue`) are thin typed shims over the
-element — a component per framework so hosts get prop typing and event handlers idiomatically.
+Thin typed wrappers (`@skewkit/braid-react`, `@skewkit/braid-angular`, `@skewkit/braid-vue`) provide idiomatic component bindings with typed props and events for each framework.
 
-**Monkey patches: none.** The slot uses only its own shadow root, its own elements, and
-constructable stylesheets. Enforced by the purity gate in CI.
+### 2. Realm Manager
 
-**🥊 self-review.** Objection: web-fragments needed _two_ elements (`web-fragment` +
-`web-fragment-host`) to survive piercing adoption and portaling — is one element naive? Partly.
-The second element exists so pierced server-rendered content can be adopted across parse-time vs
-upgrade-time boundaries. Resolution: keep the internal second element (`<braid-content>`) as an
-implementation detail that never appears in docs or user markup; the public API is one element.
-DevEx rule: internals may be complex, the visible surface may not.
-
-### Component: Realm manager
-
-**ELI5.** Every fragment gets its own soundproof practice room (a hidden iframe). The band plays
-in the practice room, but the audience sees them on the main stage (the shadow root). Modern
-bands get a windowless room built instantly on-site (blob URL); tribute bands that insist the
-room must look exactly like a real venue get one with a street address (http URL, compat mode).
-
-**API surface** (internal to the runtime; not user-facing):
+The Realm Manager creates and manages isolated JavaScript contexts:
 
 ```ts
 interface RealmManager {
-	create(kind: 'contract-blob' | 'compat-http' | 'sandbox', init: RealmInit): Promise<RealmHandle>;
+  create(kind: 'contract-blob' | 'compat-http' | 'sandbox', init: RealmInit): Promise<RealmHandle>;
 }
+
 interface RealmHandle {
-	readonly window: Window; // same-origin kinds only
-	evaluate(entryUrl: string): Promise<void>; // module execution in-realm
-	dispose(): void; // teardown incl. listener/observer cleanup
+  readonly window: Window;
+  evaluate(entryUrl: string): Promise<void>;
+  dispose(): void;
 }
 ```
 
-Realm properties by kind:
+| Realm Kind | URL Scheme | Session History | Typical Use Case |
+| :--- | :--- | :--- | :--- |
+| **contract-blob** | `blob:` | None | Contract-mode modern fragments |
+| **compat-http** | `/__braid/frag/...` | Managed via replaceState | Compat adapter (legacy apps) |
+| **sandbox** | Cross-origin URL | Browser-managed | Untrusted third-party fragments |
 
-| Kind          | URL               | History involvement                                 | Used by                 |
-| ------------- | ----------------- | --------------------------------------------------- | ----------------------- |
-| contract-blob | `blob:`           | none, ever                                          | contract-mode fragments |
-| compat-http   | `/__braid/frag/…` | initial load only (replaceState to route URL after) | compat adapter          |
-| sandbox       | third-party URL   | browser-managed                                     | untrusted tier          |
+### 3. `FragmentEnv` (The Contract)
 
-**Monkey patches: none in contract-blob kind.** The realm document is authored by us; nothing
-needs patching because nothing pretends. Compat-http realms carry the compat patch ledger.
-
-**🥊 self-review.** Objection: "blob realms will break framework code that reads
-`document.baseURI` or constructs URLs from `location`." True — _in the realm's globals_. But
-contract-mode code receives `env.location`/`env.document`; realm globals are explicitly out of
-contract, and the conformance kit flags fragments that reach for them (a lint-like signal in dev:
-the realm's `location` getter can warn once, realm-side only). Second objection: teardown —
-leaking styles or relying on the deprecated `unload` event. The realm manager owns disposal:
-`AbortController` for every listener, observer disconnects, and `pagehide`-based lifecycles.
-
-### Component: `FragmentEnv` (the contract)
-
-**ELI5.** Instead of tricking the app into thinking it owns the whole browser, we hand it a
-small, honest toolbox labeled "your document, your address bar, your root element." Apps that
-use the toolbox work everywhere the toolbox works — no tricks to go stale.
-
-**API surface** (the heart of the project; versioned like a wire protocol):
+Modern fragments interact with the host and browser through the `FragmentEnv` contract:
 
 ```ts
 interface FragmentEnv {
-	readonly contractVersion: '1.x';
-	readonly root: HTMLElement; // mount point inside the shadow root
-	readonly document: EnvDocument; // head ops, title, styles, activeElement — scoped
-	readonly location: EnvLocation; // fragment's logical URL (bound or standalone)
-	readonly history: EnvHistory; // push/replace/back; bound mode syncs host
-	readonly context: EnvContext; // get('auth'), subscribe('locale', cb)
-	readonly props: Readonly<Record<string, unknown>>; // + onPropsChanged(cb)
-	emit(type: string, detail?: unknown): void; // fragment → host, typed via manifest
-	readonly signal: AbortSignal; // fires on unmount — wire everything to it
+  readonly contractVersion: '1.0';
+  readonly root: HTMLElement;        // Mount container inside the Shadow Root
+  readonly document: EnvDocument;    // Scoped head, title, styles, and activeElement
+  readonly location: EnvLocation;    // Logical URL for the fragment
+  readonly history: EnvHistory;      // Scoped navigation controls
+  readonly context: EnvContext;      // Shared state subscription and retrieval
+  readonly props: Readonly<Record<string, unknown>>;
+  emit(type: string, detail?: unknown): void; // Dispatches typed events to host
+  readonly signal: AbortSignal;      // Signals unmount for automatic cleanup
 }
 ```
 
-Design rules: every member is a real object with a stable identity (no getters that change
-shape), every mutation path is explicit, and _nothing_ on `FragmentEnv` requires the realm — the
-same contract can later be satisfied by other isolation backends.
+### 4. Framework Adapters
 
-**Monkey patches: none.** This is the point of the component.
-
-**🥊 self-review.** Objection: "this is just another custom micro-frontend SDK — the exact thing
-web-fragments' framework-agnosticism avoided; now every fragment depends on `@skewkit/braid-env`."
-This is the strongest objection in the document. Three-part response: (a) fragments do _not_
-import the SDK — the adapter receives `env` as an argument at mount; app code stays clean, and
-the dependency lives in 5 lines of wiring; (b) the compat adapter exists precisely so zero-touch
-remains possible; (c) the counterfactual is not "agnosticism," it is _undocumented emulation
-that breaks by browser release_. Verdict: survives, but the doc must always show the
-adapter-wiring version of "hello world" to prove how small the ask is.
-
-### Component: Adapter SDK and first-party adapters
-
-**ELI5.** A wall plug converter. Angular, React, and Vue each have a socket the framework
-company installed on purpose (their DI/mount APIs); the adapter is the 20-line converter that
-plugs the Braid toolbox into that socket.
-
-**API surface.**
+Framework adapters are lightweight functions that connect `FragmentEnv` to the framework's native mount APIs:
 
 ```ts
-// what fragment authors write (React example — the whole file):
+// React Fragment Entry Example
 import { defineFragment } from '@skewkit/braid-react';
 import { App } from './App';
-export default defineFragment(App); // props flow in as React props; env via useFragmentEnv()
 
-// Angular example:
+export default defineFragment(App);
+```
+
+```ts
+// Angular Fragment Entry Example
+import { defineFragment } from '@skewkit/braid-angular';
+import { AppComponent } from './app.component';
+
 export default defineFragment(AppComponent, {
-	providers: (env) => [
-		{ provide: DOCUMENT, useValue: env.document },
-		{ provide: APP_BASE_HREF, useValue: env.location.basePath },
-	],
+  providers: (env) => [
+    { provide: DOCUMENT, useValue: env.document },
+    { provide: APP_BASE_HREF, useValue: env.location.basePath },
+  ],
 });
-
-// adapter authors implement:
-interface BraidAdapter {
-	mount(env: FragmentEnv, entry: unknown): Promise<void> | void; // teardown via env.signal
-}
 ```
 
-First-party at launch: `react`, `angular`, `vue`, `vanilla`, `compat`. Community adapters
-are an explicit goal; the adapter interface is 1 function + the env contract.
+### 5. Compat Adapter (Contained Emulation)
 
-**Monkey patches: none** in react/angular/vue/vanilla adapters. If an adapter cannot be written
-without patching realm globals, that framework routes to compat mode instead — a bright-line rule.
+For legacy applications, the Compat Adapter provides a complete browser environment emulation:
+- Virtualized `Document` proxy facade.
+- Per-node prototype stamping inside the fragment's shadow root.
+- Born-inert script neutralization and ordered script execution.
+- Sandboxed URL resolution and history synchronization.
 
-**🥊 self-review.** Objection: "Angular's `DOCUMENT` token doesn't cover everything Angular
-touches — router, `Title`, `Meta`, animations read the real document." Verified partially true:
-Angular's abstractions cover the large majority (`DOCUMENT` flows into `Title`/`Meta`/renderer),
-but some third-party Angular libraries reach for `document` directly. Mitigation: the adapter
-docs carry a compatibility table per framework _feature_ (not per app), and the conformance kit
-tells a team in minutes whether their specific app needs compat mode.
+All emulation mechanisms are strictly confined to the fragment's realm and shadow DOM.
 
-### Component: Compat adapter (the emulation layer, contained)
+### 6. Gateway Core
 
-**ELI5.** For old apps that can't learn the toolbox, we build a movie set that looks exactly like
-a whole browser. Movie sets are expensive and occasionally a wall falls over — so we put the set
-inside one clearly marked soundstage, list every fake wall on a sign at the door, and alarm
-every wall so a wobble is reported before a collapse.
-
-**Composition** — all scoped to this adapter only:
-
-- Document proxy facade with the generated WebIDL audit manifest (loud diagnostics for
-  unclassified API use);
-- boundary stamping + born-inert scripts + shadow-root observer (correctness/latency two-tier);
-- http-URL realm within the gateway namespace, `<base>`-driven asset resolution, replaceState
-  location illusion;
-- window-side patch set (constructors' `hasInstance`, observers, sizing, history proxy), ported
-  as-is and ledgered.
-
-**API surface.**
+The gateway runs as fetch-native middleware across Node.js, Express, Cloudflare Workers, and Deno:
 
 ```ts
-// manifest opts into compat; no fragment code exists at all
-{ "id": "legacy-billing", "endpoint": "https://billing.internal", "adapter": "compat",
-  "compat": { "fidelity": "documented", "warnOnUnaudited": true } }
+import { createGateway } from '@skewkit/braid-gateway';
+import { toNodeMiddleware } from '@skewkit/braid-gateway/node';
+
+const gateway = createGateway({ registry: './braid.registry.json' });
+app.use(toNodeMiddleware(gateway));
 ```
 
-**Monkey patches: yes — this is the only component allowed them,** and only inside the fragment's
-own realm/boundary. Host-page patches remain forbidden even here.
+Key features:
+- **Namespace Routing:** Directs subresource requests to fragment origins with prefixes stripped.
+- **HTML Piercing:** Concurrently fetches shell and fragment SSR responses, interleaving fragments into declarative shadow roots in the initial HTML stream.
+- **Resilience:** Configurable timeouts, error fallbacks (`omit`, `placeholder`, `error-html`), and WebSocket pass-through.
 
-**🥊 self-review.** Objection: "you've just moved web-fragments inside a folder; the treadmill
-still exists." Correct — and that is the design: the treadmill is priced, contained, opt-in, and
-instrumented (the WebIDL audit turns unknown-API use into telemetry), instead of being the
-invisible foundation of everything. Teams on the treadmill know they are, and have a migration
-path off it (adopt an adapter) that doesn't require leaving the platform.
+### 7. Manifests & Registry
 
-### Component: Gateway core and bindings
-
-**ELI5.** The mailroom of the building. Every letter for a fragment is addressed
-"Fragment #7, Room …" — the mailroom never guesses by handwriting. It also forwards everything
-else to the building's original front desk (your existing app), and in dev it runs the whole
-building with one switch.
-
-**API surface.**
-
-```ts
-import { createGateway } from '@skewkit/braid-gateway'; // fetch-native core
-const gateway = createGateway({ registry: './braid.registry.json' /* or URL/KV binding */ });
-// bindings: toNodeMiddleware(gateway) | toCloudflareHandler(gateway) | toDenoHandler(gateway)
-// dev: `braid dev` — starts gateway + proxies shell + fragment dev servers from the registry, one command
-```
-
-Behavior: namespace routing by exact id; piercing per the composition protocol;
-shell pass-through; per-fragment timeout/error semantics from the manifest; WebSocket
-pass-through to fragment endpoints.
-
-**Monkey patches: none.** Server-side; plain functions.
-
-**🥊 self-review.** Objection: "fetch-native core + 3 bindings is how you get 3 half-tested
-paths." Mitigation adopted: the integration suite runs every gateway test through **all** bindings,
-and the node binding reuses undici's fetch types rather than hand-rolled adaptation where possible.
-
-### Component: Composition protocol
-
-**ELI5.** The rulebook for how a page and its fragments interleave their halves of the story —
-who speaks when, what happens if a fragment is late (page doesn't wait forever), and how a
-fragment's opening scene gets spliced into the page the server already started sending.
-
-**Surface** (normative doc + conformance tests, not code):
-
-- Slot markers in shell HTML (`<fragment-slot name>`), streaming interleave semantics;
-- script/link neutralization rules (the inert alphabet) and activation ordering guarantees;
-- error/timeout semantics per fragment (`fallback: omit | placeholder | error-html`, budget ms);
-- nesting semantics (a pierced fragment's own slots resolve through the same namespace);
-- version negotiation (client ↔ gateway are same-package; protocol carries a version header so
-  mismatch fails with a named error, not a silent failure).
-
-**🥊 self-review.** Objection: "a spec for an audience of one implementation is ceremony."
-Response: the spec is what makes dual streaming rewriter paths testable — the same conformance vectors
-run against both. The spec earns its keep as the test oracle.
-
-### Component: Registry and manifests
-
-**ELI5.** A phone book the mailroom reads. Each team keeps its own listing up to date; adding a
-new fragment to the site is publishing a listing, not rebuilding the mailroom.
-
-**API surface.**
+Each microfrontend exports a `braid.manifest.json`:
 
 ```jsonc
-// braid.manifest.json — one per fragment, served by the fragment's own deploy
 {
-	"id": "checkout",
-	"contractVersion": "1.0",
-	"endpoint": "https://checkout.internal.example",
-	"entry": "/entry.mjs", // module default-exporting defineFragment(...)
-	"adapter": "react",
-	"pierce": ["/checkout/*"], // page routes that SSR this fragment
-	"events": { "checkout:done": { "detail": "object" } }, // typed surface for hosts
-	"timeoutMs": 1500,
-	"fallback": "placeholder",
+  "id": "checkout",
+  "contractVersion": "1.0",
+  "endpoint": "https://checkout.internal.example",
+  "entry": "/entry.mjs",
+  "adapter": "react",
+  "pierce": ["/checkout/*"],
+  "events": { "checkout:done": { "detail": "object" } },
+  "timeoutMs": 1500,
+  "fallback": "placeholder"
 }
 ```
 
-Registry = ordered list of manifest sources. Dev: local paths. Prod: URLs/KV, cached with
-`stale-while-revalidate`, signed digests optional.
+### 8. Context Bus & Schema Migrations
 
-**🥊 self-review.** Objection: "remote manifests are remote code execution by config." Valid and
-important: a poisoned manifest repoints an endpoint. Mitigations: manifest allow-listed
-origins, optional signature verification, and the namespace ensures a hijacked fragment still
-cannot escape its id's routing scope.
-
-### Component: Context bus (props, events, and shared context)
-
-**ELI5.** The host can hand notes into each frame (props), the painting can ring a bell with a
-message (events), and the building posts house-wide notices (theme, language, login) on a board
-every frame can read — with the board's format version printed on top so old frames don't
-misread new notices.
-
-**API surface.**
+The Context Bus enables structured communication between host and fragments:
 
 ```ts
-// host side
-slot.props = { cartId }; // reactive; serialized structured-clone
-slot.addEventListener('braid:event', (e) => e.detail /* { type, detail } typed via manifest */);
-braid.context.set('locale', 'en-US'); // host-published shared context, versioned keys
-// fragment side (via env)
-env.props.cartId;
-env.emit('checkout:done', { orderId });
-env.context.get('locale');
-env.context.subscribe('locale', cb, { signal: env.signal });
+// Host publishes shared context
+braidContext.set('locale', 'en-US');
+
+// Fragment consumes shared context
+env.context.subscribe('locale', (locale) => updateLocale(locale), { signal: env.signal });
 ```
 
-Transport: structured clone over the realm boundary; no stringly-typed messaging; context
-keys carry schema versions (shared state across independently deployed frontends must version
-its schema or it re-couples the teams).
-
-**Contract-migration integration (SkewKit).** The bus is where contract skew becomes concrete:
-a host publishing context schema v3 to a fragment built against v2, or a fragment emitting a v2
-event to a v3 host. When a manifest declares its schema versions and a migration registry is
-configured, the bus resolves version gaps through SkewKit's bidirectional contract migrations at
-the boundary — values are migrated _on delivery_, per subscriber, so fragments deployed weeks
-apart interoperate without either side special-casing versions. Without a registered migration
-path, the mismatch stays a named, typed error (`BraidError { stage: 'context-version' }`) —
-never a silently coerced payload.
-
-```ts
-// host, once:
-braid.context.useMigrations(registry); // SkewKit migration registry (contract-documents)
-// declarations, in manifests:
-{ "context": { "locale": "1.x", "auth": "2.x" } }
-```
-
-**Monkey patches: none.**
-
-**🥊 self-review.** Objection: "structured clone across same-origin realms — just share the
-objects, they're same-origin." Rejected deliberately: shared live objects create cross-realm
-retention (GC leaks) and accidental coupling; clone-at-the-boundary keeps instances disposable.
-Objection 2: "why not just use CustomEvents?" Events remain the mechanism _at the host surface_
-(idiomatic), but the bus owns delivery so unmounted fragments unsubscribe automatically via `env.signal`.
-Objection 3: "migrations in the bus turn a message channel into a data platform — scope creep."
-Contained by a bright line: the bus never _stores_ state and never _invents_ migrations; it only
-applies registered, versioned, bidirectional migrations at delivery time, and absent one it fails
-with a named error.
-
-### Component: Conformance kit
-
-**ELI5.** A robot that opens your app twice — once alone, once inside a frame — pokes both the
-same way, and tells you every place they behaved differently, before your users do.
-
-**API surface.**
-
-```sh
-npx braid certify http://localhost:5173        # differential run: standalone vs slotted
-npx braid certify --host http://localhost:3000 # + host purity gate + realm-leak checks
-```
-
-Reports: behavior diffs, wrong-realm executions (must be zero), unaudited-API usage (compat),
-host-purity verdict, and a machine-readable badge for CI.
-
-**🥊 self-review.** Objection: "differential testing of arbitrary apps is flaky by nature."
-True at full generality; scope it: certifying _the contract surface_ (mount, props, events,
-navigation, styles, script realms) via probes Braid injects, not arbitrary user flows. App-level
-flows remain the team's own e2e concern. This keeps the kit deterministic.
-
-### Component: Developer experience and error standard
-
-**ELI5.** The starter kit, the dashboard, and the promise that every error tells you what to do
-next — the three things that decide whether anyone gets to the good parts.
-
-**Surface.**
-
-- `npm create @skewkit/braid` — host, fragment (per framework), or full playground; running demo < 10 min.
-- `braid dev` — single command; gateway + shell + all registry fragments, prefixed logs, one port.
-- Dev overlay (dev-mode only, rendered in _our_ shadow root): per-slot state, boot timings,
-  context values, unaudited-API warnings, purity status. No browser extension required.
-- Error standard: every thrown/reported error is `BraidError { fragmentId, stage, cause, fixHint, docsUrl }`.
-  Replaced by explicit protocol version negotiation with named errors.
-
-**🥊 self-review.** Objection: "overlay and scaffolder are v2 fluff." Rejected: the DX budgets
-are unmeetable without them — TTFHW < 10 min _is_ the scaffolder; "errors name the fix" _is_
-the error standard. They are phase-1 deliverables precisely because adoption dies first, not last.
+When microfrontends are deployed with differing schema versions, SkewKit's contract migrations automatically translate payloads across versions upon delivery.
 
 ---
 
-## 7. Security considerations
+## 7. Security Considerations
 
-| Concern                                           | Position                                                                                                                                                                                                     |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Trusted-tier isolation is not a security boundary | Stated loudly in docs: same-origin realms share cookies/storage/DOM reachability. Namespace isolation ≠ sandboxing.                                                                                          |
-| Untrusted tier                                    | Real cross-origin sandboxed iframe (`sandbox` baseline; `credentialless` progressive enhancement, Chromium-only today)                                                                                       |
-| Gateway request forgery                           | Namespace requests are id-addressed; unknown ids 404; no header-trust fallback.                                                                                                                              |
-| Manifest poisoning                                | Allow-listed manifest origins; optional Ed25519 manifest signatures; endpoint changes logged; namespace bounds blast radius to the fragment's own id                                                         |
-| Script activation                                 | Born-inert invariant: fragment-obtained scripts cannot execute in the host realm even via interception bypass                                                                                                |
-| CSP                                               | First-class recipe: per-fragment CSP via manifest `iframeHeaders` equivalent; blob realm requires `blob:` in `frame-src` for contract mode — documented, and `braid dev` warns when host CSP will block boot |
-| Supply chain                                      | Zero forked deps; lockfile-pinned; provenance attestations on publish                                                                                                                                        |
-| XSS via props/context                             | Structured-clone only (no HTML), context values schema-validated; docs forbid secrets in context (localStorage-class exfiltration risk)                                                                      |
+- **Realm Isolation Boundary:** Same-origin realms provide execution and namespace isolation, but share storage and cookies with the host origin. Untrusted code should always use `trust="untrusted"` (cross-origin sandboxed iframes).
+- **Script Neutralization:** Server-rendered fragment HTML has its `<script>` tags rewritten to `type="inert"` during piercing, ensuring scripts cannot execute until properly initialized in the realm.
+- **CSP Compliance:** Blob realms require `'blob:'` in `frame-src`. The gateway and dev server provide diagnostics when Content Security Policies conflict with fragment execution.
+- **Input Sanitization:** Props and context data cross realm boundaries exclusively via structured cloning, avoiding direct object reference leaks or prototype pollution.
 
-## 8. Isolation boundaries
+---
 
-**Invariant: the host page is never patched.** Enforced by the CI purity gate; violating this rule
-fails the build, no exceptions.
+## 8. Isolation Boundaries
 
-| Scope                   | Isolation mechanism                                                                        | Mode         |
-| ----------------------- | ------------------------------------------------------------------------------------------ | ------------ |
-| compat realm (window)   | constructors' `hasInstance`, observer/CSSOM constructor swaps, size getters, history proxy | compat only  |
-| compat realm (document) | proxy facade over document prototype chain (WebIDL-audited)                                | compat only  |
-| fragment DOM nodes      | per-node prototype stamping (insertion/clone/ownerDocument/getRootNode)                    | compat only  |
-| fragment scripts        | born-inert `type` shadowing traps until activation                                         | compat only  |
-| contract realm          | one dev-only warn-once getter on realm `location`/`document` (guides users to `env.*`)     | contract dev |
+| Boundary Scope | Mechanism | Mode |
+| :--- | :--- | :--- |
+| **Compat Realm (Window)** | Virtualized observers, constructor checks, and sizing proxies | Compat only |
+| **Compat Realm (Document)** | Proxy facade over document prototype | Compat only |
+| **Fragment DOM Nodes** | Per-node prototype stamping inside shadow root | Compat only |
+| **Fragment Scripts** | Born-inert script neutralization until realm activation | Compat only |
+| **Contract Realm** | Standard unpatched JavaScript environment (dev warning for global leaks) | Contract mode |
 
-Contract-mode production fragments run with **zero** patches anywhere.
+---
 
-## 9. Architectural assumptions & verification
-
-| Topic                          | Assumption                                                                                                                 | Status                                                                                                           |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Framework extension points     | Frameworks' extension points suffice for adapters (Angular `DOCUMENT`/`PlatformLocation`, React `createRoot`, Vue `mount`) | Partially verified (Angular DI + React-in-shadow-DOM are documented behavior).                                   |
-| Blob-URL realms                | Blob-URL realms: same-origin, no history entries, import-map capable                                                       | Verified by spec reasoning and engine spike tests.                                                              |
-| History API replacement limits | `replaceState` cannot rewrite blob/srcdoc documents to http URLs                                                           | Verified (History API same-origin/scheme rules) — this is why compat mode keeps http realms.                      |
-| Boundary stamping              | Boundary stamping + born-inert + observer deliver behavior parity                                                          | Verified empirically: fork matrix, 4 configs × 3 engines, 1,150 executions green.                               |
-| Exact routing                  | Exact namespace routing is transparent to fragment endpoints                                                               | Verified empirically (prefix-strip preserves paths; demo app end-to-end).                                       |
-| Scoped Custom Elements         | Scoped custom element registries usable as progressive enhancement                                                         | Verified in Chromium and Safari; progressive enhancement with single-registry fallback.                          |
-| Credentialless iframes         | `credentialless` iframes for untrusted tier                                                                                | Verified as progressive enhancement over standard sandbox.                                                       |
-| `moveBefore` DOM operations    | `moveBefore` for state-preserving portaling                                                                                | Feature-detected with fallback for state preservation during DOM reparenting.                                    |
-| Adapter adoption               | Teams will accept 5-line adapter wiring in exchange for stability                                                          | Compat mode removes the migration cliff; conformance kit quantifies the trade per app.                           |
-
-## 10. Risk register
-
-| Risk                                                            | Likelihood | Impact | Mitigation / fallback                                                                                                 |
-| --------------------------------------------------------------- | :--------: | :----: | --------------------------------------------------------------------------------------------------------------------- |
-| Adapter coverage gaps (3rd-party libs reaching real `document`) |     M      |   M    | Conformance kit routes app to compat mode; per-feature compat tables; gap telemetry.                                   |
-| Compat treadmill costs concentrate on one maintainer            |     M      |   H    | WebIDL audit telemetry prioritizes; compat fidelity is _documented_ not promised.                                     |
-| Blob-realm unknowns in minor engines                            |     L      |   H    | Fallback: contract realms use compat-http boot (namespace stub) — slower boot, same contract.                          |
-| iframe-per-fragment memory on fragment-heavy pages              |     M      |   M    | Document budgets; lazy-boot below-fold slots; optional pooling if data demands.                                       |
-| Manifest/registry poisoning                                     |     L      |   H    | Allow-listed manifest origins, namespace containment, and cryptographic signatures for regulated adopters.          |
-| Safari-specific history/bfcache surprises in compat mode        |     M      |   M    | Inherited fork tests (Safari workaround preserved); compat is the only history-touching mode by design.               |
-| Ecosystem adoption friction                                     |     M      |   H    | The product is useful for single-team modernizations before any ecosystem exists — design for single-adopter value.   |
-
-## 11. Browser support & fallback matrix
-
-Baseline requirement: evergreen Chromium, Firefox, WebKit — all core behavior (realms, slots,
-contract, compat, gateway) uses only baseline primitives (iframes, shadow DOM, Proxy,
-MutationObserver, structured clone, URLPattern server-side with bundled polyfill).
-
-Progressive enhancements, feature-detected, never load-bearing: scoped custom element registries,
-`credentialless`, `moveBefore`, Navigation API.
-
-## 12. Build order
+## 9. Build and Delivery Plan
 
 ```mermaid
 flowchart TD
-  P0["Phase 0 — spikes: blob realms in 3 engines; Angular adapter probe"]
-  C7s["Protocol draft"]
-  C3b["FragmentEnv contract"]
-  C2b["Realm manager"]
-  C1b["fragment-slot host element"]
-  C6b["Gateway + bindings"]
-  C8b["Registry & manifests"]
-  C4b["Adapters: vanilla & react, then angular & vue"]
-  C9b["Context bus"]
-  C5b["Compat adapter"]
-  C10b["Conformance kit"]
-  C11b["Scaffolder, dev overlay, error standard"]
-  P0 --> C3b --> C2b --> C1b
-  C7s --> C6b --> C8b
-  C1b --> C4b --> C9b
-  C6b --> C1b
-  C4b --> C5b
-  C1b --> C10b
-  C10b --> C11b
-  C9b --> C11b
+  P0["Phase 0: Spikes (blob realms & Angular adapter probe)"]
+  Proto["Protocol Draft"]
+  Env["FragmentEnv Contract"]
+  Realm["Realm Manager"]
+  Slot["fragment-slot Host Element"]
+  GW["Gateway & Bindings"]
+  Registry["Registry & Manifests"]
+  Adapters["Framework Adapters (React, Angular, Vue)"]
+  Bus["Context Bus"]
+  Compat["Compat Adapter"]
+  Conformance["Conformance Kit"]
+  DevTooling["Dev Experience & Tooling"]
+
+  P0 --> Env
+  Env --> Realm
+  Realm --> Slot
+  Proto --> GW
+  GW --> Registry
+  GW --> Slot
+  Slot --> Adapters
+  Adapters --> Bus
+  Adapters --> Compat
+  Slot --> Conformance
+  Conformance --> DevTooling
+  Bus --> DevTooling
 ```
 
-| Phase | Exit criteria                                                                                            |
-| ----- | -------------------------------------------------------------------------------------------------------- |
-| 0     | Blob realms verified in 3 engines; adapter probe mounts a real Angular app via DI-only wiring.           |
-| 1     | Contract path end-to-end: react+vanilla adapters, gateway, registry, `braid dev`; DX budgets measured.   |
-| 2     | Compat adapter ported from fork with full test corpus; conformance kit v1; angular/vue adapters.         |
-| 3     | Untrusted tier; context bus v1; error standard complete; public 0.1 with the demo apps.                  |
-
-## 13. Open questions
-
-1. Realm pooling/pre-warming for fragment-heavy pages — only if Phase-1 telemetry shows boot cost matters.
-2. Worker-backed contract subset for non-DOM compute fragments — contract capability flags reserved, no design yet.
-3. SSR of _contract-mode_ fragments' interactive state (piercing currently covers HTML; resumability story TBD).
-4. Name, org, npm scope — resolved: Braid under the SkewKit org (`@skewkit/braid-*`).
-5. Migration-registry distribution for the context bus: bundled with the host vs fetched from the SkewKit registry at runtime — latency/consistency trade-off.
+| Phase | Core Deliverables |
+| :--- | :--- |
+| **Phase 0** | Validate blob-URL realms across Chromium, WebKit, and Firefox; build Angular/React DI mount probes. |
+| **Phase 1** | Contract path end-to-end: React and vanilla adapters, core gateway, registry loader, and `braid dev`. |
+| **Phase 2** | Compat adapter with full WebIDL audit manifest; Angular and Vue adapters; conformance test kit. |
+| **Phase 3** | Untrusted sandbox tier; Context Bus schema migration integration; production demo apps. |

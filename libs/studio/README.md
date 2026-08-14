@@ -3,7 +3,7 @@
 Inspection tooling for version skew. Framework-free, no dependencies.
 
 This package is being built incrementally alongside the web debugger
-described in [`docs/skew-studio-plan.md`](../../docs/skew-studio-plan.md).
+described in [`docs/skew-studio-plan.md`](../../docs/plans/skew-studio-plan.md).
 What ships today is its most reusable piece.
 
 ## `diffPayloads`
