@@ -7,6 +7,14 @@ export interface IndexedDbDriverOptions {
   collections: readonly string[];
   /** Injectable for tests. */
   indexedDB?: IDBFactory;
+  /**
+   * Injectable for tests, alongside `indexedDB`.
+   *
+   * Both are needed to substitute the implementation: `IDBKeyRange` is a separate global rather than
+   * something reachable from the factory, so injecting only the factory leaves the range queries
+   * reaching for whatever the environment happens to have — which is nothing, outside a browser.
+   */
+  keyRange?: typeof IDBKeyRange;
 }
 
 const PARTITION_INDEX = 'by-partition-seq';
@@ -26,19 +34,60 @@ export function indexedDbRecordDriver(options: IndexedDbDriverOptions): RecordDr
   const databaseName = options.database ?? 'skew-data';
   const factory = options.indexedDB ?? globalThis.indexedDB;
   const collections = [...options.collections];
+  const ranges = options.keyRange ?? globalThis.IDBKeyRange;
 
   let open: Promise<IDBDatabase> | null = null;
 
   function database(): Promise<IDBDatabase> {
-    open ??= new Promise<IDBDatabase>((resolve, reject) => {
-      if (!factory) {
-        reject(new Error('skew-data: no IndexedDB in this environment'));
-        return;
-      }
+    open ??= connect();
+    return open;
+  }
 
-      // Version is derived from the collection count so adding one triggers the upgrade that can
-      // create it — object stores cannot be created outside `onupgradeneeded`.
-      const request = factory.open(databaseName, collections.length + 1);
+  /**
+   * Opens the database, upgrading only if a declared collection is actually missing.
+   *
+   * **The version is discovered, never derived.** An earlier draft opened at
+   * `collections.length + 1`, which works perfectly for one application and breaks the moment two
+   * share an origin — which is exactly what this library is for. Two independently deployed apps
+   * rarely declare the same number of collections, so each would demand its own version: the one
+   * with the shorter list ends up requesting a version *lower* than the database already has, and
+   * IndexedDB answers that with a `VersionError` forever. Not a race, not intermittent — that app
+   * simply never opens its storage again.
+   *
+   * Discovering it instead means the two converge. Each opens at whatever version exists, adds only
+   * the stores it is missing, and the version climbs monotonically as fragments arrive.
+   */
+  async function connect(): Promise<IDBDatabase> {
+    if (!factory) throw new Error('skew-data: no IndexedDB in this environment');
+
+    let db = await openDatabase();
+    const missing = collections.filter((collection) => !db.objectStoreNames.contains(collection));
+
+    if (missing.length > 0) {
+      // A connection has to be closed before it can be upgraded, including our own.
+      db.close();
+      db = await openDatabase(db.version + 1);
+    }
+
+    /**
+     * Stand aside when another context needs to upgrade.
+     *
+     * This is the other half of sharing a database, and the half that hangs rather than throws when
+     * it is missing: a sibling fragment declaring a collection we do not have must upgrade, and an
+     * upgrade cannot start while anyone holds the database open. Closing here lets it proceed; the
+     * next operation reopens at the new version, by which point its store exists.
+     */
+    db.onversionchange = () => {
+      db.close();
+      open = null;
+    };
+
+    return db;
+  }
+
+  function openDatabase(version?: number): Promise<IDBDatabase> {
+    return new Promise<IDBDatabase>((resolve, reject) => {
+      const request = version === undefined ? factory!.open(databaseName) : factory!.open(databaseName, version);
 
       request.onupgradeneeded = () => {
         const db = request.result;
@@ -51,9 +100,20 @@ export function indexedDbRecordDriver(options: IndexedDbDriverOptions): RecordDr
 
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error ?? new Error('skew-data: could not open the database'));
-    });
 
-    return open;
+      // Someone is holding the database open at an older version and did not stand aside. Every
+      // connection this driver makes closes itself on `versionchange`, so the holder is something
+      // else — an old build, another library, or a devtools inspection. Reported rather than left
+      // to hang, because a promise that never settles is the least debuggable failure there is.
+      request.onblocked = () =>
+        reject(
+          new Error(
+            `skew-data: another connection is holding "${databaseName}" open at an older version, ` +
+              `so it cannot be upgraded to add ${collections.join(', ')}. Close other tabs of this ` +
+              `application, or reload them.`,
+          ),
+        );
+    });
   }
 
   /**
@@ -101,7 +161,7 @@ export function indexedDbRecordDriver(options: IndexedDbDriverOptions): RecordDr
 
     async list(collection, partition) {
       // Range scan over [partition, seq] — already ordered, so no sort and no full read.
-      const range = IDBKeyRange.bound([partition, -Infinity], [partition, Infinity]);
+      const range = ranges.bound([partition, -Infinity], [partition, Infinity]);
       return transaction<StoredRecord[]>(collection, 'readonly', (store) =>
         store.index(PARTITION_INDEX).getAll(range),
       );
@@ -113,7 +173,7 @@ export function indexedDbRecordDriver(options: IndexedDbDriverOptions): RecordDr
       return new Promise<void>((resolve, reject) => {
         const tx = db.transaction(collection, 'readwrite');
         const store = tx.objectStore(collection);
-        const range = IDBKeyRange.bound([partition, -Infinity], [partition, Infinity]);
+        const range = ranges.bound([partition, -Infinity], [partition, Infinity]);
         const cursor = store.index(PARTITION_INDEX).openCursor(range);
 
         cursor.onsuccess = () => {

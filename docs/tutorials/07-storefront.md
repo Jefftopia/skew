@@ -112,6 +112,11 @@ export const COLLECTIONS = ['catalogue', 'orders', 'cart', 'outbox'] as const;
 A **collection** is a bucket of records of one kind. A **partition** is who they belong to, and comes
 next.
 
+> **When several apps share one database**, each declares the collections it uses and the driver
+> reconciles them — it opens at whatever version exists and adds only the stores actually missing, so
+> two fragments with different lists converge instead of fighting over a version number. Declaring the
+> same list everywhere is still simpler, and a shared contracts package is the natural place for it.
+
 ---
 
 ## Step 3 — Decide who the data belongs to
@@ -686,4 +691,6 @@ decide otherwise.
 - [Tutorial 4](04-angular-data.md) — the same ideas in Angular, with a normalized graph on top
 - [Braid, explained](../braid-explained.md) — what a realm, a fragment, and a slot actually are, if
   the composition section was your first encounter with them
+- [The storefront demo plan](../plans/braid-storefront-demo-plan.md) — this tutorial as a running
+  site, split across three deployed fragments. Proposed, not built
 - [`@skewkit/data` sources](../../libs/data/src) — every decision above is commented where it is made

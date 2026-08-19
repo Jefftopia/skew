@@ -136,6 +136,24 @@ that returns markup already prepared for the host's DOM. The client does this au
 fetching `/__braid/frag/:id/…` instead gives you the fragment's raw HTML, which is not safe to
 insert.
 
+### One fragment's storage stops opening after another deploys
+
+**Symptom.** A fragment that worked yesterday can no longer read or write anything. Its errors name
+IndexedDB — `VersionError`, or an open request that never settles — and nothing about that fragment
+changed. Another fragment on the same origin deployed recently.
+
+**Cause (fixed, but worth recognising).** `indexedDbRecordDriver` used to derive the database version
+from the number of collections it declared. Two applications sharing an origin rarely declare the
+same number, so each demanded its own version — and the one with the *shorter* list ended up
+requesting a version lower than the database already had. IndexedDB refuses that permanently. The
+sibling that "broke" it had done nothing wrong.
+
+**Fix.** Upgrade `@skewkit/data`. The version is now discovered rather than derived, connections
+close themselves on `versionchange` so a sibling's upgrade is not blocked, and a genuinely blocked
+upgrade reports which database and collections are involved instead of hanging. If you are pinned to
+an older version, the workaround is to have every application on the origin declare an identical
+collection list.
+
 ### Two fragments write the same record and one edit disappears
 
 **Symptom.** Two composed apps write the same shared record. One of the edits is simply gone —
