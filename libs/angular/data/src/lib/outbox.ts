@@ -1,5 +1,5 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { createOutbox, outboxFlushLock, withLock, type Outbox, type OptimisticOverlay, type QueuedEntry } from '@skewkit/data';
+import { createOutbox, drainOutbox, type Outbox, type OptimisticOverlay, type QueuedEntry } from '@skewkit/data';
 import { DATA_OPTIONS, OUTBOX_COLLECTION } from './config';
 import { PendingWrites } from './overlay';
 
@@ -119,9 +119,10 @@ export class OutboxService {
   /**
    * Drains this app's queue in order.
    *
-   * Strictly sequential: entries frequently depend on each other (create, then publish the thing you
-   * created), and parallel flushing would race them. A permanently-failing entry is abandoned rather
-   * than blocking the queue forever — reported through `onOutboxError` so it is never silent.
+   * The rules — sequential, stop at the first failure, one drain per owner across every tab, give up
+   * loudly — live in `@skewkit/data`'s `drainOutbox`, because this service used to carry a second
+   * copy of them and the two had already drifted apart on what to do with an entry nobody can
+   * replay. What stays here is the Angular half: signals, and re-reading the shared store into them.
    *
    * Only this app's entries are touched. Another app's queued work is left exactly where it is.
    */
@@ -129,71 +130,20 @@ export class OutboxService {
     await this.load();
     if (this.flushingSignal()) return { sent: 0, failed: 0, remaining: this.pendingCount(), skipped: true };
 
-    // Held across every tab and realm, not just this instance. Storage is shared per origin, so
-    // without it each open tab drains the same queue on reconnect — replaying the same mutations
-    // repeatedly, against a server that is by definition just coming back.
-    //
-    // Declined rather than queued: a flush waiting behind another tab's would run against a queue
-    // that tab had already drained. Per owner, so a different application flushing its own disjoint
-    // entries is not made to wait for something unrelated.
-    const outcome = await withLock(outboxFlushLock(this.options.owner), () => this.drain());
-
-    if (!outcome.acquired) {
-      // Another tab is on it. Its writes land in the shared store, so refresh to see them.
-      await this.refresh();
-      return { sent: 0, failed: 0, remaining: this.pendingCount(), skipped: true };
-    }
-
-    return { ...outcome.value, skipped: false };
-  }
-
-  private async drain(): Promise<{ sent: number; failed: number; remaining: number }> {
     this.flushingSignal.set(true);
-    let sent = 0;
-    let failed = 0;
-
     try {
-      // Snapshot: entries enqueued mid-flush wait for the next pass.
-      for (const entry of [...this.mineSignal()]) {
-        const runner = this.runners.get(entry.mutationId);
+      const result = await drainOutbox({
+        outbox: this.queue,
+        owner: this.options.owner,
+        runnerFor: (mutationId) => this.runners.get(mutationId),
+        maxAttempts: this.options.maxOutboxAttempts,
+        ...(this.options.onOutboxError === undefined ? {} : { onError: this.options.onOutboxError }),
+      });
 
-        if (!runner) {
-          // This app owns the entry but no longer has the mutation — renamed or removed between
-          // deploys. Nothing here can replay it, and no other app will claim it either.
-          this.options.onOutboxError?.(
-            `no registered mutation for "${entry.mutationId}"; dropping queued entry`,
-            entry,
-          );
-          await this.queue.remove(entry.id);
-          failed++;
-          continue;
-        }
-
-        try {
-          await runner(entry.input, entry);
-          await this.queue.remove(entry.id);
-          sent++;
-        } catch (error) {
-          failed++;
-          const message = error instanceof Error ? error.message : String(error);
-          const attempts = await this.queue.recordFailure(entry.id, message);
-
-          if (attempts >= this.options.maxOutboxAttempts) {
-            this.options.onOutboxError?.(
-              `giving up on "${entry.mutationId}" after ${attempts} attempts`,
-              error,
-            );
-            await this.queue.remove(entry.id);
-          } else {
-            // Ordering matters, so a failure stops the drain rather than skipping ahead to entries
-            // that may depend on this one.
-            break;
-          }
-        }
-      }
-
+      // Whatever happened — this app drained, or another tab did — the shared store moved, so the
+      // signals have to be re-read from it rather than adjusted from the counts.
       await this.refresh();
-      return { sent, failed, remaining: this.pendingCount() };
+      return { ...result, remaining: this.pendingCount() };
     } finally {
       this.flushingSignal.set(false);
     }

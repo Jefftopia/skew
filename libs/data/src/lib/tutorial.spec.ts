@@ -179,6 +179,97 @@ describe('tutorial 6', () => {
     expect(await afterReloadVolatile.mine()).toHaveLength(0);
   });
 
+  it('step 5 and 7: mutate queues, keeps the change on screen, and replays it', async () => {
+    const driver = memoryRecordDriver();
+    const data = createDataClient({
+      driver,
+      partition: () => 'demo',
+      collection: 'notes',
+      outbox: createOutbox({ driver, owner: 'notes-app' }),
+      autoFlush: false,
+    });
+
+    // A record to change, as a fetched query would have left it.
+    const notes = createRecordStore({ driver, collection: 'notes', schema: NoteContract });
+    await notes.put({ id: 'note:n1', partition: 'demo', value: { id: 'n1', title: 'Oat milk' } });
+
+    let online = false;
+    const send = async (input: unknown) => {
+      if (!online) throw new TypeError('Failed to fetch');
+      return input;
+    };
+
+    const outcome = await data.mutate({
+      key: 'note:n1',
+      schema: NoteContract,
+      mutationId: 'note.rename',
+      input: { id: 'n1', title: 'Buy oat milk' },
+      patch: { title: 'Buy oat milk' },
+      tags: ['note#n1'],
+      send,
+    });
+
+    expect(outcome.status).toBe('queued');
+
+    const query = data.query<Note>({
+      key: 'note:n1',
+      schema: NoteContract,
+      fetch: async () => ({ id: 'n1', title: 'Oat milk' }),
+      staleWhileRevalidate: false,
+    });
+    const pending = await settled(query, (state: { data?: Note }) => state.data !== undefined);
+
+    // The change is on screen while it waits, which is what the tutorial promises.
+    expect((pending as { data: Note }).data.title).toBe('Buy oat milk');
+
+    online = true;
+    expect((await data.flush()).sent).toBe(1);
+
+    query.dispose();
+    data.close();
+  });
+
+  it('step 7: an entry with no registered runner is kept, not dropped', async () => {
+    const driver = memoryRecordDriver();
+    const first = createDataClient({
+      driver,
+      partition: () => 'demo',
+      collection: 'notes',
+      outbox: createOutbox({ driver, owner: 'notes-app' }),
+      autoFlush: false,
+    });
+    await first.mutate({
+      key: 'note:n1',
+      schema: NoteContract,
+      mutationId: 'note.rename',
+      input: { id: 'n1', title: 'Buy oat milk' },
+      patch: { title: 'Buy oat milk' },
+      send: async () => {
+        throw new TypeError('Failed to fetch');
+      },
+    });
+    first.close();
+
+    // The reload the tutorial warns about: register your mutation kinds, or nothing can replay them.
+    const reported: string[] = [];
+    const second = createDataClient({
+      driver,
+      partition: () => 'demo',
+      collection: 'notes',
+      outbox: createOutbox({ driver, owner: 'notes-app' }),
+      onFlushError: (message) => reported.push(message),
+      autoFlush: false,
+    });
+
+    expect((await second.flush()).remaining).toBe(1);
+    expect(reported[0]).toContain('no registered mutation');
+
+    second.registerMutation('note.rename', async (input) => input);
+    expect((await second.flush()).sent).toBe(1);
+
+    second.close();
+  });
+
   it('step 10: signing in, switching, and signing out do what the tutorial says', async () => {
     const driver = memoryRecordDriver();
     const tenancy = createTenancy({ driver, collections: ['entities', 'outbox'] });

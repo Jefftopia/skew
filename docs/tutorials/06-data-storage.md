@@ -1,5 +1,9 @@
 # Tutorial 6 — Client storage that survives a reload
 
+> **This is the feature-by-feature tour.** If you would rather build one working thing in the
+> order you would actually build it — tenancy, then reads, then orders, then offline, then sign-out —
+> read [Tutorial 7: Build a storefront](07-storefront.md) and come back here for the detail.
+
 **Package:** `@skewkit/data` · **Time:** ~40 minutes ·
 **Prerequisites:** Tutorial 1 (contracts and `versioned()`). You will need a browser; the store is
 a browser API. No Braid, no micro-frontends, and no Angular are required — the last step shows the
@@ -145,19 +149,38 @@ Call `stop()` when your component goes away, and `note.dispose()` when you are d
 
 ---
 
-## Step 5 — Invalidate by tag after a write
+## Step 5 — Write through the client
 
-When you change something, say what changed:
+Writes go through the same client the reads do:
 
 ```ts
-await fetch('/api/notes/n1', { method: 'POST', body: JSON.stringify({ title: 'Buy oat milk' }) });
-
-data.invalidate('note#n1');
+await data.mutate({
+  key: 'note:n1',
+  schema: NoteContract,
+  mutationId: 'note.rename', // names the *kind* of write, so a queued one can be replayed
+  input: { id: 'n1', title: 'Buy oat milk' },
+  patch: { title: 'Buy oat milk' }, // shown immediately, before the server answers
+  tags: ['note#n1'], // marked stale once it lands
+  send: (input) => fetch('/api/notes/n1', { method: 'POST', body: JSON.stringify(input) }).then((r) => r.json()),
+});
 ```
+
+That one call does four things you would otherwise wire up by hand: it shows the change immediately,
+queues it durably so a failed send is not lost, stores what the server actually returned, and marks
+`note#n1` stale.
 
 Every query that declared `note#n1` refetches — **including queries in other applications on the
 page**. You do not need a reference to them, and they do not need one to you. The tag is the whole
 channel.
+
+### Invalidating by hand
+
+`mutate` invalidates for you. Reach for `invalidate` directly when the change did **not** come
+through this client — a WebSocket message, a write another app made, a server-sent signal:
+
+```ts
+data.invalidate('note#n1');
+```
 
 Tags are just strings you choose. A useful convention:
 
@@ -211,49 +234,61 @@ and quietly overwriting good data with a default.
 
 ## Step 7 — Keep a write that cannot be sent
 
-The outbox is a durable queue of writes. Queue a change, and it survives whatever happens next:
+Pass an outbox to the client and durability stops being something you assemble:
 
 ```ts
-import { createOutbox } from '@skewkit/data';
+import { createDataClient, createOutbox } from '@skewkit/data';
 
-const outbox = createOutbox({
+const data = createDataClient({
   driver,
-  owner: 'notes-app',   // who this queue belongs to
+  partition: () => 'demo',
+  outbox: createOutbox({ driver, owner: 'notes-app' }), // who this queue belongs to
 });
-
-// the user edits something while the network is down
-await outbox.enqueue({ mutationId: 'note.rename', input: { id: 'n1', title: 'Buy oat milk' } });
-
-// later, when you can send
-for (const entry of await outbox.mine()) {
-  try {
-    await send(entry.input);
-    await outbox.remove(entry.id);
-  } catch (error) {
-    const attempts = await outbox.recordFailure(entry.id, String(error));
-    if (attempts >= 5) await outbox.remove(entry.id);
-    break;   // stop on the first failure — later entries may depend on this one
-  }
-}
 ```
 
-Three rules that will save you time:
+That is the whole wiring. From here, the `mutate` from step 5 behaves differently when the network
+is not there: the write is queued before it is sent, the change stays on screen, and the client
+replays it when the browser says the network is back — or when you call `data.flush()` yourself.
 
-**Store data, never a function.** `input` must survive being written to disk and read back by a
-*different build* of your app. A closure cannot. This is why entries name a `mutationId` instead of
-holding the function that sends them.
+```ts
+const outcome = await data.mutate({ ...rename });
+outcome.status; // 'confirmed' — it landed
+//             | 'queued'    — it did not, and it is waiting
+```
 
-**`owner` matters.** Storage belongs to the origin, so several apps share one queue. `mine()`
-returns only your entries; `foreign()` returns other apps'. **Never send an entry you do not own** —
-you do not have the code that knows how, and the app that does will send it when it is next open.
+### The one thing you must do yourself
 
-**Stop the drain on failure.** Entries often depend on each other (create, then publish the thing
-you created). Skipping past a failure applies them out of order.
+A queued write outlives the page that made it, and after a reload the function that would send it is
+gone. Entries store **data**, never closures, so the app has to re-introduce its mutation kinds at
+start-up:
 
-> **See the whole path.** A read, a write, the same write with the network gone, a reload, and the
-> flush that finally sends it are drawn end to end as one sequence diagram in
-> [the Angular binding's README](../../libs/angular/data/README.md#the-whole-flow-end-to-end). The
-> mechanics are identical here — the binding just wraps them in signals.
+```ts
+// at bootstrap, before anything can flush
+data.registerMutation('note.rename', (input) => sendRename(input), { tags: ['note#n1'] });
+```
+
+Skip that and the client will not guess. It leaves the entry queued and reports through
+`onFlushError` that it has no runner for it — because dropping the entry would discard a write the
+user was already told had saved.
+
+### Rules the drain follows
+
+**Strictly sequential, stopping at the first failure.** Queued writes routinely depend on each other
+— create a thing, then rename the thing — and replaying them in parallel, or skipping past a failed
+one, applies them out of order.
+
+**One drain at a time across the whole origin.** The flush runs under a Web Lock keyed to the queue's
+owner, so five open tabs coming back online do not replay the same write five times. A tab that finds
+the lock taken reports `skipped: true` rather than waiting, because waiting would drain a queue the
+other tab has already emptied.
+
+**Permanently failing entries are dropped loudly.** After `maxAttempts` the entry is abandoned and
+reported through `onFlushError` — never silently, because the user has long since navigated away
+believing it saved.
+
+**`owner` matters.** Storage belongs to the origin, so several apps share it. Each replays only its
+own entries; another app's queued work is left exactly where it is, waiting for the app that knows
+how to send it.
 
 ---
 
@@ -366,6 +401,11 @@ indistinguishable from a user who genuinely has no data — including to your ow
 after the last, so a crash halfway is discoverable. The partitions it names are **poisoned**: refused
 on the next open until a `recover()` finishes the job. A half-emptied partition served as if it were
 whole is the failure this exists to prevent.
+
+**A guest who signs in can bring their records with them.** Partitions never merge on their own, but
+`tenancy.adopt(guestPartition, { collections: ['cart'], mode: 'move' })` carries them across — as
+stored bytes, envelope untouched, keeping the destination's own records by default.
+`copyPartition({ driver, from, to, collections })` is the same operation without a tenancy.
 
 **A sign-out anywhere ends the session everywhere.** Another tab holding a principal in memory has no
 reason to doubt it; `recover()` notices the partition it was reading is gone and clears its own

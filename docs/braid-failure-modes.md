@@ -136,6 +136,24 @@ that returns markup already prepared for the host's DOM. The client does this au
 fetching `/__braid/frag/:id/…` instead gives you the fragment's raw HTML, which is not safe to
 insert.
 
+### Two fragments write the same record and one edit disappears
+
+**Symptom.** Two composed apps write the same shared record. One of the edits is simply gone —
+intermittently, and more often on a fast connection where both writes land close together.
+
+**Cause.** Not a bug in either app. `@skewkit/data` gives every write a single-record transaction, so
+records are never torn and no update is lost to a read-modify-write — but there is **no compare-and-set**:
+concurrent writes to one key end in last-write-wins. Both values were accepted by the server; the
+store holds whichever arrived second.
+
+**Fix.** The ordering has to be decided where the writes actually meet, which is the server. Add a
+version or etag check and reject the stale write; the losing fragment's `mutate` then reports it as
+`{ expected, actual, paths }` rather than losing silently. See
+[the storefront tutorial's composition section](tutorials/07-storefront.md#6-what-happens-when-two-fragments-race).
+
+Note the asymmetry while you are here: two fragments *reading* the same key are serialized by a
+per-key Web Lock and produce one fetch. Reads are coordinated; writes are not.
+
 ### A widget renders an empty shell, or 404s, on every page
 
 **Symptom.** A fragment meant to appear everywhere pierces nothing. The slot carries

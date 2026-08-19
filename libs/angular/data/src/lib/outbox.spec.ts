@@ -142,7 +142,11 @@ describe('OutboxService', () => {
     expect(onError).toHaveBeenCalledWith(expect.stringContaining('giving up'), expect.anything());
   });
 
-  it('drops an entry whose mutation no longer exists in this build', async () => {
+  it('keeps an entry whose mutation no longer exists in this build, and says so', async () => {
+    // This used to drop the entry. It no longer does, and the change is deliberate: the mutation is
+    // missing because the app did not re-register it at start-up, or renamed it between deploys —
+    // and in both cases dropping discards a write the user was told had saved. A later build, or a
+    // rollback, can still send it.
     const onError = vi.fn();
     const { outbox } = configure({ onError });
     await outbox.enqueue({ mutationId: 'renamed.away', input: {}, schemaVersion: 1 });
@@ -150,11 +154,23 @@ describe('OutboxService', () => {
     const result = await outbox.flush();
 
     expect(result.failed).toBe(1);
-    expect(outbox.pendingCount()).toBe(0);
+    expect(outbox.pendingCount()).toBe(1);
     expect(onError).toHaveBeenCalledWith(
       expect.stringContaining('no registered mutation'),
       expect.anything(),
     );
+  });
+
+  it('lets an operator discard work nothing can replay', async () => {
+    // Keeping the entry would be a leak if there were no way out — a queue that never drains and an
+    // "unsent changes" badge that never clears. `clear()` is the deliberate way out.
+    const { outbox } = configure({ onError: vi.fn() });
+    await outbox.enqueue({ mutationId: 'renamed.away', input: {}, schemaVersion: 1 });
+    await outbox.flush();
+
+    await outbox.clear();
+
+    expect(outbox.pendingCount()).toBe(0);
   });
 
   it('does not run two flushes concurrently', async () => {

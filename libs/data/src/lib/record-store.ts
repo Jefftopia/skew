@@ -109,8 +109,13 @@ export interface RecordStore<T> {
   unreadable(partition: string): Promise<{ id: string; failure: Extract<SkewResult<never>, { ok: false }> }[]>;
 }
 
-/** Partition-scoped storage key. The separator cannot appear in either half by construction. */
-function storageKey(partition: string, key: string): string {
+/**
+ * Partition-scoped storage key. The separator cannot appear in either half by construction.
+ *
+ * Exported because moving a record between partitions means rewriting exactly this — and a second
+ * implementation of the composition rule is a silent way to lose records to a key nobody looks up.
+ */
+export function storageKey(partition: string, key: string): string {
   return `${partition}\u0000${key}`;
 }
 

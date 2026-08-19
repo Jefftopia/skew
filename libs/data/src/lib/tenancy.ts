@@ -1,5 +1,6 @@
 import { versioned } from '@skewkit/core';
 import { withLock } from './locks.js';
+import { copyPartition, type CopyPartitionResult, type PartitionConflictPolicy } from './partitions.js';
 import { createRecordStore, type RecordDriver } from './record-store.js';
 
 /**
@@ -70,6 +71,31 @@ export interface Tenancy {
   recover(): Promise<void>;
   /** Notified with the new partition, or `null` when nobody is signed in. */
   subscribe(listener: (partition: string | null) => void): () => void;
+  /**
+   * Brings another partition's records into the active one — the guest who just signed in.
+   *
+   * ```ts
+   * const guest = await tenancy.signIn({ userId: `guest:${deviceId}` });
+   * // …they shop, then sign in…
+   * await tenancy.signIn({ userId: 'user:ana' });
+   * await tenancy.adopt(guest, { collections: ['cart'], mode: 'move' });
+   * ```
+   *
+   * Deliberate rather than automatic. Whether a guest's basket should follow them into an account
+   * that may already have one is a question about *your* product — prices, stock reservations, and
+   * whose cart wins — and a data layer that answered it for you would be answering it wrong for
+   * somebody.
+   */
+  adopt(from: string, options?: AdoptOptions): Promise<CopyPartitionResult>;
+}
+
+export interface AdoptOptions {
+  /** Which collections follow the person. Defaults to every collection this tenancy manages. */
+  collections?: readonly string[];
+  /** Defaults to `'skip'` — the signed-in account's own records win. */
+  onConflict?: PartitionConflictPolicy;
+  /** `'move'` clears the source afterwards. Defaults to `'copy'`. */
+  mode?: 'copy' | 'move';
 }
 
 interface TenancyRecordV1 {
@@ -284,6 +310,24 @@ export function createTenancy(options: TenancyOptions): Tenancy {
       listeners.add(listener);
       listener(active);
       return () => void listeners.delete(listener);
+    },
+
+    async adopt(from, adoptOptions) {
+      if (!active || !principal) {
+        throw new Error(
+          '[skew/data] cannot adopt a partition before signing in: there is no destination to ' +
+            'copy into. Sign the user in first, then adopt what their guest session left behind.',
+        );
+      }
+
+      return copyPartition({
+        driver: options.driver,
+        from,
+        to: active,
+        collections: adoptOptions?.collections ?? options.collections,
+        ...(adoptOptions?.onConflict === undefined ? {} : { onConflict: adoptOptions.onConflict }),
+        ...(adoptOptions?.mode === undefined ? {} : { mode: adoptOptions.mode }),
+      });
     },
   };
 }

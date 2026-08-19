@@ -5,6 +5,7 @@ import { sharedInvalidator, type Invalidator } from './invalidation.js';
 import { withLock } from './locks.js';
 import type { OptimisticOverlay, Outbox } from './outbox.js';
 import type { PushConnection, PushRecord } from './adapters.js';
+import { drainOutbox, type FlushResult, type MutationRunner } from './flush.js';
 
 /**
  * The read path: reactive queries over a shared, persisted, skew-tolerant cache.
@@ -122,6 +123,28 @@ export interface DataClientOptions {
    * record a write it cannot yet send, so queries show only confirmed values.
    */
   outbox?: Outbox;
+  /**
+   * How many times a queued write is retried before it is abandoned.
+   *
+   * Abandoned loudly through `onFlushError`, never silently: the user was told it saved.
+   */
+  maxAttempts?: number;
+  /** Reports a queued write that could not be replayed. Wire it to telemetry. */
+  onFlushError?: (message: string, detail?: unknown) => void;
+  /**
+   * Flush the queue when the browser comes back online, and once at construction.
+   *
+   * Defaults to true whenever an outbox is supplied — a queue nothing drains is durability without
+   * delivery, which is the worse half of the feature.
+   */
+  autoFlush?: boolean;
+}
+
+export type { FlushResult, MutationRunner };
+
+export interface MutationRegistration {
+  /** Marked stale after a successful replay, as `mutate` would have done at the time. */
+  tags?: string[];
 }
 
 /** What to do when the server's value disagrees with what the overlay predicted. */
@@ -142,8 +165,14 @@ export interface MutationDefinition<T> {
   patch: Partial<T>;
   /** Set when the write deletes the record: readers show it gone before the server agrees. */
   removes?: boolean;
-  /** Sends it. Resolves with the server's version of the record. */
-  send: () => Promise<unknown>;
+  /**
+   * Sends it. Resolves with the server's version of the record.
+   *
+   * Takes the input rather than closing over it, because this same function is what replays the
+   * write if the send fails: a queued entry stores data, and the runner it is handed back to must
+   * be able to work from that data alone.
+   */
+  send: (input: unknown) => Promise<unknown>;
   /** Tags to mark stale once the write lands. */
   tags?: string[];
   /**
@@ -180,6 +209,22 @@ export interface DataClient {
   mutate<T>(definition: MutationDefinition<T>): Promise<MutationOutcome<T>>;
   /** Dismisses a raised conflict, once the user has seen it. */
   acknowledgeConflict(key: string): void;
+  /**
+   * Teaches the client how to replay a kind of write.
+   *
+   * `mutate` registers its own `send` automatically, so the live path needs no call. This exists
+   * for the path that has no live closure left: **after a reload**, a queued entry knows its
+   * `mutationId` and its input and nothing else, so the application must re-register its mutation
+   * kinds during start-up or the queue has nowhere to go.
+   */
+  registerMutation(mutationId: string, runner: MutationRunner, options?: MutationRegistration): void;
+  /**
+   * Drains the queue, oldest first.
+   *
+   * Called automatically when the browser comes back online unless `autoFlush` is off; call it
+   * directly after signing in, or behind a "retry now" button.
+   */
+  flush(): Promise<FlushResult>;
   /**
    * Connects a push stream — a subscription, socket, or SSE feed — to the store.
    *
@@ -233,6 +278,10 @@ export function createDataClient(options: DataClientOptions): DataClient {
   /** Why a key's stored record could not be read, last time anyone tried. */
   const unreadable = new Map<string, SkewFailureReason>();
 
+  /** How to replay each kind of queued write. Populated by `mutate` and by `registerMutation`. */
+  const runners = new Map<string, { run: MutationRunner; tags?: string[] }>();
+  const maxAttempts = options.maxAttempts ?? 5;
+
   /**
    * One store per schema, because the store *is* the projection: the same bytes read through two
    * chains give two different values, which is the point.
@@ -252,6 +301,83 @@ export function createDataClient(options: DataClientOptions): DataClient {
       stores.set(schema as VersionedSchema<unknown>, store);
     }
     return store as RecordStore<T>;
+  }
+
+  /**
+   * Drains this client's queue, oldest first, under the same per-owner lock the outbox uses.
+   *
+   * Three rules, each with a failure behind it:
+   *
+   * - **Strictly sequential.** Queued writes routinely depend on each other — create a thing, then
+   *   rename the thing — and replaying them in parallel races them into the wrong order.
+   * - **A failure stops the drain** rather than skipping ahead, for the same reason.
+   * - **An entry with no runner is not silently dropped.** It means the app did not re-register that
+   *   mutation kind after a reload, or renamed it between deploys. Dropping it quietly discards a
+   *   write the user was told had saved, so it is reported and left queued for a build that knows
+   *   what it is.
+   */
+  /**
+   * Serializes *this client's* own flushes.
+   *
+   * The Web Lock declines a flush another tab is already running, which is right: waiting for it
+   * would drain a queue that tab has already emptied. But applied to one client's own overlapping
+   * calls that rule is a trap — construct a client, queue a write, call `flush()`, and the
+   * start-up flush is very likely still finishing, so the caller's flush reports `skipped` and
+   * quietly does nothing. Within one client, a second flush waits for the first and then runs,
+   * picking up anything queued in between.
+   */
+  let flushing: Promise<FlushResult> | null = null;
+
+  async function flush(): Promise<FlushResult> {
+    if (flushing) await flushing.catch(() => undefined);
+
+    const run = drain();
+    flushing = run;
+    try {
+      return await run;
+    } finally {
+      if (flushing === run) flushing = null;
+    }
+  }
+
+  function drain(): Promise<FlushResult> {
+    const outbox = options.outbox;
+    if (!outbox) return Promise.resolve({ sent: 0, failed: 0, remaining: 0, skipped: false });
+
+    return drainOutbox({
+      outbox,
+      // The collection names this application's queue, and the flush lock is per owner.
+      owner: options.collection ?? DEFAULT_COLLECTION,
+      runnerFor: (mutationId) => runners.get(mutationId)?.run,
+      maxAttempts,
+      ...(options.onFlushError === undefined ? {} : { onError: options.onFlushError }),
+      onSent: (entry) => {
+        // The overlay lifts with the entry; whatever the write invalidated at the time is marked
+        // stale again, now that the server has actually seen it.
+        const keys = (entry.optimistic ?? []).map((overlay) => overlay.key);
+        invalidator.invalidate(...keys.map(pendingTag), ...(runners.get(entry.mutationId)?.tags ?? []));
+      },
+      onAbandoned: (entry) => {
+        // Nothing will send it now, so the prediction it was showing has to come off the screen.
+        const keys = (entry.optimistic ?? []).map((overlay) => overlay.key);
+        invalidator.invalidate(...keys.map(pendingTag));
+      },
+    });
+  }
+
+  /**
+   * A queue nothing drains is durability without delivery, so a client given an outbox flushes on
+   * its own: once now, for whatever a previous session left behind, and again whenever the browser
+   * says the network is back.
+   *
+   * `online` is a hint rather than a fact — it fires for a captive portal too — but a flush that
+   * finds the network still down simply leaves the queue where it was.
+   */
+  if (options.outbox && (options.autoFlush ?? true)) {
+    void flush().catch(() => undefined);
+
+    const view = globalThis as { addEventListener?: typeof addEventListener };
+    view.addEventListener?.('online', () => void flush().catch(() => undefined));
   }
 
   return {
@@ -277,6 +403,13 @@ export function createDataClient(options: DataClientOptions): DataClient {
         );
       }
 
+      // Registered on the way in, so a send that fails has a runner waiting for it before anyone
+      // asks — including a flush triggered by the network returning a second later.
+      runners.set(definition.mutationId, {
+        run: definition.send,
+        ...(definition.tags === undefined ? {} : { tags: definition.tags }),
+      });
+
       const store = storeFor(definition.schema);
       const partition = options.partition();
       const confirmed = (await store.get(definition.key, partition))?.value;
@@ -300,7 +433,7 @@ export function createDataClient(options: DataClientOptions): DataClient {
 
       let actual: T;
       try {
-        actual = (await definition.send()) as T;
+        actual = (await definition.send(definition.input)) as T;
       } catch (error) {
         // The entry stays queued and the overlay stays applied: from the user's point of view the
         // change happened, and the queue is what will eventually make that true.
@@ -334,6 +467,15 @@ export function createDataClient(options: DataClientOptions): DataClient {
       if (!conflicts.delete(key)) return;
       invalidator.invalidate(pendingTag(key));
     },
+
+    registerMutation(mutationId, runner, registration) {
+      runners.set(mutationId, {
+        run: runner,
+        ...(registration?.tags === undefined ? {} : { tags: registration.tags }),
+      });
+    },
+
+    flush,
 
     connect<T>(connection: PushConnection<T>): () => void {
       const store = storeFor(connection.schema);
@@ -527,7 +669,13 @@ function createQuery<T>(
   void (async () => {
     const hit = await readView();
     if (!hit || staleWhileRevalidate) await fetchAndStore(hit);
-  })();
+  })().catch((error: unknown) => {
+    // Reading the partition is the throw that lands here: a query created after sign-out cannot
+    // say where to look. Reported as an error *state* rather than an unhandled rejection, because
+    // the caller has a subscriber and no promise to catch — and an app that renders its query
+    // states will show this one without being taught anything new.
+    if (!controller.signal.aborted) emit({ status: 'error', error });
+  });
 
   return {
     get current() {

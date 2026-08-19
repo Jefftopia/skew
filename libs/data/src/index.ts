@@ -36,7 +36,11 @@ export type {
   ConflictPolicy,
   MutationDefinition,
   MutationOutcome,
+  MutationRegistration,
 } from './lib/query.js';
+
+export { drainOutbox } from './lib/flush.js';
+export type { DrainOptions, FlushResult, MutationRunner } from './lib/flush.js';
 
 export { createInvalidator, sharedInvalidator, resetSharedInvalidators } from './lib/invalidation.js';
 export type { Invalidator, InvalidationOptions, BroadcastChannelLike } from './lib/invalidation.js';
@@ -45,7 +49,14 @@ export { createOutbox, OutboxEntrySchema } from './lib/outbox.js';
 export type { Outbox, OutboxOptions, OutboxEntry, QueuedEntry, OptimisticOverlay } from './lib/outbox.js';
 
 export { createTenancy, partitionKey, TenancyRecordSchema } from './lib/tenancy.js';
-export type { Tenancy, TenancyOptions, Principal } from './lib/tenancy.js';
+export type { Tenancy, TenancyOptions, Principal, AdoptOptions } from './lib/tenancy.js';
+
+export { copyPartition } from './lib/partitions.js';
+export type {
+  CopyPartitionOptions,
+  CopyPartitionResult,
+  PartitionConflictPolicy,
+} from './lib/partitions.js';
 
 export { fromPull } from './lib/adapters.js';
 export type {
