@@ -114,7 +114,15 @@ export interface DataClientOptions {
   partition: () => string;
   collection?: string;
   buildId?: string;
-  crossTabInvalidation?: boolean;
+  /**
+   * Let invalidation reach other JavaScript contexts — other tabs, and **other realms on this
+   * page**. Off by default.
+   *
+   * Turn it on whenever this app is composed with others: a Braid realm is its own context, so
+   * without the channel a sibling fragment never hears that a record went stale, and staleness is
+   * invisible.
+   */
+  crossContextInvalidation?: boolean;
   /** Called whenever the network is actually hit. What the demo's "fetched once" counter reads. */
   onFetch?: (key: string) => void;
   invalidator?: Invalidator;
@@ -261,7 +269,9 @@ export function createDataClient(options: DataClientOptions): DataClient {
     options.invalidator ??
     sharedInvalidator({
       partition: options.partition(),
-      ...(options.crossTabInvalidation === undefined ? {} : { crossTab: options.crossTabInvalidation }),
+      ...(options.crossContextInvalidation === undefined
+        ? {}
+        : { crossContext: options.crossContextInvalidation }),
     });
 
   const stores = new Map<VersionedSchema<unknown>, RecordStore<unknown>>();

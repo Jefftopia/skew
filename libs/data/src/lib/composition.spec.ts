@@ -144,13 +144,13 @@ describe('invalidation across realms', () => {
       driver,
       partition,
       collection: 'entities',
-      invalidator: createInvalidator({ partition: 'p', crossTab: true, channel: channelOne }),
+      invalidator: createInvalidator({ partition: 'p', crossContext: true, channel: channelOne }),
     });
     const profile = createDataClient({
       driver,
       partition,
       collection: 'entities',
-      invalidator: createInvalidator({ partition: 'p', crossTab: true, channel: channelTwo }),
+      invalidator: createInvalidator({ partition: 'p', crossContext: true, channel: channelTwo }),
     });
 
     const refetches = vi.fn(async () => ({ id: 'c1', name: 'Ana' }));

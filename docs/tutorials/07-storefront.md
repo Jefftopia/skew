@@ -524,7 +524,7 @@ which is what an "unsaved changes" indicator should report.
 Give two fragments the same owner and they will replay each other's writes. That is the collision
 `owner` exists to prevent, and it is why the field is not defaulted.
 
-### 4. Turn on cross-tab invalidation — realms need it too
+### 4. Turn on cross-context invalidation — realms need it, not just tabs
 
 This is the one that surprises people, so it is worth being blunt:
 
@@ -539,13 +539,14 @@ panel two hundred pixels away will never hear about it:
 const client = createDataClient({
   driver,
   partition: tenancy.partition,
-  crossTabInvalidation: true, // required for cross-*realm*, not just cross-tab
+  crossContextInvalidation: true, // a realm is a context, and so is a tab
 });
 ```
 
-The flag is named for tabs because that is the more familiar case, but a composed page needs it for a
-more immediate reason. Leave it off and staleness is invisible — the fragment that never heard looks
-exactly like one that is working, which is the worst property a bug can have.
+The flag is named for *contexts* rather than tabs precisely because of this: the two cases are one
+mechanism, and only the tab one is obvious. Leave it off on a composed page and staleness is
+invisible — the fragment that never heard looks exactly like one that is working, which is the worst
+property a bug can have.
 
 Both behaviours are pinned down in
 [`composition.spec.ts`](../../libs/data/src/lib/composition.spec.ts): without the channel the second
@@ -645,7 +646,7 @@ whole, and concurrent queue appends keeping every entry.
 | Partition | yes, derived | same identity in, same partition out |
 | Schema version | **no** | each reader projects to its own — that is the point |
 | Outbox `owner` | **no** | ownership is what stops one fragment replaying another's writes |
-| `crossTabInvalidation` | on, everywhere | a realm is a separate context |
+| `crossContextInvalidation` | on, everywhere | a realm is a separate context, exactly as a tab is |
 
 One line to keep from the section above: **reads are serialized between fragments, writes are not.**
 Concurrent writes to one record end in last-write-wins, and the server is the only thing that can
@@ -671,7 +672,7 @@ decide otherwise.
 8. **A server that changes your write is not an error** — but it is something to tell the customer.
 9. **Sign-out destroys data**, and an interrupted purge refuses to serve rather than guessing it
    finished.
-10. **Composing with Braid? Turn on `crossTabInvalidation`.** A realm is a separate JavaScript
+10. **Composing with Braid? Turn on `crossContextInvalidation`.** A realm is a separate JavaScript
     context, so without it one fragment's invalidation never reaches another — and staleness is
     invisible.
 11. **Reads are serialized between fragments; writes are not.** Two fragments asking for the same

@@ -17,13 +17,18 @@ export interface InvalidationOptions {
    */
   partition: string;
   /**
-   * Whether invalidation reaches other **tabs**.
+   * Whether invalidation reaches other **JavaScript contexts** — other tabs, and other realms on
+   * this page.
+   *
+   * Named for contexts rather than tabs because the two cases are the same mechanism and people
+   * only think of the first one. A Braid realm is a separate context: two fragments composed onto
+   * one page are as isolated from each other, in memory, as two tabs are. Leave this off on a
+   * composed page and one fragment's invalidation silently never reaches another.
    *
    * Off by default, and that is a real choice rather than caution: refreshing a list in another tab
-   * is sometimes exactly right and sometimes a refetch storm across five of them. Realms on *this*
-   * page are always reached, because they are one page and a user thinks of them as one app.
+   * is sometimes exactly right and sometimes a refetch storm across five of them.
    */
-  crossTab?: boolean;
+  crossContext?: boolean;
   /** Injectable for tests. */
   channel?: BroadcastChannelLike;
 }
@@ -115,7 +120,7 @@ export function createInvalidator(options: InvalidationOptions): Invalidator {
 
   const channel =
     options.channel ??
-    (options.crossTab && typeof BroadcastChannel !== 'undefined'
+    (options.crossContext && typeof BroadcastChannel !== 'undefined'
       ? (new BroadcastChannel(CHANNEL_NAME) as unknown as BroadcastChannelLike)
       : undefined);
 
