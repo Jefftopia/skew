@@ -4,11 +4,16 @@
   "sourceRoot": "libs/braid-angular/src",
   "prefix": "braid",
   "projectType": "library",
-  "tags": ["scope:shared", "framework:angular"],
+  "tags": [
+    "scope:shared",
+    "framework:angular"
+  ],
   "targets": {
     "build": {
-      "executor": "@nx/angular:ng-packagr-lite",
-      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "executor": "@nx/angular:package",
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
       "defaultConfiguration": "production",
       "options": {
         "project": "libs/braid-angular/ng-package.json",
@@ -19,6 +24,11 @@
           "tsConfig": "libs/braid-angular/tsconfig.lib.prod.json"
         },
         "development": {}
+      }
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
       }
     },
     "test": {
@@ -33,7 +43,9 @@
   },
   "release": {
     "version": {
-      "manifestRootsToUpdate": ["dist/{projectRoot}"],
+      "manifestRootsToUpdate": [
+        "dist/{projectRoot}"
+      ],
       "currentVersionResolver": "git-tag",
       "fallbackCurrentVersionResolver": "disk"
     }

@@ -21,6 +21,11 @@
         ]
       }
     },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
+      }
+    },
     "test": {
       "executor": "nx:run-commands",
       "cache": true,
