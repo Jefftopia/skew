@@ -9,6 +9,7 @@ import { createDocumentOverrides } from './document-overrides.js';
 import { createFragmentBoundary, FragmentBoundary } from './fragment-boundary.js';
 import { makeScriptBornInert } from './born-inert-scripts.js';
 import { navigationBus, ensureHostNavigationSources } from './navigation-bus.js';
+import { createRealmNavigator } from './service-worker.js';
 import { RealmHandle } from '../realm/realm-manager.js';
 
 /**
@@ -19,13 +20,23 @@ import { RealmHandle } from '../realm/realm-manager.js';
  * confined to the fragment's boundary — the host page's globals and prototypes are never
  * touched.
  */
+export interface RealmContext extends FragmentBoundary {
+  /**
+   * Ends the boot window, after which a bound fragment's navigations may drive the host URL.
+   *
+   * Called by the adapter once the fragment's own scripts have run. See the boot-window note in
+   * the history patches: a router resolving its initial route is not the user navigating.
+   */
+  bootComplete(): void;
+}
+
 export function initializeRealmContext(
   realm: RealmHandle,
   fragmentShadowRoot: CompatShadowRoot,
   braidDocumentElement: HTMLElement,
   boundNavigation: boolean,
   fragmentAbortController: AbortController,
-): FragmentBoundary {
+): RealmContext {
   assert(realm.window !== null && realm.document !== null, 'attempted to patch the realm before it was ready');
 
   const realmWindow = realm.window;
@@ -100,10 +111,15 @@ export function initializeRealmContext(
   realmWindow.CSSStyleSheet = mainWindow.CSSStyleSheet;
 
   realmWindow.matchMedia = mainWindow.matchMedia.bind(mainWindow); // needs to be bound to mainWindow otherwise operates on the realm window
+
+  // The realm's navigator is the host's, with one member contained: a service worker attaches to
+  // the whole origin and outlives the fragment, so a fragment must not be able to install one.
+  // See service-worker.ts — the realm isolates JavaScript, and a worker is not JavaScript state.
+  const realmNavigator = createRealmNavigator(mainWindow.navigator, realm.fragmentId);
   // the navigator API is defined as an enumerable and configurable property with a getter and an undefined setter
   Object.defineProperty(realmWindow, 'navigator', {
     set: undefined,
-    get: () => mainWindow.navigator,
+    get: () => realmNavigator,
     configurable: true,
     enumerable: true,
   });
@@ -141,6 +157,21 @@ export function initializeRealmContext(
   // the same context it was dispatched from.
   class SyntheticPopStateEvent extends PopStateEvent {}
 
+  /**
+   * True until the fragment's own scripts have finished running.
+   *
+   * A framework's router performs an initial navigation as it starts — resolving a default route,
+   * following a `redirectTo`, normalizing a trailing slash. That is the fragment settling into the
+   * route it was *given*, not the user navigating, and letting it reach the host's History API
+   * means a fragment can rewrite the host's URL the instant it mounts.
+   *
+   * Which is not hypothetical: mounting a routed fragment on a page reached by client-side
+   * navigation used to bounce the host straight back to one of the fragment's own routes. Deferring
+   * the privilege until boot finishes fixes it for **any** router, because it constrains when the
+   * fragment may act rather than what it may call.
+   */
+  let booting = true;
+
   if (boundNavigation) {
     setInternalReference(realmWindow, 'history');
 
@@ -148,6 +179,16 @@ export function initializeRealmContext(
       get(target, property, receiver) {
         if (typeof Object.getOwnPropertyDescriptor(History.prototype, property)?.value === 'function') {
           return function (this: unknown, ...args: unknown[]) {
+            // During boot, a bound fragment's navigation is confined to its own realm: the host
+            // keeps the URL it navigated to, and the fragment still gets the location it asked for.
+            if (booting && MUTATING_HISTORY_METHODS.has(property as string)) {
+              return Reflect.apply(
+                History.prototype.replaceState as Function,
+                getInternalReference(realmWindow, 'history'),
+                [args[0], args[1] ?? '', args[2] ?? realmWindow.location.href],
+              );
+            }
+
             const applyNavigation = () =>
               Reflect.apply(History.prototype[property as keyof History] as Function, this === receiver ? target : this, args);
 
@@ -198,25 +239,39 @@ export function initializeRealmContext(
         },
       },
 
-      back: {
-        value: function compatStandaloneBack() {
-          if (standaloneHistoryCursor === 0) return;
+      /**
+       * Traverses the virtual stack and tells the fragment about it.
+       *
+       * The `popstate` is not decoration: a router only learns it has moved by hearing one, so
+       * without it `back()` changed the URL and left the application rendering the previous route.
+       */
+      go: {
+        value: function compatStandaloneGo(delta?: number) {
+          // Unpatched, this reached the real `go()` — which traverses the **joint** session
+          // history and drags the top document with it. That is the whole hazard this branch
+          // exists to avoid, and it was reachable by any router calling `go(-1)`.
+          const steps = Math.trunc(delta ?? 0);
+          if (steps === 0) return;
 
-          standaloneHistoryCursor--;
+          const next = Math.min(Math.max(standaloneHistoryCursor + steps, 0), standaloneHistoryStack.length - 1);
+          if (next === standaloneHistoryCursor) return;
 
+          standaloneHistoryCursor = next;
           const { state, title, url } = standaloneHistoryStack[standaloneHistoryCursor];
           realmWindow.history.replaceState(state, title, url);
+          realmWindow.dispatchEvent(new PopStateEvent('popstate', { state }));
+        },
+      },
+
+      back: {
+        value: function compatStandaloneBack() {
+          realmWindow.history.go(-1);
         },
       },
 
       forward: {
         value: function compatStandaloneForward() {
-          if (standaloneHistoryCursor === standaloneHistoryStack.length - 1) return;
-
-          standaloneHistoryCursor++;
-
-          const { state, title, url } = standaloneHistoryStack[standaloneHistoryCursor];
-          realmWindow.history.replaceState(state, title, url);
+          realmWindow.history.go(1);
         },
       },
 
@@ -639,5 +694,12 @@ export function initializeRealmContext(
 
   // END: EVENT SYSTEM PATCHES
 
-  return fragmentBoundary;
+  return Object.assign(fragmentBoundary, {
+    bootComplete() {
+      booting = false;
+    },
+  });
 }
+
+/** History methods that move the user, as opposed to reading state. */
+const MUTATING_HISTORY_METHODS = new Set(['pushState', 'replaceState', 'back', 'forward', 'go']);

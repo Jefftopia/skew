@@ -15,6 +15,7 @@ import { OutboxService } from './outbox';
  *
  * ```ts
  * provideSkewData({
+ *   owner: 'bulletin',
  *   persistOutbox: true,
  *   buildId: BUILD_ID,
  *   onOutboxError: (message, detail) => telemetry.error(message, detail),

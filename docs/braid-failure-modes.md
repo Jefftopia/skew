@@ -1,5 +1,8 @@
 # Braid — failure modes and how to avoid them
 
+> Symptom-first, and it assumes you know what a realm, a slot, and the `/__braid/` namespace are.
+> If a term here is unfamiliar, [**Braid, explained**](braid-explained.md) defines it in one page.
+
 Composition failures are rarely loud. A fragment that quietly re-fetches content it already had,
 or lags one navigation behind, looks like it works. This is the catalogue of the ones we have
 actually hit, each with the symptom you would see first and the thing that prevents it.
@@ -7,6 +10,59 @@ actually hit, each with the symptom you would see first and the thing that preve
 Every entry here was observed in a real browser during development, not imagined.
 
 ---
+
+## A routed fragment mounted by client-side navigation hijacks the host URL
+
+**Symptom.** The host router navigates to a route — say `/reports` — and the URL immediately becomes
+one of the *fragment's* routes instead. The page renders the wrong component. A direct load or a
+full reload of the same URL works perfectly.
+
+**Trace.** Instrumenting `history` on the host shows the host's own navigation succeeding and then
+being undone by a traversal nobody in the host called:
+
+```
+pushState /reports   → /reports
+POPSTATE             → /billing/invoices
+replaceState /billing/invoices
+```
+
+No `history.back()`, `forward()`, or `go()` runs in the top document. The traversal comes from
+**inside a realm**: a compat realm is a real same-origin iframe on a real URL, so its navigations
+join the top document's session history, and a traversal there moves the top document with it.
+
+**Cause.** A compat fragment whose own application has a router, mounted onto a route reached by
+*client-side* navigation. When the realm boots, the fragment's router performs its initial
+navigation; that navigation lands in the joint session history alongside the host's just-pushed
+entry, and the resulting traversal replaces it.
+
+Setting `src` does **not** avoid it. An unbound fragment does not *drive* host navigation through
+Braid, but its realm is still an iframe in the same session history, which is a lower level than
+`bound` operates at.
+
+**What it does not affect.** A fragment with no router of its own — a React app without one, a
+custom element — is fine, because nothing inside it navigates on boot. Pages reached by a full
+document load are fine, because the host is not mid-`pushState` when the realms boot. That is why
+the composed billing page works and a client-side hop to another page mounting the same fragment
+does not.
+
+**Workarounds today.**
+
+| | |
+| --- | --- |
+| Reach the page by document load | correct but defeats client-side routing |
+| Mount routed fragments only on routes they own | what the POC does; the composed page is entered directly |
+| Use a fragment without its own router on such pages | what the demo page does |
+
+**The real fix is the `contract-blob` realm kind**, which boots from a runtime-authored `blob:` URL
+and has *zero* interaction with the joint session history — the realm manager already says this
+eliminates "the whole class of back/forward corruption that http-booted realms have to work
+around". This is a concrete instance of that class. Contract-blob realms exist and are tested, but
+only contract-mode fragments can use them, because compat mode needs a real `http:` URL to make
+`location`/`history` truthful.
+
+So the honest statement of the limitation: **compat mode buys zero app changes and pays for it in
+session-history fidelity.** A routed compat fragment is safe on the routes it owns, and unsafe as a
+passenger on someone else's client-side navigation.
 
 ## Host integration
 
@@ -79,6 +135,41 @@ prevent exactly this — if you are seeing it, the response did not go through t
 that returns markup already prepared for the host's DOM. The client does this automatically;
 fetching `/__braid/frag/:id/…` instead gives you the fragment's raw HTML, which is not safe to
 insert.
+
+### A widget renders an empty shell, or 404s, on every page
+
+**Symptom.** A fragment meant to appear everywhere pierces nothing. The slot carries
+`data-braid-fallback="placeholder"`, or the fragment's endpoint logs a stream of 404s for paths that
+belong to the host — `/billing/invoices`, `/settings`, `/`.
+
+**Cause.** The fragment is **bound** when it should not be. A bound fragment is a screen: the
+gateway fetches it at the page's own path, because that is the route it is supposed to render.
+Chrome — a header panel, a sidebar, a global search box — has content at one fixed address instead,
+and asking its endpoint for the host's path is a question it has no answer to.
+
+**Fix.** Declare it unbound, and say where its content lives:
+
+```jsonc
+{ "id": "notifications", "bound": false, "src": "/panel", "pierce": ["/", "/*"] }
+```
+
+The gateway warns at registration when `bound: false` arrives without a `src`, because the fallback
+behaviour — fetching the page path — is wrong in a way that shows up as an empty widget rather than
+as an error anyone can trace.
+
+### The widget changes the moment it hydrates
+
+**Symptom.** The server-rendered widget is right in the first paint, then flips to different content
+(or to an empty state) as soon as the client boots.
+
+**Cause.** The slot's `src` and the manifest's `src` disagree. The gateway pierced content from one
+path; the client runtime then booted the fragment at the other. Both are working correctly — they
+were told different things.
+
+**Fix.** Make them agree. The gateway prints
+`slot for fragment "…" declares src="…" but its manifest declares src="…"` at pierce time, which is
+the only place this is visible before a user reports it. A slot that declares no `src` at all is
+filled in from the manifest, so omitting it is safer than guessing at it.
 
 ### The fragment's own router computes the wrong routes
 

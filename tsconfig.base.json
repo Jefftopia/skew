@@ -25,11 +25,13 @@
       "@skewkit/braid-react": ["./libs/braid-react/src/index.ts"],
       "@skewkit/braid-registry": ["./libs/braid-registry/src/index.ts"],
       "@skewkit/braid-registry/node": ["./libs/braid-registry/src/node.ts"],
+      "@skewkit/braid-sw": ["./libs/braid-sw/src/index.ts"],
       "@skewkit/braid-gateway": ["./libs/braid-gateway/src/index.ts"],
       "@skewkit/braid-gateway/node": ["./libs/braid-gateway/src/node.ts"],
       "@skewkit/build": ["./libs/build/src/index.ts"],
       "@skewkit/contract": ["./libs/contract/src/index.ts"],
       "@skewkit/core": ["./libs/core/src/index.ts"],
+      "@skewkit/data": ["./libs/data/src/index.ts"],
       "@skewkit/studio": ["./libs/studio/src/index.ts"],
       "@skewkit/angular-core": ["./libs/angular/core/src/index.ts"]
     }

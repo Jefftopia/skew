@@ -6,6 +6,7 @@
  * billing → http://localhost:4501  Angular SPA          (compat adapter)
  * reviews → http://localhost:4502  React 19 app         (compat adapter)
  * rating  → http://localhost:4503  a custom element     (contract custom-element adapter)
+ * notifs  → http://localhost:4505  Angular SSR app      (unbound — its own server, its own render)
  *
  * The registry console is served by the host itself at /__braid/console — same origin as the
  * gateway, so it reads the live registry and writes to the registry API with no CORS to arrange.
@@ -14,7 +15,19 @@ import { execSync, spawn } from 'node:child_process';
 
 const WORKSPACE = new URL('../../', import.meta.url).pathname;
 
+// The gateway compiles pierce patterns with URLPattern, a global only from Node 23.8. Checking up
+// front costs nothing and beats what it prevents: a build that dies partway through reporting every
+// valid pierce pattern as invalid syntax.
+if (typeof URLPattern === 'undefined') {
+  console.error(
+    `This demo needs Node 24 or newer — running Node ${process.versions.node}, which has no global URLPattern.` +
+      `\n  nvm use 24   (or install it first: nvm install 24)`,
+  );
+  process.exit(1);
+}
+
 const HOST_PORT = 4500;
+const NOTIFICATIONS_PORT = 4505;
 const FRAGMENTS = [
   { label: 'billing', dir: 'dist/apps/braid-poc-remote/browser', port: 4501, spa: true },
   { label: 'reviews', dir: 'dist/apps/braid-poc-react-remote', port: 4502, spa: true },
@@ -22,7 +35,7 @@ const FRAGMENTS = [
 ];
 
 // Clean up any stale processes from earlier runs holding our ports
-for (const port of [HOST_PORT, ...FRAGMENTS.map((f) => f.port)]) {
+for (const port of [HOST_PORT, NOTIFICATIONS_PORT, ...FRAGMENTS.map((f) => f.port)]) {
   try {
     const pids = execSync(`lsof -t -i :${port}`, { encoding: 'utf-8' }).trim();
     if (pids) {
@@ -81,6 +94,7 @@ await runToCompletion('npx', [
   'braid-poc-remote',
   'braid-poc-react-remote',
   'braid-poc-widget',
+  'braid-poc-notifications',
   'braid-poc-host',
 ]);
 
@@ -94,6 +108,9 @@ const children = FRAGMENTS.map((fragment) =>
     fragment.port,
   ),
 );
+// Not a static directory like the others: this fragment renders on its own server, per request,
+// which is the entire claim POC 2 makes.
+children.push(runServer('dist/apps/braid-poc-notifications/server/server.mjs', [], NOTIFICATIONS_PORT));
 children.push(runServer('dist/apps/braid-poc-host/server/server.mjs', [], HOST_PORT));
 
 const shutdown = () => children.forEach((child) => child.kill());
@@ -107,10 +124,12 @@ process.on('exit', shutdown);
 for (const fragment of FRAGMENTS) {
   await waitFor(`http://localhost:${fragment.port}/`, `${fragment.label} (fragment origin)`);
 }
+await waitFor(`http://localhost:${NOTIFICATIONS_PORT}/panel`, 'notifications (SSR fragment origin)');
 await waitFor(`http://localhost:${HOST_PORT}/`, 'host (SSR + gateway)');
 
 console.log(
-  `\nOpen http://localhost:${HOST_PORT}/billing/invoices — Angular, React and a web component on one page.` +
+  `\nOpen http://localhost:${HOST_PORT}/billing/invoices — Angular, React and a web component on one page,` +
+    `\n  with the server-rendered notifications widget in the header of every one of them.` +
     `\nRegistry console: http://localhost:${HOST_PORT}/__braid/console/` +
     `\n  Snapshots are written to .braid/registry. This gateway serves its inline manifests, so a` +
     `\n  published snapshot takes effect when a deploy pins its id — configuration changes are deploys.\n`,

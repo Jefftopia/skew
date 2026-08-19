@@ -4,7 +4,7 @@
   "peerDependencies": {
     "@angular/core": "^22.0.0",
     "@angular/common": "^22.0.0",
-    "@skewkit/core": "^0.0.1"
+    "@skewkit/data": "^0.0.1"
   },
   "sideEffects": false,
   "description": "Normalized entity store, tag invalidation, and a durable mutation outbox for Angular.",

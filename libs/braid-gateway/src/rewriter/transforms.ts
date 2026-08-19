@@ -210,6 +210,15 @@ export interface PierceTarget {
   content: ReadableStream<Uint8Array> | null;
   /** Set as `data-braid-fallback` on the slot when content is omitted, for skeleton styling. */
   fallbackReason?: string;
+  /**
+   * The path the manifest says this fragment's content lives at, for unbound fragments.
+   *
+   * The host's own template is what tells the client where to mount an unbound fragment, so this is
+   * carried only to check the two against each other. Declaring it in both places is the accepted
+   * cost of the slot working identically whether or not the page was pierced; warning on
+   * disagreement is what stops that duplication from drifting in silence.
+   */
+  src?: string;
 }
 
 export interface PierceOptions {
@@ -251,7 +260,10 @@ export function pierceShellHtml(options: PierceOptions): ReadableStream<Uint8Arr
   /** A slot element the gateway creates because the shell didn't mark one up. */
   const orphanSlot = (target: PierceTarget): Injection =>
     concatStreams([
-      `<fragment-slot name="${escapeAttribute(target.fragmentId)}" data-braid-pierced="">`,
+      `<fragment-slot name="${escapeAttribute(target.fragmentId)}"` +
+        // A slot the gateway invents has no template to have declared `src`, so the manifest's is
+        // the only source there is.
+        `${target.src ? ` src="${escapeAttribute(target.src)}"` : ''} data-braid-pierced="">`,
       ...shadowRoot(target),
       '</fragment-slot>',
     ]);
@@ -279,6 +291,19 @@ export function pierceShellHtml(options: PierceOptions): ReadableStream<Uint8Arr
           const target = name ? pending.get(name) : undefined;
           if (!target) return;
           pending.delete(target.fragmentId);
+
+          const declared = tag.getAttribute('src');
+          if (target.src && declared && declared !== target.src) {
+            // Two sources of truth that disagree: the gateway pierced content from one path while
+            // the client will boot the fragment at another, so the widget changes under the user
+            // the moment it hydrates. Cheap to say, and invisible otherwise.
+            console.warn(
+              `braid-gateway: slot for fragment "${target.fragmentId}" declares src="${declared}" ` +
+                `but its manifest declares src="${target.src}" — the pierced content and the client ` +
+                `boot would come from different paths`,
+            );
+          }
+          if (target.src && !declared) tag.setAttribute('src', target.src);
 
           if (!target.content) {
             // nothing to pierce: mark the slot so the page can style a skeleton, and let the

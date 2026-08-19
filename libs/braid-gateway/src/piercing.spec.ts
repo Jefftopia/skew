@@ -434,10 +434,111 @@ describe('gateway piercing', () => {
     expect(body).toContain('responded with HTTP 500');
   });
 
+  describe('unbound fragments', () => {
+    /** Records every path each endpoint was asked for, which is the whole claim under test. */
+    function trackingGateway() {
+      const asked: Record<string, string[]> = { billing: [], notifications: [] };
+      const endpoint = (id: string, body: string) => (async (input: Request | string) => {
+        const url = new URL(typeof input === 'string' ? input : input.url);
+        asked[id]!.push(`${url.pathname}${url.search}`);
+        return htmlResponse(`<html><body>${body}</body></html>`);
+      }) as unknown as typeof fetch;
+
+      const gateway = createGateway({
+        registry: [
+          { id: 'billing', endpoint: endpoint('billing', '<h1>Invoices</h1>'), pierce: ['/billing/*'] },
+          {
+            id: 'notifications',
+            endpoint: endpoint('notifications', '<p>3 unread</p>'),
+            pierce: ['/', '/*'],
+            bound: false,
+            src: '/panel',
+          },
+        ],
+      });
+      return { gateway, asked };
+    }
+
+    it('fetches each fragment at the path its own kind implies', async () => {
+      const { gateway, asked } = trackingGateway();
+      const shell = async () =>
+        htmlResponse(
+          `<html><body><fragment-slot name="notifications" src="/panel"></fragment-slot>` +
+            `<fragment-slot name="billing"></fragment-slot></body></html>`,
+        );
+
+      const body = await (await gateway.handle(documentRequest('/billing/invoices?tab=open'), shell))!.text();
+
+      // A screen renders the route the user is on; chrome renders the one place its content lives.
+      expect(asked['billing']).toEqual(['/billing/invoices?tab=open']);
+      expect(asked['notifications']).toEqual(['/panel']);
+      // Both pierced, each into its own slot.
+      expect(body).toContain('<h1>Invoices</h1>');
+      expect(body).toContain('<p>3 unread</p>');
+    });
+
+    it('composes the widget on a page no bound fragment matches', async () => {
+      const { gateway, asked } = trackingGateway();
+      const shell = async () =>
+        htmlResponse(`<html><body><fragment-slot name="notifications" src="/panel"></fragment-slot></body></html>`);
+
+      const body = await (await gateway.handle(documentRequest('/'), shell))!.text();
+
+      expect(body).toContain('<p>3 unread</p>');
+      expect(asked['billing']).toEqual([]);
+      expect(asked['notifications']).toEqual(['/panel']);
+    });
+
+    it('warns when the slot and the manifest disagree about where the fragment lives', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const { gateway } = trackingGateway();
+      const shell = async () =>
+        htmlResponse(`<html><body><fragment-slot name="notifications" src="/widget"></fragment-slot></body></html>`);
+
+      await (await gateway.handle(documentRequest('/'), shell))!.text();
+
+      // Pierced from one path, booted from another: the widget would change under the user on
+      // hydration, and nothing else would ever say so.
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('slot for fragment "notifications"'));
+      warn.mockRestore();
+    });
+
+    it('fills in a slot that declared no src, so the client boots where the content came from', async () => {
+      const { gateway } = trackingGateway();
+      const shell = async () =>
+        htmlResponse(`<html><body><fragment-slot name="notifications"></fragment-slot></body></html>`);
+
+      const body = await (await gateway.handle(documentRequest('/'), shell))!.text();
+
+      expect(body).toContain('src="/panel"');
+    });
+
+    it('warns at registration when an unbound fragment declares no src', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      createGateway({ registry: [{ id: 'notifications', endpoint: 'https://n.internal', bound: false }] });
+
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('bound: false without a src'));
+      warn.mockRestore();
+    });
+  });
+
   it('rejects invalid pierce patterns at registration', () => {
     expect(() =>
       createGateway({ registry: [{ id: 'x', endpoint: 'https://x.internal', pierce: ['/(unclosed'] }] }),
     ).toThrow(/invalid pierce pattern/);
+  });
+
+  it('blames the runtime, not the pattern, when URLPattern is unavailable', () => {
+    const original = Reflect.get(globalThis, 'URLPattern');
+    Reflect.deleteProperty(globalThis, 'URLPattern');
+    try {
+      expect(() =>
+        createGateway({ registry: [{ id: 'x', endpoint: 'https://x.internal', pierce: ['/billing'] }] }),
+      ).toThrow(/no global URLPattern[\s\S]*Node 24/);
+    } finally {
+      Object.defineProperty(globalThis, 'URLPattern', { value: original, configurable: true, writable: true });
+    }
   });
 
   it('pierces through toWebMiddleware', async () => {
@@ -447,5 +548,57 @@ describe('gateway piercing', () => {
     const body = await (await middleware(documentRequest('/billing/x'), next)).text();
 
     expect(body).toContain('<h1>Invoices</h1>');
+  });
+});
+
+describe('the generated service worker', () => {
+  const swRequest = () => new Request('https://example.com/__braid/sw.js');
+
+  it('is not served unless asked for', async () => {
+    const gateway = createGateway({ registry: [{ id: 'billing', endpoint: 'https://b.internal' }] });
+
+    expect(await gateway.handle(swRequest())).toBeNull();
+  });
+
+  it('claims the origin root, which is the only reason to serve it from here', async () => {
+    const gateway = createGateway({
+      registry: [{ id: 'billing', endpoint: 'https://b.internal' }],
+      serviceWorker: true,
+    });
+
+    const response = (await gateway.handle(swRequest()))!;
+
+    // Without this header the worker's scope is capped at /__braid/, where it can serve fragment
+    // assets but not the shell's own — useless for the chunk-failure case that matters most.
+    expect(response.headers.get('service-worker-allowed')).toBe('/');
+    expect(response.headers.get('content-type')).toContain('text/javascript');
+    expect(response.headers.get('cache-control')).toBe('no-cache');
+    expect(await response.text()).toContain('setupBraidWorker');
+  });
+
+  it('accepts a narrower scope for a gateway mounted under a path', async () => {
+    const gateway = createGateway({
+      registry: [{ id: 'billing', endpoint: 'https://b.internal' }],
+      serviceWorker: { scope: '/apps/' },
+    });
+
+    expect((await gateway.handle(swRequest()))!.headers.get('service-worker-allowed')).toBe('/apps/');
+  });
+
+  it('stays byte-identical when the registry changes', async () => {
+    const script = async (registry: { id: string; endpoint: string }[]) =>
+      (await createGateway({ registry, serviceWorker: { buildId: 'b-1', precache: ['billing'] } }).handle(
+        swRequest(),
+      ))!.text();
+
+    const before = await script([{ id: 'billing', endpoint: 'https://b.internal' }]);
+    const after = await script([
+      { id: 'billing', endpoint: 'https://b.internal' },
+      { id: 'reviews', endpoint: 'https://r.internal' },
+    ]);
+
+    // Every change to this script is a worker update with its own waiting and activation
+    // lifecycle. Configuration churn must not become worker churn.
+    expect(after).toBe(before);
   });
 });

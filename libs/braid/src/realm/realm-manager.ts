@@ -51,6 +51,8 @@ export interface RealmInit {
 
 export interface RealmHandle {
   readonly kind: RealmKind;
+  /** The fragment this realm belongs to. */
+  readonly fragmentId: string;
   readonly window: Window & typeof globalThis;
   readonly document: Document;
   /**
@@ -268,6 +270,7 @@ function createRealmHandle(
 
   return {
     kind,
+    fragmentId: init.fragmentId,
     window: realmWindow,
     document: realmDocument,
     manifestAdapter,

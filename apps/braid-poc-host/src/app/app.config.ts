@@ -1,3 +1,4 @@
+import { provideSkewData } from '@skewkit/angular-data';
 import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
 import { provideClientHydration, withIncrementalHydration } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -19,6 +20,23 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     provideRouter(routes),
+    /**
+     * The demo's data layer.
+     *
+     * `owner` is required whenever the outbox persists: the store is shared per origin, so
+     * ownership is what stops this app replaying or discarding the billing app's queued work.
+     */
+    provideSkewData({
+      owner: 'host',
+      persistOutbox: true,
+      database: 'braid-poc-demo',
+      // Declared up front: IndexedDB creates object stores only during a version upgrade.
+      //
+      // `demo-outbox` is the shared-data panels' own queue, kept apart from the durability panels'
+      // so that panel 8's "queued on this page" count answers for the work that panel queued and
+      // not for an optimistic edit that is about to confirm on its own.
+      collections: ['demo-entities', 'demo-outbox'],
+    }),
     provideClientHydration(withIncrementalHydration()),
   ],
 };

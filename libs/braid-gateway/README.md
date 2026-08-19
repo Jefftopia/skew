@@ -1,5 +1,8 @@
 # @skewkit/braid-gateway
 
+> Every `/__braid/…` URL this package serves — what asks for it, when, and what comes back — is
+> walked through in [Braid, explained](../../docs/braid-explained.md#4-the-__braid-urls).
+
 The Braid gateway: fetch-native, platform-neutral origin-front middleware. Routes fragment
 traffic by **exact id** under the reserved `/__braid/frag/:fragmentId/*` namespace — no route
 pattern sniffing, no header-trust fallback — and passes everything else through to your existing

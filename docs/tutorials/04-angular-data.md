@@ -29,6 +29,7 @@ import { BUILD_ID } from '../generated/build-id';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideSkewData({
+      owner: 'bulletin',     // this app's name in the shared outbox — required when persisting
       persistOutbox: true,   // queued writes survive a reload
       buildId: BUILD_ID,     // queued entries name the build that wrote them
       onOutboxError: (message, detail) => console.warn(message, detail),
@@ -145,9 +146,8 @@ Two behaviours you get without asking: out-of-order responses are discarded
 
 ## Step 4 — A mutation that can take a punch
 
-`mutation()` is a write with the whole lifecycle declared in one place:
-optimistic application, precise rollback, invalidation, and (next step)
-durability:
+`mutation()` is a write with the whole lifecycle declared in one place: the
+optimistic overlay, rollback, invalidation, and (next step) durability:
 
 ```ts
 import { mutation, tag } from '@skewkit/angular-data';
@@ -156,9 +156,9 @@ readonly renameFund = mutation({
   operation: (input: { id: string; name: string }) =>
     firstValueFrom(this.http.patch(`${API}/v2/funds/${input.id}`, input)),
 
-  // Applied to the store immediately. Everything written through `tx`
-  // is rolled back *precisely* if the operation fails — restored to what
-  // was there, not "roughly re-fetched".
+  // *Describes* the change. It appears in every read immediately, and if the
+  // operation fails the description is dropped — there is nothing to roll
+  // back, because the confirmed record was never touched.
   optimistic: (tx, input) => tx.patch(FundEntity, input.id, { name: input.name }),
 
   // Marked stale once the server agrees; the fund list's query re-runs.
@@ -173,9 +173,27 @@ readonly renameFund = mutation({
 </button>
 ```
 
-Under the hood the optimistic write runs in a **store transaction** — an
-undo log keyed by first-prior-value, so overlapping writes unwind correctly.
-You can use transactions directly for multi-record operations:
+Under the hood that callback runs against a transaction that **records** rather
+than writes, and every read returns `confirmed ⊕ pending`:
+
+```ts
+readonly fund = this.store.select(FundEntity, id);              // includes the pending rename
+readonly asServerSaid = this.store.peekConfirmed(FundEntity, id);
+readonly disagreed = this.renameFund.conflict();                // { expected, actual, paths, entity }
+```
+
+The prediction is stored *with the queued entry*, which is why it survives a
+reload and why another app on the page shows it too. And a rename the server
+accepts but normalizes (`north star` → `North Star`) is neither a failure nor
+something to swap in silently: `onConflict` defaults to `'raise'`, while the
+record stored is the server's either way.
+
+The [flow diagram](../../libs/angular/data/README.md#the-whole-flow-end-to-end)
+traces all of it — query, mutation, offline, reload, flush, invalidation — as
+one numbered sequence.
+
+`store.transaction()` still exists, for writes to the **confirmed** graph that
+you want to unwind yourself:
 
 ```ts
 const tx = store.transaction();

@@ -1,0 +1,44 @@
+{
+  "name": "braid-poc-notifications",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "notifications",
+  "sourceRoot": "apps/braid-poc-notifications/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "development",
+      "options": {
+        "outputPath": "dist/apps/braid-poc-notifications",
+        "index": "apps/braid-poc-notifications/src/index.html",
+        "browser": "apps/braid-poc-notifications/src/main.ts",
+        "server": "apps/braid-poc-notifications/src/main.server.ts",
+        "outputMode": "server",
+        "ssr": {
+          "entry": "apps/braid-poc-notifications/src/server.ts"
+        },
+        "tsConfig": "apps/braid-poc-notifications/tsconfig.app.json",
+        "styles": ["apps/braid-poc-notifications/src/styles.css"]
+      },
+      "configurations": {
+        "production": {
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true,
+          "outputHashing": "all"
+        }
+      }
+    },
+    "serve-poc": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node dist/apps/braid-poc-notifications/server/server.mjs"
+      }
+    }
+  }
+}

@@ -6,6 +6,7 @@ import {
   BRAID_PROTOCOL_VERSION,
   braidFragmentUrl,
   parseBraidPathname,
+  BRAID_SERVICE_WORKER_PATH,
 } from './protocol.js';
 import {
   canFetch,
@@ -99,6 +100,40 @@ export interface GatewayOptions {
    * default: paths carry identifiers, and sometimes personal ones.
    */
   observe?: (event: RoutingEvent) => void;
+  /**
+   * Serve Braid's service worker from `/__braid/sw.js`. Off by default.
+   *
+   * Worth doing here for a reason that is not convenience. **A worker's scope is capped by the path
+   * it is served from**, so a script at `/__braid/sw.js` defaults to controlling `/__braid/` — which
+   * would intercept fragment assets but not the shell's own, making it useless for the chunk-failure
+   * case that matters most. Widening it needs a `Service-Worker-Allowed` header on the script
+   * response, and the gateway is the one component already sitting in front of the origin that can
+   * send it without additional infrastructure configuration.
+   *
+   * The default scope is `/`. That sounds broad and costs nothing: scope precedence is
+   * longest-match, so a worker registered at `/legacy/` still controls clients under `/legacy/`
+   * whatever Braid claims — the root is a fallback, not an exclusion, and the handler ignores
+   * everything outside the namespace anyway. The override exists for a gateway mounted under a path
+   * on an origin it does not own.
+   */
+  serviceWorker?: boolean | ServiceWorkerOptions;
+}
+
+export interface ServiceWorkerOptions {
+  /** The scope to claim, sent as `Service-Worker-Allowed`. Defaults to `/`. */
+  scope?: string;
+  /**
+   * The module the generated worker imports `setupBraidWorker` from.
+   *
+   * A URL your origin serves — the worker runs in its own realm and cannot resolve a bare specifier.
+   * Defaults to `/braid-sw.js`, which is where a build that copies `@skewkit/braid-sw` normally
+   * lands it.
+   */
+  module?: string;
+  /** Fragment ids whose realm stubs the worker precaches at install. */
+  precache?: readonly string[];
+  /** Stamped into the worker so it can report disagreement with the page it is serving. */
+  buildId?: string;
 }
 
 /**
@@ -146,6 +181,9 @@ export function createGateway(options: GatewayOptions): BraidGateway {
   const pierceCacheControl = options.pierceCacheControl ?? 'private';
   const additionalHeaders = options.additionalHeaders ?? {};
   const trustForwardedHeaders = options.trustForwardedHeaders ?? false;
+  const serviceWorker = options.serviceWorker
+    ? (options.serviceWorker === true ? {} : options.serviceWorker)
+    : null;
   const isDevelopment = mode === 'development';
 
   /**
@@ -163,6 +201,10 @@ export function createGateway(options: GatewayOptions): BraidGateway {
 
       if (discovery?.owns(requestUrl.pathname)) {
         return discovery.handle(request, requestUrl);
+      }
+
+      if (serviceWorker && requestUrl.pathname === BRAID_SERVICE_WORKER_PATH) {
+        return serviceWorkerResponse(serviceWorker);
       }
 
       const route = parseBraidPathname(requestUrl.pathname);
@@ -314,7 +356,7 @@ export function createGateway(options: GatewayOptions): BraidGateway {
     fragment: ResolvedFragmentManifest,
     options: { prepare?: boolean } = {},
   ): Promise<Response> {
-    const result = await fetchFragment(request, requestUrl, strippedPathname, fragment);
+    const result = await fetchFragment(request, requestUrl, `${strippedPathname}${requestUrl.search}`, fragment);
 
     if (!result.ok && result.outOfScope) {
       console.warn(String(result.error));
@@ -373,13 +415,16 @@ export function createGateway(options: GatewayOptions): BraidGateway {
   async function fetchFragment(
     request: Request,
     requestUrl: URL,
-    pathname: string,
+    /** The path on the fragment's own endpoint, query included. */
+    path: string,
     fragment: ResolvedFragmentManifest,
   ): Promise<FragmentFetchResult> {
     const { endpoint } = fragment;
 
-    const strippedUrl = new URL(requestUrl);
-    strippedUrl.pathname = pathname;
+    // The caller composes the whole path, query included. Whether the page's query belongs on this
+    // request is a question only the caller can answer — a namespace request forwards it, a bound
+    // fragment renders it, and to a widget the host's `?tab=` means nothing at all.
+    const strippedUrl = new URL(path, requestUrl);
 
     let fragmentRequestUrl: URL;
     let fragmentFetch: typeof fetch;
@@ -526,8 +571,10 @@ export function createGateway(options: GatewayOptions): BraidGateway {
     const pagePath = `${requestUrl.pathname}${requestUrl.search}`;
     const [shellResponse, ...fragmentResults] = await Promise.all([
       next(),
-      // bound fragments render the page's own route, so the endpoint gets the page path
-      ...matches.map((fragment) => fetchFragment(request, requestUrl, requestUrl.pathname, fragment)),
+      // A bound fragment renders the page's own route, so the endpoint gets the page path. An
+      // unbound one is chrome: its content lives at one fixed path, and asking a notifications
+      // endpoint for `/billing/invoices` is a question it has no answer to.
+      ...matches.map((fragment) => fetchFragment(request, requestUrl, fragmentPath(fragment, requestUrl), fragment)),
     ]);
 
     const shell = new Response(shellResponse.body, shellResponse);
@@ -552,6 +599,7 @@ export function createGateway(options: GatewayOptions): BraidGateway {
         return {
           fragmentId: fragment.id,
           content: prepareFragmentHtml(result.response.body!, { fragmentId: fragment.id }),
+          ...(fragment.src === undefined ? {} : { src: fragment.src }),
         };
       }
 
@@ -591,6 +639,53 @@ export function createGateway(options: GatewayOptions): BraidGateway {
       pierced.headers.append(BRAID_FRAGMENT_ID_HEADER, target.fragmentId);
     }
     return pierced;
+  }
+
+  /**
+   * The path this fragment's content is fetched from for a given page.
+   *
+   * The whole difference between a screen and a widget, in one expression.
+   */
+  function fragmentPath(fragment: ResolvedFragmentManifest, requestUrl: URL): string {
+    // `src` verbatim, query and all: an unbound fragment's content lives at one address, and
+    // appending the page's query would give the widget a different cache key on every page it
+    // appears on while changing nothing about what it renders.
+    if (fragment.bound === false && fragment.src) return fragment.src;
+    return `${requestUrl.pathname}${requestUrl.search}`;
+  }
+
+  /**
+   * The generated worker script.
+   *
+   * **Kept byte-stable across registry publishes**, deliberately. The tempting move is to bake the
+   * pinned snapshot id and the fragment ids into it, since this gateway knows them — but then the
+   * script changes on every publish, and every change is a worker update with its own waiting and
+   * activation lifecycle. Configuration churn must not become worker churn, so anything that varies
+   * with the registry is fetched by the worker at runtime instead.
+   */
+  function serviceWorkerResponse(config: ServiceWorkerOptions): Response {
+    const module = config.module ?? '/braid-sw.js';
+    const setup = {
+      ...(config.buildId === undefined ? {} : { buildId: config.buildId }),
+      ...(config.precache === undefined ? {} : { precache: [...config.precache] }),
+    };
+
+    const script =
+      `// Generated by @skewkit/braid-gateway. Serves the Braid namespace only.\n` +
+      `import { setupBraidWorker } from ${JSON.stringify(module)};\n` +
+      `setupBraidWorker(${JSON.stringify(setup)});\n`;
+
+    return new Response(script, {
+      headers: {
+        'content-type': 'text/javascript; charset=utf-8',
+        // The whole reason this lives on the gateway: without it the worker's scope is capped at
+        // /__braid/, where it could serve fragment assets but not the shell's own.
+        'service-worker-allowed': config.scope ?? '/',
+        // A worker script must not be served stale — the browser's update check is the only thing
+        // that ever replaces it.
+        'cache-control': 'no-cache',
+      },
+    });
   }
 
   function describeFragmentFailure(

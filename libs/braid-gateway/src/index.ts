@@ -14,7 +14,7 @@
  */
 
 export { createGateway, toWebMiddleware, toFetchHandler } from './gateway.js';
-export type { BraidGateway, GatewayOptions, RoutingEvent } from './gateway.js';
+export type { BraidGateway, GatewayOptions, RoutingEvent, ServiceWorkerOptions } from './gateway.js';
 export {
   DEFAULT_ADAPTER,
   DEFAULT_TIMEOUT_MS,
@@ -46,6 +46,7 @@ export {
   BRAID_REALM_PREFIX,
   BRAID_DOCUMENT_PREFIX,
   BRAID_PROTOCOL_VERSION,
+  BRAID_SERVICE_WORKER_PATH,
   parseBraidPathname,
 } from './protocol.js';
 export type { BraidRoute, BraidRouteKind } from './protocol.js';

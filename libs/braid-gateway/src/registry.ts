@@ -44,6 +44,22 @@ export interface FragmentManifest {
    * mechanism for asset or data routing, which is always exact and id-addressed.
    */
   pierce?: string[];
+  /**
+   * Whether this fragment renders the page's route.
+   *
+   * Defaults to `true`: a bound fragment is a screen, so it is fetched at the page's own path and
+   * participates in host navigation. `false` marks a widget — header chrome, a sidebar, a global
+   * search box — whose content lives at one fixed path regardless of which page it appears on.
+   */
+  bound?: boolean;
+  /**
+   * Where an unbound fragment's content lives, as a path on its own endpoint (`/panel`).
+   *
+   * Required in practice for `bound: false`, because the alternative is asking a notifications
+   * endpoint for `/billing/invoices` — a request that means nothing to it and that will, at best,
+   * 404 on every page the widget appears on.
+   */
+  src?: string;
   /** Typed event surface for hosts. Reserved; not enforced by this build. */
   events?: Record<string, { detail: string }>;
   /** Per-fragment budget for endpoint fetches, in milliseconds. */
@@ -155,6 +171,7 @@ export interface ResolvedFragmentManifest extends FragmentManifest {
   adapter: string;
   timeoutMs: number;
   fallback: FragmentFallback;
+  bound: boolean;
 }
 
 /**
@@ -181,11 +198,21 @@ export function normalizeManifest(manifest: FragmentManifest): ResolvedFragmentM
     throw new Error(`braid-gateway: manifest "${manifest.id}" is missing its endpoint`);
   }
 
+  // Warned rather than thrown: the fragment still composes, at the page path, which is wrong in a
+  // way that shows up as an empty widget rather than as an error anyone can trace back to here.
+  if (manifest.bound === false && !manifest.src) {
+    console.warn(
+      `braid-gateway: fragment "${manifest.id}" declares bound: false without a src, so it will be ` +
+        `fetched at each page's own path — declare the path its content lives at, e.g. src: "/panel"`,
+    );
+  }
+
   return {
     ...manifest,
     adapter: manifest.adapter ?? DEFAULT_ADAPTER,
     timeoutMs: manifest.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     fallback: manifest.fallback ?? 'placeholder',
+    bound: manifest.bound ?? true,
   };
 }
 
@@ -274,6 +301,9 @@ export class Registry {
 function compilePierceRoutes(manifests: Map<string, ResolvedFragmentManifest>): CompiledPierceRoute[] {
   const routes: CompiledPierceRoute[] = [];
 
+  const piercing = [...manifests.values()].some((manifest) => (manifest.pierce ?? []).length > 0);
+  if (piercing) assertURLPatternAvailable();
+
   for (const manifest of manifests.values()) {
     for (const pathnamePattern of manifest.pierce ?? []) {
       let pattern: URLPattern;
@@ -301,6 +331,22 @@ function compilePierceRoutes(manifests: Map<string, ResolvedFragmentManifest>): 
   }
 
   return routes;
+}
+
+/**
+ * `URLPattern` is a global only from Node 23.8; on older runtimes the constructor throws a
+ * ReferenceError. Left to the per-pattern try/catch below that reads as "your pattern is invalid"
+ * for every pattern in the registry, which sends you debugging the manifest instead of the runtime.
+ */
+function assertURLPatternAvailable(): void {
+  if (typeof URLPattern !== 'undefined') return;
+
+  const node = typeof process !== 'undefined' && process.versions?.node ? ` (running Node ${process.versions.node})` : '';
+  throw new Error(
+    `braid-gateway: this runtime has no global URLPattern${node}, which pierce patterns require — ` +
+      `use Node 24 or newer (URLPattern is global from Node 23.8), or a runtime that implements the ` +
+      `URL Pattern API (Workers, Deno, modern browsers)`,
+  );
 }
 
 function indexManifests(manifests: FragmentManifest[]): Map<string, ResolvedFragmentManifest> {

@@ -4,8 +4,11 @@ The Braid client runtime — compose independently deployed frontend apps into o
 one origin, one DOM, one accessibility tree, while each app keeps its own JavaScript world, its
 own dependencies, and its own release train.
 
-Braid is the composition layer of SkewKit. Its founding architecture lives in
-[`docs/braid-architecture.md`](../../docs/braid-architecture.md).
+Braid is the composition layer of SkewKit.
+
+**Start with [Braid, explained](../../docs/braid-explained.md)** if you are new to this: it defines
+every term this README uses and walks one page load end to end. The founding architecture and its
+rationale live in [`docs/braid-architecture.md`](../../docs/braid-architecture.md).
 
 Also see: [failure modes](../../docs/braid-failure-modes.md) ·
 [working POC](../../docs/braid-poc.md) ·

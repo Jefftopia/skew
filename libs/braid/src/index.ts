@@ -29,6 +29,9 @@ export { customElementAdapter } from './adapters/custom-element-adapter.js';
 export { FragmentSlot } from './elements/fragment-slot.js';
 export type { FragmentSlotState } from './elements/fragment-slot.js';
 export { braidContext } from './context/context-bus.js';
+export { registerBraidServiceWorker } from './compat/register-worker.js';
+export type { RegisterBraidServiceWorkerOptions } from './compat/register-worker.js';
+export type { ContextSubscribeOptions, ContextReadOptions } from './context/context-bus.js';
 export { createRealm } from './realm/realm-manager.js';
 export type { RealmKind, RealmHandle, RealmInit, RealmImportMap } from './realm/realm-manager.js';
 export {

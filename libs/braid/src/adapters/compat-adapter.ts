@@ -47,10 +47,21 @@ export const compatAdapter: InstalledAdapter = {
 
     // Install the full compat illusion onto the realm (window patches, document facade,
     // boundary stamping, born-inert scripts).
-    initializeRealmContext(realm, fragmentShadowRoot, contentRoot, bound, fragmentAbortController);
+    const realmContext = initializeRealmContext(
+      realm,
+      fragmentShadowRoot,
+      contentRoot,
+      bound,
+      fragmentAbortController,
+    );
 
     // Now activate the fragment's scripts, in document order, in the realm's JS context.
     executeScriptsInFragmentContent(contentRoot, realm.document);
+
+    // The fragment's own code has run, so its router has resolved whatever initial route it was
+    // going to resolve. From here a navigation is the user's, and a bound fragment may drive the
+    // host URL with it.
+    realmContext.bootComplete();
 
     // Replicate the document lifecycle the fragment would observe standalone.
     fragmentShadowRoot[compatMetadataSymbol].documentReadyState = 'interactive';

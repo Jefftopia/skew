@@ -26,6 +26,7 @@ export type FindingCode =
   | 'missing-endpoint'
   | 'invalid-endpoint'
   | 'invalid-pierce-pattern'
+  | 'urlpattern-unavailable'
   | 'pierce-overlap'
   | 'custom-element-incomplete'
   | 'empty-access-rule';
@@ -105,8 +106,23 @@ function validateEndpoint(manifest: FragmentManifest): RegistryFinding[] {
 
 function validatePierce(manifest: FragmentManifest): RegistryFinding[] {
   const findings: RegistryFinding[] = [];
+  const patterns = manifest.pierce ?? [];
 
-  for (const pattern of manifest.pierce ?? []) {
+  // Without a global URLPattern every constructor call throws, which would report each pattern as
+  // invalid syntax; the runtime is what is wrong, and saying so once is the useful finding.
+  if (patterns.length > 0 && typeof URLPattern === 'undefined') {
+    return [
+      {
+        severity: 'error',
+        code: 'urlpattern-unavailable',
+        fragmentIds: [manifest.id],
+        message: `pierce patterns cannot be compiled: this runtime has no global URLPattern`,
+        hint: 'use Node 24 or newer (URLPattern is global from Node 23.8), or a runtime that implements the URL Pattern API',
+      },
+    ];
+  }
+
+  for (const pattern of patterns) {
     try {
       new URLPattern({ pathname: pattern });
     } catch {

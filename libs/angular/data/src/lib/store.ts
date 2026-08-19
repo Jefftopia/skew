@@ -1,5 +1,6 @@
-import { Injectable, Signal, computed, signal } from '@angular/core';
+import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import type { EntityType } from './entity';
+import { PendingWrites, applyOverlays, type EntityOverlay } from './overlay';
 
 /**
  * The normalized entity store.
@@ -11,6 +12,13 @@ import type { EntityType } from './entity';
  *
  *   ✗ bulletins = this.list.value();          // a private copy that drifts
  *   ✓ bulletins = store.selectAll(Bulletin);  // a view of the shared graph
+ *
+ * **Reads are the view, not the confirmed graph.** Every read here returns
+ * `confirmed ⊕ pending`: what the server has agreed to, with the queue's
+ * predictions applied on top. Writes go only to the confirmed half — an
+ * optimistic change is a queued entry, never a write here — which is why a
+ * failed mutation needs no undo log and a reload shows the user their unsent
+ * edit instead of the value they replaced. See `overlay.ts`.
  */
 
 type EntityTable = ReadonlyMap<string, unknown>;
@@ -39,6 +47,7 @@ export interface StoreTransaction {
 @Injectable({ providedIn: 'root' })
 export class EntityStore {
   private readonly state = signal<StoreState>(new Map());
+  private readonly pending = inject(PendingWrites);
 
   /**
    * Memoized per `type#id`. Without this, calling `select()` inside a template
@@ -48,25 +57,39 @@ export class EntityStore {
   private readonly selectCache = new Map<string, Signal<unknown>>();
   private readonly allCache = new Map<string, Signal<readonly unknown[]>>();
 
-  /** A single record, or `undefined` when absent. */
+  /** A single record as this page shows it: confirmed, with any pending write applied. */
   select<T>(type: EntityType<T>, id: string): Signal<T | undefined> {
     const cacheKey = `${type.name}#${id}`;
     const existing = this.selectCache.get(cacheKey);
     if (existing) return existing as Signal<T | undefined>;
 
-    const derived = computed(() => this.state().get(type.name)?.get(id) as T | undefined);
+    const derived = computed(() => this.view<T>(type, id));
     this.selectCache.set(cacheKey, derived);
     return derived;
   }
 
-  /** Every record of a type, in insertion order. */
+  /**
+   * Every record of a type, in insertion order, with pending writes applied.
+   *
+   * A pending record nothing has confirmed yet still appears, and a pending removal does not: a
+   * list that omits what the user just created, or keeps what they just deleted, is the same bug
+   * seen from either end.
+   */
   selectAll<T>(type: EntityType<T>): Signal<readonly T[]> {
     const existing = this.allCache.get(type.name);
     if (existing) return existing as Signal<readonly T[]>;
 
     const derived = computed(() => {
       const table = this.state().get(type.name);
-      return table ? ([...table.values()] as T[]) : [];
+      const overlaid = this.pending.overlays().filter((overlay) => overlay.typeName === type.name);
+      const ids = new Set([...(table?.keys() ?? []), ...overlaid.map((overlay) => overlay.id)]);
+
+      const rows: T[] = [];
+      for (const id of ids) {
+        const value = this.view<T>(type, id);
+        if (value !== undefined) rows.push(value);
+      }
+      return rows;
     });
     this.allCache.set(type.name, derived);
     return derived;
@@ -81,8 +104,25 @@ export class EntityStore {
     return computed(() => all().filter(predicate));
   }
 
-  /** Reads a record without subscribing. For use inside effects and handlers. */
+  /**
+   * Reads a record without subscribing. For use inside effects and handlers.
+   *
+   * The same value `select` would give, pending writes included — a read that disagrees with the
+   * subscribed read depending on which one you happened to call is a trap, not an optimization.
+   * {@link peekConfirmed} is the one that skips the overlay.
+   */
   peek<T>(type: EntityType<T>, id: string): T | undefined {
+    return this.view<T>(type, id);
+  }
+
+  /**
+   * The record as the server last reported it, ignoring anything queued.
+   *
+   * What a conflict is measured against: "the server disagreed with you" is a claim about the
+   * prediction, so comparing against a value that already includes the prediction would answer a
+   * different question.
+   */
+  peekConfirmed<T>(type: EntityType<T>, id: string): T | undefined {
     return this.state().get(type.name)?.get(id) as T | undefined;
   }
 
@@ -177,6 +217,17 @@ export class EntityStore {
   }
 
   // --- internals ---------------------------------------------------------
+
+  /** `confirmed ⊕ pending` for one record. The single place the two halves meet. */
+  private view<T>(type: EntityType<T>, id: string): T | undefined {
+    const confirmed = this.state().get(type.name)?.get(id) as T | undefined;
+    const overlays: EntityOverlay[] = this.pending
+      .overlays()
+      .filter((overlay) => overlay.typeName === type.name && overlay.id === id);
+
+    if (overlays.length === 0) return confirmed;
+    return applyOverlays(confirmed, overlays);
+  }
 
   private toWrites<T>(
     type: EntityType<T>,

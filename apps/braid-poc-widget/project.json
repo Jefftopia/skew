@@ -7,9 +7,11 @@
   "targets": {
     "build": {
       "executor": "nx:run-commands",
-      "outputs": ["{workspaceRoot}/dist/apps/braid-poc-widget"],
+      "outputs": [
+        "{workspaceRoot}/dist/apps/braid-poc-widget"
+      ],
       "options": {
-        "command": "mkdir -p dist/apps/braid-poc-widget && cp apps/braid-poc-widget/star-rating.js dist/apps/braid-poc-widget/"
+        "command": "mkdir -p dist/apps/braid-poc-widget && cp apps/braid-poc-widget/star-rating.js apps/braid-poc-widget/live-text.js dist/apps/braid-poc-widget/"
       }
     }
   }

@@ -1,5 +1,6 @@
 export * from './lib/entity';
 export * from './lib/store';
+export * from './lib/overlay';
 export * from './lib/cache-registry';
 export * from './lib/config';
 export * from './lib/outbox';

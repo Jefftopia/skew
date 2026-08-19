@@ -11,6 +11,7 @@ protects you from — reproduced, not described.
 | 3 | [Versioned stores, the Angular way](03-angular-core.md) | `@skewkit/angular-core` | A draft editor on DI + Signals with zero flicker and typed failure states |
 | 4 | [One graph, durable writes](04-angular-data.md) | `@skewkit/angular-data` | A normalized fund list with optimistic, outbox-durable order submission |
 | 5 | [Compose without colliding](05-braid.md) | `@skewkit/braid-gateway` · `@skewkit/braid-client` | An enterprise microfrontend shell with server-side piercing, isolated iframe realms, and zero-blast-radius degradation |
+| 6 | [Client storage that survives a reload](06-data-storage.md) | `@skewkit/data` | A framework-free cache on IndexedDB — shared across apps, invalidated by tag, with a durable queue for writes the network never took |
 
 **Read them in the demo.** These pages are also served inside the federated
 demo apps — the remote exposes a `./Tutorials` module and the host routes to

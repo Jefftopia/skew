@@ -10,6 +10,9 @@
     "middleware"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
   "sideEffects": false,
   "type": "module",
   "main": "./src/index.js",

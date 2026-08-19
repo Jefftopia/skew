@@ -1,0 +1,10 @@
+/*
+ * The widget styles itself. It is chrome inside someone else's header, so everything here is
+ * scoped to the app's own elements — a fragment that styles `body` would be styling a page it
+ * knows nothing about, and the shadow root it lands in makes that a silent no-op anyway.
+ */
+notifications-root {
+  display: block;
+  font: 13px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #0f172a;
+}

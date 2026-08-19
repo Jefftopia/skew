@@ -12,6 +12,16 @@ export interface CreateEnvOptions {
   /** Fragment → host event dispatch (surfaced as `braid:event` on the slot element). */
   emit(type: string, detail?: unknown): void;
   signal: AbortSignal;
+  /** Names this fragment in context-version errors. */
+  fragmentId?: string;
+  /**
+   * The contract version this fragment speaks for each context key, from its manifest.
+   *
+   * A fragment built months ago reads a context published today, so it declares what it can parse
+   * and the bus projects each delivery down to it. Absent, a fragment is assumed current — right for
+   * one built from the same source, and the reason a fragment that knows it is behind must say so.
+   */
+  contextVersions?: Readonly<Record<string, number>>;
 }
 
 function parseEnvLocation(routeUrl: string): EnvLocation {
@@ -37,6 +47,12 @@ export function createFragmentEnv(options: CreateEnvOptions): FragmentEnv {
 
   let location = parseEnvLocation(routeUrl);
   const historyListeners = new Set<(location: EnvLocation) => void>();
+
+  /** The version this fragment declared for a key, and the name to blame if it is unreachable. */
+  const contextOptions = (key: string) => ({
+    ...(options.contextVersions?.[key] === undefined ? {} : { as: options.contextVersions[key] }),
+    ...(options.fragmentId === undefined ? {} : { fragmentId: options.fragmentId }),
+  });
 
   const applyNavigation = (url: string, state: unknown, replace: boolean) => {
     const target = new URL(url, location.href);
@@ -87,9 +103,10 @@ export function createFragmentEnv(options: CreateEnvOptions): FragmentEnv {
       },
     },
     context: {
-      get: (key) => braidContext.get(key),
+      get: (key) => braidContext.get(key, contextOptions(key)),
       subscribe: (key, listener, subscribeOptions) =>
         braidContext.subscribe(key, listener, {
+          ...contextOptions(key),
           signal: subscribeOptions?.signal ?? signal,
         }),
     },

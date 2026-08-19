@@ -1,0 +1,39 @@
+{
+  "name": "@skewkit/braid-sw",
+  "version": "0.0.1",
+  "description": "Braid service worker \u2014 skew-aware asset serving for composed pages: each fragment gets its own build-keyed cache partition, so a page already open keeps getting the chunks it was built against after a deploy lands. Ships as a handler to compose into an existing worker, and as a complete worker.",
+  "keywords": [
+    "micro-frontends",
+    "service-worker",
+    "version-skew",
+    "cache",
+    "offline"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jefftopia/skew.git",
+    "directory": "libs/braid-sw"
+  },
+  "homepage": "https://github.com/Jefftopia/skew#readme",
+  "bugs": {
+    "url": "https://github.com/Jefftopia/skew/issues"
+  }
+}

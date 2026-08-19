@@ -84,6 +84,7 @@ shared identity and no write primitive.
 
 ```ts
 provideSkewData({
+  owner: 'bulletin',            // required when persisting — see below
   persistOutbox: true,          // queued writes survive a reload
   buildId: BUILD_ID,
   onOutboxError: (msg, detail) => telemetry.error(msg, detail),
@@ -108,8 +109,16 @@ readonly publish = mutation({
   invalidates: (b) => [tag.entity(Bulletin, b.id), 'bulletins'],
   durability: 'outbox',
   schemaVersion: 41,
+  onConflict: 'raise', // default │ 'accept' │ (conflict) => valueToStore
 });
 ```
+
+`optimistic` **describes** the change rather than applying it: the description
+is queued, and every read returns `confirmed ⊕ pending`. So a failed write needs
+no rollback (the entry is dropped), the prediction survives a reload, and the
+other apps on the page see it too. `store.peekConfirmed(...)` is the server's
+last word, `publish.conflict()` is a server that accepted the write and stored
+something else, and `publish.hasPendingWrite()` is "not saved yet".
 
 Outbox rules (they're constraints, not suggestions):
 
@@ -117,7 +126,8 @@ Outbox rules (they're constraints, not suggestions):
   bootstrap**, not lazily in a click handler — after a reload there's no
   closure left; queued entries find their operation again by id.
 - Flushing is strictly sequential; a failure stops the drain (entries often
-  depend on each other). Optimistic state stays applied while queued.
+  depend on each other). Optimistic state stays applied while queued — it *is*
+  the queue, so the two cannot disagree.
 - After `maxOutboxAttempts`, entries are dropped *loudly* via `onOutboxError`.
 - A queue written by a newer build is left untouched (`ahead`) — replaying it
   would send payloads this build doesn't understand.

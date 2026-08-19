@@ -79,10 +79,13 @@ async function runOrderMutation(
   input: unknown,
   entry: OutboxEntry,
 ): Promise<unknown> {
+  // An entry that declared no contract version is v1 by definition — that is the default the outbox
+  // stamps on entries whose caller did not say — so the fallback is a reading of the record, not a
+  // guess about it.
   const firstEnvelope =
     entry.schemaVersion === 2
       ? OrderSchemaV2.write(input as OrderV2)
-      : { v: entry.schemaVersion, payload: input };
+      : { v: entry.schemaVersion ?? 1, payload: input };
 
   trace('step', 'order', `POST /v2/orders as v${firstEnvelope.v}`, true);
   const first = await postOrder(firstEnvelope);

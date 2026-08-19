@@ -4,6 +4,7 @@ import type { FragmentManifest } from '@skewkit/braid-gateway';
 import { toNodeMiddleware } from '@skewkit/braid-gateway/node';
 import { createRegistryApi, createRoutingObservations, createSnapshot, serializeObservations } from '@skewkit/braid-registry';
 import { fileSnapshotStore } from '@skewkit/braid-registry/node';
+import { mountDemoApi } from './demo-api.js';
 import express from 'express';
 import { writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -68,6 +69,17 @@ const REGISTRY: FragmentManifest[] = [
      * `events` is what the adapter republishes to the host as `braid:event`.
      */
     {
+      // The demo's live-typing panel. A second custom element from the same widget deployment.
+      id: 'live-text',
+      endpoint: process.env['BRAID_WIDGET_ORIGIN'] ?? 'http://localhost:4503',
+      adapter: 'custom-element',
+      entry: '/live-text.js',
+      element: 'live-text',
+      title: 'Live text',
+      description: 'Renders text the host is typing, in its own realm.',
+      tags: ['widget', 'demo'],
+    },
+    {
       id: 'rating',
       endpoint: process.env['BRAID_WIDGET_ORIGIN'] ?? 'http://localhost:4503',
       adapter: 'custom-element',
@@ -77,6 +89,30 @@ const REGISTRY: FragmentManifest[] = [
       title: 'Star rating',
       description: 'A framework-free web component, mounted through the contract adapter.',
       tags: ['widget'],
+    },
+
+    /**
+     * The unbound fragment: shell chrome rather than a screen.
+     *
+     * `bound: false` with `src` is the whole difference. A bound fragment is asked for the page the
+     * user is on; this one is asked for `/panel` on every page, because that is where its content
+     * lives and `/billing/invoices` is a question its endpoint has no answer to.
+     *
+     * The tight `timeoutMs` is not caution, it is the price of `pierce: ['/*']`: this fetch is now
+     * on the critical path of every document request, so a slow widget would slow the whole site.
+     * Past the budget the slot degrades to `placeholder` and the client boots the fragment itself.
+     */
+    {
+      id: 'notifications',
+      endpoint: process.env['BRAID_NOTIFICATIONS_ORIGIN'] ?? 'http://localhost:4505',
+      bound: false,
+      src: '/panel',
+      pierce: ['/', '/*'],
+      timeoutMs: 400,
+      fallback: 'placeholder',
+      title: 'Notifications',
+      description: 'Server-rendered header chrome, deployed on its own schedule.',
+      tags: ['chrome'],
     },
 
     /**
@@ -185,6 +221,11 @@ app.use(async (req, res, next) => {
 // The console itself. Its bundle uses relative asset URLs, so it works under this prefix without
 // being rebuilt for it — hence the redirect: without the trailing slash the browser would resolve
 // `./assets/…` against `/__braid/` and miss.
+// The demo's data sources: SWAPI for reads, a controllable mock for writes. Mounted before the
+// Angular handler so it is not swallowed by the SSR catch-all.
+app.use(express.json());
+mountDemoApi(app);
+
 app.use('/__braid/console', (req, res, next) => {
   // Exact-match on originalUrl, not a route: Express treats `/x` and `/x/` as the same path, so
   // `app.get('/__braid/console')` would also catch the slashed form and redirect it to itself.

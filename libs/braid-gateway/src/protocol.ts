@@ -30,6 +30,9 @@ export const BRAID_NAMESPACE_PREFIX = BRAID_FRAGMENT_PREFIX;
  *
  * v2 split the single fragment namespace into frag/realm/doc.
  */
+/** Where the gateway serves its generated service worker, when asked to. */
+export const BRAID_SERVICE_WORKER_PATH = '/__braid/sw.js';
+
 export const BRAID_PROTOCOL_VERSION = '2';
 
 /** Name of the `<meta>` element carrying the protocol version in the realm stub document. */

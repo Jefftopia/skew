@@ -1,0 +1,24 @@
+{
+  "name": "@skewkit/data",
+  "version": "0.0.1",
+  "description": "Local-first client data layer: persistence-first, skew-tolerant across independently deployed readers.",
+  "keywords": ["local-first", "indexeddb", "offline", "outbox", "micro-frontends", "skew"],
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": { "types": "./src/index.d.ts", "default": "./src/index.js" },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": { "@skewkit/core": "^0.0.1" },
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jefftopia/skew.git",
+    "directory": "libs/data"
+  },
+  "homepage": "https://github.com/Jefftopia/skew#readme",
+  "bugs": { "url": "https://github.com/Jefftopia/skew/issues" }
+}

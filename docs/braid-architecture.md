@@ -1,5 +1,10 @@
 # Braid Architecture
 
+> **New here?** This document assumes the vocabulary — *fragment*, *realm*, *slot*, *piercing*,
+> *the `/__braid/` namespace*. [**Braid, explained**](braid-explained.md) introduces all of it from
+> scratch, with a walkthrough of one page load, and takes about fifteen minutes. Start there and
+> come back.
+
 - **Status:** Draft for review.
 - **Name:** **Braid** — independent strands composed into one strong cord, where every strand keeps its own identity and dependencies, while remaining unbraidable (incremental migration is completely reversible).
 - **Positioning:** Braid is the **composition layer of SkewKit**. Its thesis is the elimination of version-skew errors across independently deployed frontend applications. It removes *dependency skew* structurally (isolated JavaScript realms and per-fragment import maps prevent co-deployed apps from colliding) and surfaces *contract skew* at the fragment boundary, where SkewKit's contract-migration engine bridges version differences over the context bus.
@@ -140,7 +145,9 @@ Braid never modifies global variables or prototypes on the host page. Even when 
 
 ### 4. Exact Namespace Routing
 
-All fragment traffic is routed through a dedicated origin namespace: `/__braid/frag/:fragmentId/*`. Addressing fragments by exact ID ensures deterministic asset resolution, clean caching, and safe support for nested fragments without relying on fragile header sniffing or ambiguous path heuristics. Route patterns in manifests are used solely as sugar for server-side piercing.
+All fragment traffic is routed through a dedicated origin namespace: `/__braid/frag/:fragmentId/*`
+(the realm stub and document namespaces sit beside it — every path, and who requests it when, is
+tabulated in [Braid, explained §4](braid-explained.md#4-the-__braid-urls)). Addressing fragments by exact ID ensures deterministic asset resolution, clean caching, and safe support for nested fragments without relying on fragile header sniffing or ambiguous path heuristics. Route patterns in manifests are used solely as sugar for server-side piercing.
 
 ### 5. Data-Driven Manifest Registry
 
