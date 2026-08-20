@@ -19,6 +19,14 @@
  */
 
 export { RegistryConsole, filterEntries } from './lib/registry-console.js';
+export { TopologyGraph, layoutTopology } from './lib/topology-graph.js';
+export { IntegrationPanel } from './lib/integration-panel.js';
+export type { IntegrationPanelProps } from './lib/integration-panel.js';
+export { integrationSnippet, allIntegrationSnippets, integrationWarnings, INTEGRATION_TARGETS } from './lib/integration.js';
+export type { IntegrationTarget, IntegrationSnippet } from './lib/integration.js';
+export type { TopologyGraphProps } from './lib/topology-graph.js';
+export { buildTopology, neighborhood, coTenants, edgeKey } from './lib/topology.js';
+export type { Topology, TopologyNode, TopologyEdge, TopologyNodeKind } from './lib/topology.js';
 export type { RegistryConsoleProps } from './lib/registry-console.js';
 export { RegistryEditor } from './lib/registry-editor.js';
 export type { RegistryEditorProps } from './lib/registry-editor.js';

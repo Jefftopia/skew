@@ -433,6 +433,8 @@ export function createDataClient(options: DataClientOptions): DataClient {
         optimistic: [
           {
             key: definition.key,
+            // Stamped so the prediction is only ever shown to the tenant it was made for.
+            partition,
             patch: definition.patch as Record<string, unknown>,
             ...(definition.removes ? { removed: true } : {}),
           },
@@ -494,7 +496,10 @@ export function createDataClient(options: DataClientOptions): DataClient {
       const sink = {
         async receive(record: PushRecord) {
           if (controller.signal.aborted) return;
-          await store.put({ id: record.key, partition: options.partition(), value: record.value as T });
+          // The stream's own answer wins when it has one: a socket carrying several tenants' events
+          // knows which tenant each belongs to, and the reader's current partition does not.
+          const target = record.partition ?? options.partition();
+          await store.put({ id: record.key, partition: target, value: record.value as T });
 
           // The pending tag, not the record's own: this refreshes readers from the store, where the
           // value already is. Marking the record stale would answer a push by fetching the thing the
@@ -586,7 +591,9 @@ function createQuery<T>(
       return false;
     }
 
-    const overlays: OptimisticOverlay[] = context.outbox ? await context.outbox.pendingFor(definition.key) : [];
+    const overlays: OptimisticOverlay[] = context.outbox
+      ? await context.outbox.pendingFor(definition.key, context.partition())
+      : [];
     const data = overlays.reduce<T | undefined>(
       (value, overlay) => (overlay.removed ? undefined : ({ ...(value ?? {}), ...overlay.patch } as T)),
       record.value,

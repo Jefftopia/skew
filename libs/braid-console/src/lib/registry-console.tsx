@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DiscoveryEntry } from '@skewkit/braid-gateway';
 import { fetchRegistry, type ConsoleApi, type RegistryListing } from './client.js';
 import { ensureStyles } from './styles.js';
+import { buildTopology } from './topology.js';
+import { TopologyGraph } from './topology-graph.js';
+import { IntegrationPanel } from './integration-panel.js';
 
 export interface RegistryConsoleProps {
   /** How to reach the gateway. Defaults to this origin's `/__braid/registry`. */
@@ -15,7 +18,26 @@ export interface RegistryConsoleProps {
   className?: string;
   /** Called whenever a listing loads, for hosts that want their own chrome (counts, timestamps). */
   onLoaded?: (listing: RegistryListing) => void;
+  /**
+   * Hide the title bar, for a host that already renders its own page heading.
+   *
+   * Defaults to showing it, because the standalone deployment is a whole page and a page with no
+   * title is disorienting. An admin shell embedding this usually has a heading already, and two
+   * competing ones read as a bug.
+   */
+  chrome?: boolean;
+  /**
+   * Which panel to show, when the host wants to own the tab strip.
+   *
+   * Uncontrolled by default — the console renders its own tabs, which is what a library embedder
+   * dropping it into a page wants. A host that has its own chrome (or that deep-links views into
+   * its router) passes this and renders the switcher itself, rather than ending up with two rows
+   * of tabs disagreeing about which one is selected.
+   */
+  view?: ConsoleView;
 }
+
+export type ConsoleView = 'fragments' | 'topology';
 
 type State =
   | { status: 'loading' }
@@ -32,10 +54,14 @@ type State =
  * What it deliberately does not do: own the URL, own a session, or style anything outside itself.
  * See `styles.ts` for the second, and `ConsoleApi` for the first two.
  */
-export function RegistryConsole({ api, theme, className, onLoaded }: RegistryConsoleProps) {
+export function RegistryConsole({ api, theme, className, onLoaded, chrome = true, view }: RegistryConsoleProps) {
   const [state, setState] = useState<State>({ status: 'loading' });
   const [query, setQuery] = useState('');
+  const [ownTab, setOwnTab] = useState<ConsoleView>('fragments');
+  const tab = view ?? ownTab;
   const [reloadToken, setReloadToken] = useState(0);
+  /** The fragment whose embed snippet is open, if any. */
+  const [embedding, setEmbedding] = useState<DiscoveryEntry | null>(null);
 
   // The api object is usually an inline literal, so a new identity every render. Depending on it
   // directly would refetch forever; these fields are what actually determine the request.
@@ -73,6 +99,10 @@ export function RegistryConsole({ api, theme, className, onLoaded }: RegistryCon
   const entries = state.status === 'ready' ? state.listing.entries : [];
   const visible = useMemo(() => filterEntries(entries, query), [entries, query]);
 
+  // The graph reads the *filtered* set, so the search box narrows both views the same way. A graph
+  // that ignored the filter would contradict the table sitting one tab away from it.
+  const topology = useMemo(() => buildTopology(visible), [visible]);
+
   const reload = useCallback(() => setReloadToken((token) => token + 1), []);
 
   return (
@@ -80,14 +110,65 @@ export function RegistryConsole({ api, theme, className, onLoaded }: RegistryCon
       {state.status === 'error' ? (
         <ErrorPanel error={state.error} onRetry={reload} />
       ) : (
-        <>
-          <Header
-            count={visible.length}
-            total={entries.length}
-            loading={state.status === 'loading'}
-            query={query}
-            onQueryChange={setQuery}
-          />
+        <div className="braid-console__shell">
+          {chrome && (
+            <div className="braid-console__titlebar">
+              <h2 className="braid-console__producttitle">Fragment registry</h2>
+              <span className="braid-console__breadcrumb">
+                <span aria-hidden="true">·</span>
+                <code>{api?.baseUrl || 'this origin'}</code>
+                {state.status === 'ready' && <span>protocol {state.listing.protocolVersion}</span>}
+              </span>
+            </div>
+          )}
+
+          <div className="braid-console__commandbar">
+            {view === undefined && (
+            <div className="braid-console__tabs" role="tablist" aria-label="Registry views">
+              <button
+                type="button"
+                role="tab"
+                className="braid-console__tab"
+                aria-selected={tab === 'fragments'}
+                onClick={() => setOwnTab('fragments')}
+              >
+                Fragments
+                <span className="braid-console__tabcount">{visible.length}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                className="braid-console__tab"
+                aria-selected={tab === 'topology'}
+                onClick={() => setOwnTab('topology')}
+              >
+                Topology
+                <span className="braid-console__tabcount">{topology.routes.length}</span>
+              </button>
+            </div>
+            )}
+
+            <span className="braid-console__spacer" />
+
+            <button type="button" className="braid-console__command" onClick={reload} disabled={state.status === 'loading'}>
+              <span className="braid-console__commandicon" aria-hidden="true">
+                ⟳
+              </span>
+              {state.status === 'loading' ? 'Refreshing…' : 'Refresh'}
+            </button>
+            <span className="braid-console__commandsep" aria-hidden="true" />
+            <input
+              className="braid-console__search"
+              type="search"
+              value={query}
+              placeholder="Filter by id, title, tag, route"
+              aria-label="Filter fragments"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+
+          {state.status === 'ready' && <StatStrip listing={state.listing} entries={visible} topology={topology} />}
+
           {state.status === 'ready' && state.listing.unfiltered && (
             <p className="braid-console__notice" role="status">
               <span aria-hidden="true">◆</span>
@@ -97,52 +178,68 @@ export function RegistryConsole({ api, theme, className, onLoaded }: RegistryCon
               </span>
             </p>
           )}
-          {state.status === 'ready' && visible.length === 0 ? (
+
+          {state.status === 'loading' ? (
+            <p className="braid-console__empty">Loading the registry…</p>
+          ) : visible.length === 0 ? (
             <p className="braid-console__empty">
               {entries.length === 0 ? 'No fragments are registered.' : `Nothing matches “${query}”.`}
             </p>
+          ) : tab === 'fragments' ? (
+            <FragmentTable entries={visible} onEmbed={setEmbedding} />
           ) : (
-            <FragmentTable entries={visible} />
+            <TopologyGraph entries={visible} onEmbed={setEmbedding} />
           )}
-        </>
+
+          {embedding && <IntegrationPanel entry={embedding} onClose={() => setEmbedding(null)} />}
+        </div>
       )}
     </div>
   );
 }
 
-function Header({
-  count,
-  total,
-  loading,
-  query,
-  onQueryChange,
+/**
+ * The four numbers worth reading before scrolling.
+ *
+ * "Shared routes" earns its place over a prettier metric because it is the only one that can be
+ * wrong: it counts pages where two fragments compose, which is either the design or the overlap
+ * bug, and an operator who does not know which should be looking.
+ */
+function StatStrip({
+  listing,
+  entries,
+  topology,
 }: {
-  count: number;
-  total: number;
-  loading: boolean;
-  query: string;
-  onQueryChange: (value: string) => void;
+  listing: RegistryListing;
+  entries: readonly DiscoveryEntry[];
+  topology: ReturnType<typeof buildTopology>;
 }) {
+  const shared = topology.routes.filter((route) => route.shared).length;
+  const gated = entries.filter((entry) => !entry.loadable).length;
+
   return (
-    <div className="braid-console__header">
-      <h2 className="braid-console__title">Fragment registry</h2>
-      <span className="braid-console__count">
-        {loading ? 'loading…' : count === total ? `${total} fragment${total === 1 ? '' : 's'}` : `${count} of ${total}`}
-      </span>
-      <span className="braid-console__spacer" />
-      <input
-        className="braid-console__search"
-        type="search"
-        value={query}
-        placeholder="Filter by id, title, tag, route"
-        aria-label="Filter fragments"
-        onChange={(event) => onQueryChange(event.target.value)}
-      />
+    <div className="braid-console__stats">
+      <div className="braid-console__stat">
+        <span className="braid-console__statvalue">{listing.total}</span>
+        <span className="braid-console__statlabel">Fragments registered</span>
+      </div>
+      <div className="braid-console__stat">
+        <span className="braid-console__statvalue">{topology.routes.length}</span>
+        <span className="braid-console__statlabel">Route patterns</span>
+      </div>
+      <div className={`braid-console__stat${shared > 0 ? ' braid-console__stat--warn' : ''}`}>
+        <span className="braid-console__statvalue">{shared}</span>
+        <span className="braid-console__statlabel">Shared routes</span>
+      </div>
+      <div className="braid-console__stat">
+        <span className="braid-console__statvalue">{gated}</span>
+        <span className="braid-console__statlabel">Gated for you</span>
+      </div>
     </div>
   );
 }
 
-function FragmentTable({ entries }: { entries: DiscoveryEntry[] }) {
+function FragmentTable({ entries, onEmbed }: { entries: DiscoveryEntry[]; onEmbed: (entry: DiscoveryEntry) => void }) {
   return (
     <table className="braid-console__table">
       <thead>
@@ -152,6 +249,9 @@ function FragmentTable({ entries }: { entries: DiscoveryEntry[] }) {
           <th scope="col">Pierces</th>
           <th scope="col">Mount</th>
           <th scope="col">Access</th>
+          <th scope="col">
+            <span className="braid-console__sronly">Actions</span>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -192,6 +292,16 @@ function FragmentTable({ entries }: { entries: DiscoveryEntry[] }) {
               >
                 {entry.loadable ? 'loadable' : 'gated'}
               </span>
+            </td>
+            <td>
+              <button
+                type="button"
+                className="braid-console__ghost"
+                onClick={() => onEmbed(entry)}
+                aria-label={`Show code to embed ${entry.id}`}
+              >
+                Embed
+              </button>
             </td>
           </tr>
         ))}

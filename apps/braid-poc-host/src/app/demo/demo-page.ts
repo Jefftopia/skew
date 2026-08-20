@@ -41,27 +41,20 @@ import { DemoDurability } from './durability-panels';
     <demo-durability />
 
     <div class="later">
-      <h2>A limitation this page runs into</h2>
+      <h2>A limitation this page used to run into</h2>
       <p>
-        The Angular <strong>billing</strong> remote is not on this page, and the reason is a real
-        one rather than an oversight. A compat fragment that has <em>its own router</em> performs an
-        initial navigation when its realm boots — and a compat realm is a real same-origin iframe,
-        so that navigation lands in the joint session history and can undo the host's own. Arriving
-        here by clicking a link would bounce you to <code>/billing/invoices</code>.
+        A compat fragment that has <em>its own router</em> performs an initial navigation when its
+        realm boots — and a compat realm is a real same-origin iframe, so that navigation lands in
+        the joint session history and could undo the host's own. Mounting the Angular
+        <strong>billing</strong> remote here used to bounce you to <code>/billing/invoices</code>.
       </p>
       <p>
-        It is safe on the routes it owns, which is why the Billing page works. The fix is the
-        <code>contract-blob</code> realm kind, which never touches session history — available to
-        contract-mode fragments, and not to compat, which needs a real URL to keep
-        <code>location</code> truthful. See <code>docs/braid-failure-modes.md</code>.
-      </p>
-    </div>
-
-    <div class="later">
-      <h2>Not built yet</h2>
-      <p>
-        Optimistic mutation with conflict reporting (panels 6–7) still needs the overlay derived
-        from the outbox. See <code>docs/plans/braid-data-demo-plan.md</code>.
+        Fixed by gating the privilege on the user rather than on the clock: a bound fragment may
+        move the host URL only once someone has acted inside it, so a router settling into its
+        route changes its own <code>location</code> and nothing else. The first version of this fix
+        gated on <em>boot finishing</em> and did not hold — Angular resolves its initial route
+        about 170ms later, well after the last script returned. See
+        <code>docs/braid-failure-modes.md</code>.
       </p>
     </div>
   `,

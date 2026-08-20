@@ -15,6 +15,19 @@
 
 export { createGateway, toWebMiddleware, toFetchHandler } from './gateway.js';
 export type { BraidGateway, GatewayOptions, RoutingEvent, ServiceWorkerOptions } from './gateway.js';
+export { rateVital, parseVitalsBeacon, vitalsCollectorScript } from './telemetry.js';
+export { createBreaker, DEFAULT_BREAKER } from './breaker.js';
+export { createSingleFlight, singleFlightKey } from './single-flight.js';
+export type { SingleFlight } from './single-flight.js';
+export type { Breaker, BreakerOptions, BreakerState, BreakerTransition } from './breaker.js';
+export type {
+  TelemetryOptions,
+  TelemetryEvent,
+  FragmentFetchEvent,
+  WebVitalEvent,
+  WebVitalName,
+  BreakerEvent,
+} from './telemetry.js';
 export {
   DEFAULT_ADAPTER,
   DEFAULT_TIMEOUT_MS,
@@ -58,4 +71,5 @@ export {
   BRAID_FRAGMENT_STYLES,
   BRAID_SHELL_STYLES,
 } from './rewriter/transforms.js';
+export { cspNonceOf, withNonce } from './rewriter/transforms.js';
 export type { PierceOptions, PierceTarget } from './rewriter/transforms.js';

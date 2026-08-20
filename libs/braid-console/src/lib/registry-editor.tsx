@@ -225,18 +225,46 @@ function FragmentRow({
 }) {
   const errors = findings.filter((finding) => finding.severity === 'error');
 
+  const fieldsId = `braid-fields-${manifest.id || 'new'}`;
+
   return (
-    <li className="braid-console__card">
+    <li className={`braid-console__card${expanded ? ' is-open' : ''}`}>
+      {/* Two controls open the same panel on purpose. The caret is what a reader who already knows
+          this pattern reaches for; the labelled button is what everyone else needs, because a 6px
+          glyph is not an advertisement that a record is editable at all. */}
       <div className="braid-console__cardhead">
-        <button className="braid-console__disclose" type="button" onClick={onToggle} aria-expanded={expanded}>
-          <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+        <button
+          className="braid-console__disclose"
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-controls={fieldsId}
+        >
+          <span className="braid-console__caret" aria-hidden="true">
+            ▸
+          </span>
           <span className="braid-console__id">{manifest.id || '(no id)'}</span>
         </button>
         <span className="braid-console__mono">{String(manifest.endpoint || '(no endpoint)')}</span>
+        {/* A collapsed card should still read as the record it is, rather than an id and a button. */}
+        {!expanded && manifest.pierce?.length ? (
+          <span className="braid-console__cardmeta">
+            pierces <span className="braid-console__mono">{formatList(manifest.pierce)}</span>
+          </span>
+        ) : null}
         <span className="braid-console__spacer" />
         {errors.length > 0 && (
           <span className="braid-console__badge braid-console__badge--error">{errors.length} error</span>
         )}
+        <button
+          className="braid-console__ghost"
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-controls={fieldsId}
+        >
+          {expanded ? 'Done' : 'Edit'}
+        </button>
         <button className="braid-console__ghost" type="button" onClick={onRemove} aria-label={`Remove ${manifest.id}`}>
           Remove
         </button>
@@ -253,7 +281,7 @@ function FragmentRow({
         </ul>
       )}
 
-      {expanded && <FragmentFields manifest={manifest} onChange={onChange} />}
+      {expanded && <FragmentFields manifest={manifest} onChange={onChange} id={fieldsId} />}
     </li>
   );
 }
@@ -261,14 +289,16 @@ function FragmentRow({
 function FragmentFields({
   manifest,
   onChange,
+  id,
 }: {
   manifest: FragmentManifest;
   onChange: (patch: Partial<FragmentManifest>) => void;
+  id: string;
 }) {
   const endpointIsFunction = typeof manifest.endpoint === 'function';
 
   return (
-    <div className="braid-console__fields">
+    <div className="braid-console__fields" id={id}>
       <Field label="id" hint="addresses the fragment; no “/”">
         <input value={manifest.id} onChange={(event) => onChange({ id: event.target.value })} />
       </Field>

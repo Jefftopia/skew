@@ -29,6 +29,17 @@ export interface OptimisticOverlay {
   /** Applied over the confirmed record while the entry is queued. */
   patch: Record<string, unknown>;
   /**
+   * The tenant partition this prediction belongs to.
+   *
+   * The queue is deliberately *session*-scoped — a queued write belongs to the session that made it,
+   * not to whichever client was on screen — but the **overlay is not**. Without this, an advisor with
+   * an unsent trade for one client sees it applied to the identically-keyed record of the next client
+   * they open, in another tab, because the two share a record key and a queue.
+   *
+   * Absent on entries written before this existed, which keeps their overlay behaving as it did.
+   */
+  partition?: string;
+  /**
    * True when the write deletes the record rather than changing it.
    *
    * A patch cannot express absence, and a deletion a reader cannot see is a row that stays on
@@ -129,8 +140,11 @@ export interface Outbox {
    * Ownership governs who may *send* an entry; it does not govern who may see its effect. A user
    * who typed a name into one app and looks at another expects to see the name they typed, and an
    * overlay filtered by owner would show them the stale value with no indication why.
+   *
+   * Tenancy is the one thing that *does* filter. Pass the partition being read and an overlay
+   * belonging to a different one is left out — same key, different client, different answer.
    */
-  pendingFor(key: string): Promise<OptimisticOverlay[]>;
+  pendingFor(key: string, partition?: string): Promise<OptimisticOverlay[]>;
   /** Entries this instance owns and may replay, oldest first. */
   mine(): Promise<QueuedEntry[]>;
   /**
@@ -189,8 +203,15 @@ export function createOutbox(options: OutboxOptions): Outbox {
       return entryId;
     },
 
-    async pendingFor(key) {
-      return (await entries()).flatMap((entry) => (entry.optimistic ?? []).filter((overlay) => overlay.key === key));
+    async pendingFor(key, forPartition) {
+      return (await entries()).flatMap((entry) =>
+        (entry.optimistic ?? []).filter(
+          (overlay) =>
+            overlay.key === key &&
+            // An overlay that names no partition predates this and applies as it always did.
+            (overlay.partition === undefined || forPartition === undefined || overlay.partition === forPartition),
+        ),
+      );
     },
 
     async mine() {

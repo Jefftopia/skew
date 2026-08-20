@@ -52,6 +52,16 @@ export interface DiscoveryEntry {
    * cannot open yet — this flag is what lets it render that state instead of a broken tile.
    */
   loadable: boolean;
+  /**
+   * Whether the fragment renders the page's route (a screen) or sits at a fixed path (a widget).
+   *
+   * Published because it changes how a host embeds it: a widget needs {@link DiscoveryEntry.src},
+   * a screen does not. Without this a consumer has to guess, and guessing wrong is the "widget
+   * renders an empty shell on every page" failure.
+   */
+  bound: boolean;
+  /** Where an unbound fragment's content lives, as a path on its own endpoint. */
+  src?: string;
   /** Present only when `includeEndpoints` is on (or in development). */
   endpoint?: string;
 }
@@ -192,12 +202,14 @@ function toEntry(
     adapter: manifest.adapter,
     mount: `${BRAID_FRAGMENT_PREFIX}${encodeURIComponent(manifest.id)}/`,
     loadable,
+    bound: manifest.bound,
   };
 
   if (manifest.description) entry.description = manifest.description;
   if (manifest.tags?.length) entry.tags = [...manifest.tags];
   if (manifest.contractVersion) entry.contractVersion = manifest.contractVersion;
   if (manifest.pierce?.length) entry.pierce = [...manifest.pierce];
+  if (manifest.src) entry.src = manifest.src;
   if (includeEndpoints && typeof manifest.endpoint === 'string') entry.endpoint = manifest.endpoint;
 
   return entry;

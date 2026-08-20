@@ -94,6 +94,16 @@ import { toNodeMiddleware } from '@skewkit/braid-gateway/node';
 app.use(toNodeMiddleware(gateway));
 ```
 
+**Angular SSR (`@angular/ssr/node`)** — mount `toNodeMiddleware` on Express before the Angular handler, and enable `trustProxyHeaders` on `AngularNodeAppEngine` so forwarded gateway headers are accepted:
+
+```ts
+const angularApp = new AngularNodeAppEngine({
+  allowedHosts: ['localhost', '127.0.0.1'],
+  trustProxyHeaders: true,
+});
+app.use(toNodeMiddleware(gateway));
+```
+
 **NestJS** — the Express adapter is a Connect stack, so the same binding applies:
 
 ```ts
@@ -290,6 +300,139 @@ existence would turn the namespace into an inventory of what they cannot reach.
 
 This is authorization for *composition*, not a substitute for the fragment's own. The fragment's
 endpoint should still authorize the requests it receives.
+
+## Telemetry (optional)
+
+Off unless configured. One hook, two kinds of event — what the gateway did, and what the browser
+experienced — both attributed to the fragment responsible.
+
+```ts
+createGateway({
+  registry,
+  telemetry: {
+    on: (event) => otel.emit(event),
+    webVitals: true,   // also collect LCP/CLS/INP/FCP/TTFB in the browser
+    sampleRate: 0.1,   // of browser sessions, not of metrics
+  },
+});
+```
+
+| Event | When | Carries |
+| --- | --- | --- |
+| `fragment-fetch` | the gateway fetched a fragment endpoint | `fragmentId`, `phase`, `outcome`, `status`, `durationMs` |
+| `web-vital` | a browser reported a vital | `name`, `value`, `rating`, `fragmentId`, `pathname` |
+
+`phase` separates a **pierce** fetch, which delays the page, from a **namespace** fetch, which
+delays only that fragment. `outcome` reports a 5xx as `ok` with its status: the distinction an
+operator needs is *did we reach it*, and folding a reachable-but-broken endpoint in with an
+unreachable one loses it.
+
+### Why per-fragment vitals are the point
+
+Server-side timings per fragment are ordinary — a reverse proxy gives you those. Web vitals per
+*fragment* are not, because in a composed page the page-level number is an average over apps owned
+by different teams. "The page has a CLS of 0.31" starts an argument; "ninety percent of the layout
+shift happened inside `reviews`" ends it.
+
+Attribution works by climbing from the reported element to its enclosing `<fragment-slot>` —
+**through shadow roots**, since a pierced fragment's DOM lives in a declarative shadow root where
+`closest()` stops at the boundary. `fragmentId: null` is a real answer, not a gap: TTFB belongs to
+the document, and an LCP element in the shell's own markup is genuinely the shell's.
+
+`webVitals` is off by default because it serves a collector from `/__braid/vitals.js` and injects
+it into every composed page, which is a deployment's decision rather than a library's. The
+collector is ~2 kB, hand-written rather than pulling in `web-vitals`, and beacons to
+`/__braid/vitals` on `visibilitychange`/`pagehide`.
+
+**That endpoint is reachable by anyone who can load the page**, so nothing it receives is trusted:
+metric names are checked against the five, values must be finite and positive, the pathname is
+stripped of its query and length-capped, the batch is capped, and a `fragmentId` the registry does
+not know is nulled rather than relayed. It always answers `204` — the browser is unloading and
+nothing is listening, so a status code would only tell a prober what the endpoint accepts.
+
+The hook is wrapped: a throwing sink is logged once and then muted, because a feature meant to be
+left on in production must not be able to take the site down. (`observe` deliberately does *not*
+do this — a broken analysis hook should fail loudly, since silently recording nothing corrupts the
+decisions its data feeds.)
+
+### What the listing publishes
+
+Each entry carries what a consumer needs to *embed* the fragment, not just name it: `id`, `title`,
+`adapter`, `mount`, `pierce`, `loadable`, and — because they change the required markup — `bound`
+and `src`. A widget embedded without its `src` renders an empty shell on every page, so a listing
+that omitted it would force every consumer to guess. `endpoint` appears only when
+`includeEndpoints` is on, or in development.
+
+The registry console uses exactly this to generate copy-pasteable integration code per fragment.
+
+## Circuit breaker (optional)
+
+```ts
+createGateway({ registry, breaker: true });            // 3 failures, 10s cooldown
+createGateway({ registry, breaker: { failureThreshold: 5, resetTimeoutMs: 30_000 } });
+```
+
+**The problem is compounding, not failure.** A fragment endpoint that is down already costs its
+full `timeoutMs` — but it costs that on *every* request, because nothing remembers the last one.
+Four fragments at a 3s budget is a page held hostage to the worst of them, repeatedly, with the
+shell's response waiting behind it. The fallback machinery already handles a fragment that fails;
+what it cannot do is stop paying to rediscover that it fails.
+
+So this is a **latency control first, an availability control second**. When the circuit is open
+the manifest's declared fallback is served immediately instead of after the budget expires — the
+rendered result is identical, it just arrives in ~0ms.
+
+Per fragment id, never global: fragments are independently deployed, and one team's bad release
+must not shed another team's traffic. A 5xx counts as a failure (reachable is not the same as
+working). A shed request reports `outcome: 'shed'` rather than `'error'`, so an operator counting
+failures does not count our own load-shedding as the endpoint failing again. Transitions arrive on
+the telemetry hook as `kind: 'breaker'` — on the four state edges only, never per request.
+
+Off unless configured, because shedding load is a behaviour change a deployment should opt into.
+
+## Concurrent-fetch coalescing (on by default)
+
+Composing a page costs one origin fetch per fragment. A widget pierced into `/` and `/*` is fetched
+once per render, so fifty concurrent renders are fifty identical fetches of the same header panel.
+The gateway collapses those into one.
+
+```ts
+createGateway({ registry });                                  // on
+createGateway({ registry, coalesceFragmentFetches: false });  // off
+```
+
+**Not a cache.** It only notices that a fetch it is already making is the one another request
+wants; nothing outlives the request that started it. No TTL, no invalidation, no shared state, and
+no dependence on which instance a request lands on — which is what makes it safe by default on ECS
+or any horizontally scaled deployment.
+
+Two requests share a fetch only when their `cookie`, `authorization`, `user-agent`, and negotiation
+headers match exactly, and a fragment declaring `access` rules is never shared at all. So this helps
+anonymous and shared-identity traffic and does nothing for personalized fragments — two signed-in
+users never share a flight. That is correct rather than a limitation: sharing a render across
+identities is a data leak wearing a performance feature's clothes.
+
+For an endpoint that varies on something the gateway cannot see — a tenant or feature-flag header —
+opt out on the manifest with `coalesce: false`.
+
+How much it saves scales with endpoint latency × concurrency. Against a 120ms endpoint, ten
+parallel renders collapse to one fetch; against a fragment on localhost answering in 10ms the
+requests barely overlap and it saves nothing. Measure somewhere that resembles production.
+
+## Content Security Policy
+
+The gateway injects inline markup into someone else's document: the `<style>` that makes slots lay
+out as blocks, and — when `webVitals` is on — the collector `<script>`. Under a strict policy
+(`script-src 'nonce-…'`) the browser drops anything unstamped **silently**, which is the worst
+failure shape available: the page renders, the slot layout rule is gone, and no server log mentions
+it.
+
+So the gateway reads the nonce from the shell's *own* `Content-Security-Policy` response header and
+stamps what it injects. Nothing to configure — it works if your shell already sends a nonce.
+
+It never mints one. A nonce the shell's policy does not list is not trusted, and a nonce reused
+across responses is not a nonce. A shell with no policy, or one using hashes or `'unsafe-inline'`,
+gets unstamped markup, which is correct for all three.
 
 ## Security posture
 

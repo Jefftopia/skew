@@ -96,6 +96,23 @@ describe('Express', () => {
     const origin = await listen(createServer(app));
     expectPierced(await (await fetch(`${origin}/billing/stream`, documentInit)).text());
   });
+
+  it('correctly handles downstream 304 Not Modified and 204 No Content responses', async () => {
+    const { default: express } = await import('express');
+
+    const app = express();
+    app.use(toNodeMiddleware(makeGateway()));
+    app.get('/not-modified', (_req, res) => res.status(304).end());
+    app.get('/no-content', (_req, res) => res.status(204).end());
+
+    const origin = await listen(createServer(app));
+
+    const res304 = await fetch(`${origin}/not-modified`);
+    expect(res304.status).toBe(304);
+
+    const res204 = await fetch(`${origin}/no-content`);
+    expect(res204.status).toBe(204);
+  });
 });
 
 describe('NestJS', () => {

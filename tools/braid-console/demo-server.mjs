@@ -4,17 +4,25 @@
  * That is both the simplest way to see it working and a realistic deployment: the console is a
  * static bundle, and the gateway is already an HTTP server in front of the origin.
  *
- *   node --import tsx tools/braid-console/demo-server.mjs
- *   GATEWAY_MODE=production node --import tsx tools/braid-console/demo-server.mjs
+ * `tsx` is not a workspace dependency, and Node's own type stripping cannot resolve the workspace's
+ * `.js`-suffixed source imports or its `@skewkit/*` path aliases — so both are handed to `tsx` via
+ * npx, pointed at the tsconfig that defines them:
+ *
+ *   TSX_TSCONFIG_PATH=tsconfig.base.json npx tsx tools/braid-console/demo-server.mjs
+ *   GATEWAY_MODE=production TSX_TSCONFIG_PATH=tsconfig.base.json npx tsx tools/braid-console/demo-server.mjs
+ *
+ * Build the console first: `nx build-app braid-console`.
  */
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createGateway } from '../../libs/braid-gateway/src/index.ts';
 import { toNodeMiddleware } from '../../libs/braid-gateway/src/node.ts';
 import { createRegistryApi, createSnapshot, memorySnapshotStore } from '../../libs/braid-registry/src/index.ts';
 
-const DIST = 'dist/apps/braid-console';
+// Resolved from this file, not the cwd, so the server runs correctly from any directory.
+const DIST = fileURLToPath(new URL('../../dist/apps/braid-console', import.meta.url));
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 
 const REGISTRY = [
@@ -87,7 +95,10 @@ createServer((request, response) => {
       return;
     }
 
-    const path = !request.url || request.url === '/' ? '/index.html' : request.url.split('?')[0];
+    // Strip the query *before* testing for the root, so `/?x=1` still serves the app rather than
+    // falling through to a read of the dist directory itself.
+    const pathname = (request.url ?? '/').split('?')[0];
+    const path = !pathname || pathname === '/' ? '/index.html' : pathname;
     try {
       const body = await readFile(join(DIST, path));
       response.writeHead(200, { 'content-type': TYPES[extname(path)] ?? 'application/octet-stream' });

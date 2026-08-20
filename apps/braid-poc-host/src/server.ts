@@ -1,5 +1,5 @@
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
-import { createGateway } from '@skewkit/braid-gateway';
+import { createGateway, type TelemetryEvent } from '@skewkit/braid-gateway';
 import type { FragmentManifest } from '@skewkit/braid-gateway';
 import { toNodeMiddleware } from '@skewkit/braid-gateway/node';
 import { createRegistryApi, createRoutingObservations, createSnapshot, serializeObservations } from '@skewkit/braid-registry';
@@ -16,8 +16,11 @@ const browserDistFolder = resolve(serverDistFolder, '../browser');
 const app = express();
 
 // Angular 22 validates the Host header against an allow-list (SSRF hardening). This POC is
-// served from localhost, so it has to be named explicitly.
-const angularApp = new AngularNodeAppEngine({ allowedHosts: ['localhost', '127.0.0.1'] });
+// served from localhost, so it has to be named explicitly. Proxy headers are trusted since the gateway fronts it.
+const angularApp = new AngularNodeAppEngine({
+  allowedHosts: ['localhost', '127.0.0.1'],
+  trustProxyHeaders: true,
+});
 
 /**
  * The Braid gateway, in front of the host's own SSR.
@@ -142,10 +145,33 @@ const observations = createRoutingObservations({
   redact: (pathname) => pathname.replace(/\/invoices\/[^/]+/, '/invoices/:id'),
 });
 
+/**
+ * The last few hundred telemetry events, in memory.
+ *
+ * A real deployment sends these to OpenTelemetry or a metrics pipeline; a ring buffer behind an
+ * endpoint is the demo equivalent, and it keeps the hook's contract visible — the gateway hands
+ * over events and has no opinion about where they go.
+ */
+const telemetryLog: TelemetryEvent[] = [];
+
 const gateway = createGateway({
   registry: REGISTRY,
   // synchronous and cheap: it updates one Map entry and returns
   observe: (event) => observations.record(event),
+  /**
+   * Server-side fetch outcomes, plus web vitals from the browser attributed per fragment.
+   *
+   * `webVitals` serves a collector from `/__braid/vitals.js` and injects it into composed pages.
+   * It is on here because the whole point of this POC is to make the machinery visible; it is off
+   * by default in the library, since adding a script to every pierced page is a deployment's call.
+   */
+  telemetry: {
+    on: (event) => {
+      telemetryLog.push(event);
+      if (telemetryLog.length > 300) telemetryLog.shift();
+    },
+    webVitals: true,
+  },
   mode: 'development',
   // `GET /__braid/registry` — in development this lists everything, endpoints included.
   // `appd: true` additionally serves it in FDC3 App Directory shape at
@@ -240,6 +266,11 @@ app.get('/__braid/observations', async (_req, res) => {
   const path = resolve(process.cwd(), '.braid/observations.json');
   await writeFile(path, serializeObservations(observations.snapshot()));
   res.type('application/json').send(serializeObservations(observations.snapshot()));
+});
+
+// What the gateway measured. Same demo affordance as the observations dump above.
+app.get('/__braid/telemetry', (_req, res) => {
+  res.type('application/json').send(JSON.stringify({ events: telemetryLog }));
 });
 
 // The host's own static assets. No max-age: this POC builds without filename hashing, so a

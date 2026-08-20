@@ -13,6 +13,36 @@ import { concatStreams, Injection, rewriteHtmlStream, StartTag } from './html-re
 export const BRAID_SHELL_STYLES =
   '<style>fragment-slot { display: block; }</style>';
 
+/**
+ * The shell's CSP nonce, read from its own response headers.
+ *
+ * **The gateway injects inline markup into someone else's document**, and under a strict policy —
+ * `script-src 'nonce-…'`, `style-src 'nonce-…'` — anything without the right nonce is dropped
+ * silently by the browser. That is the worst possible failure shape: the page renders, the slot
+ * layout rule is gone, and nothing in the server logs mentions it.
+ *
+ * Reading the nonce off the shell's *own* CSP is the only correct source. Minting one here would
+ * be worse than useless: a nonce the shell's policy does not list is not trusted, and a nonce
+ * reused across responses is not a nonce. If the shell does not send a policy, or sends one
+ * without a nonce, this returns null and nothing is stamped — an unrestricted page needs no
+ * attribute, and a policy using hashes or `'unsafe-inline'` is not ours to second-guess.
+ */
+export function cspNonceOf(headers: Headers): string | null {
+  const policy = headers.get('content-security-policy');
+  if (!policy) return null;
+
+  // Only script-src and style-src matter here; those are the two directives governing what this
+  // layer injects. `default-src` counts when the specific directive is absent, per CSP fallback.
+  const match = /(?:^|;)\s*(?:script-src|style-src|default-src)[^;]*'nonce-([A-Za-z0-9+/_-]+=*)'/.exec(policy);
+  return match?.[1] ?? null;
+}
+
+/** Stamps a nonce onto generated inline markup. A no-op when the shell has no policy. */
+export function withNonce(markup: string, nonce: string | null): string {
+  if (!nonce) return markup;
+  return markup.replace(/<(script|style)(?=[\s>])/g, `<$1 nonce="${escapeAttribute(nonce)}"`);
+}
+
 /** The `<style>` that goes inside every fragment's shadow root. */
 export const BRAID_FRAGMENT_STYLES =
   '<style>:host, braid-document, braid-html, braid-body { display: block; } braid-head { display: none; }</style>';
@@ -226,6 +256,17 @@ export interface PierceOptions {
   shell: ReadableStream<Uint8Array>;
   /** The fragments to pierce into this document, in registration order. */
   fragments: PierceTarget[];
+  /**
+   * Markup appended inside `<head>`, after the shell styles. Used for the optional web-vitals
+   * collector; empty for every other deployment, which is why it is a string the caller composes
+   * rather than a telemetry-shaped option this layer would have to know about.
+   */
+  headScript?: string;
+  /**
+   * The shell's CSP nonce, so injected inline markup survives a strict policy. See
+   * {@link cspNonceOf} for why this must come from the shell rather than be minted here.
+   */
+  nonce?: string | null;
 }
 
 /**
@@ -244,7 +285,7 @@ export interface PierceOptions {
  * the gateway creates. This keeps piercing working for shells that haven't been marked up yet.
  */
 export function pierceShellHtml(options: PierceOptions): ReadableStream<Uint8Array> {
-  const { shell } = options;
+  const { shell, headScript, nonce } = options;
 
   const pending = new Map(options.fragments.map((fragment) => [fragment.fragmentId, fragment]));
   let stylesInjected = false;
@@ -281,7 +322,9 @@ export function pierceShellHtml(options: PierceOptions): ReadableStream<Uint8Arr
         element(tag) {
           if (stylesInjected) return;
           stylesInjected = true;
-          tag.prepend(BRAID_SHELL_STYLES);
+          // Styles first: the slot layout rules must land before any fragment content is parsed,
+          // and an async measurement script must never be what delays them.
+          tag.prepend(withNonce(BRAID_SHELL_STYLES + (headScript ?? ''), nonce ?? null));
         },
       },
 

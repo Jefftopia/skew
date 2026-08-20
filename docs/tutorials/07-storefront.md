@@ -413,6 +413,34 @@ orphan.subscribe((state) => {
 });
 ```
 
+### Two tabs, two customers
+
+A user who acts on behalf of others — an advisor with clients, a desk with funds — opens two tabs on
+two of them. Everything is keyed the same way in both: same app, same entity ids, same fetches.
+
+What separates them is the partition, and five things follow it: **records**, **the shared cache**,
+**fetch de-duplication**, **invalidation**, and **the optimistic overlay**. Two tabs reading
+`holding:h1` for different clients each get their own record, each go to the network, and neither
+one's staleness reaches the other.
+
+One thing deliberately does **not** follow it: the **queue**. A write queued offline belongs to the
+session, not to whichever client was on screen when it was made, so it flushes from whichever tab is
+open. Only its *prediction* is tenant-scoped.
+
+```ts
+// tab one
+await tenancy.signIn({ userId: 'advisor:ana', actingAs: 'client:smith' });
+// tab two
+await tenancy.signIn({ userId: 'advisor:ana', actingAs: 'client:jones' });
+```
+
+If a stream carries events for more than one of them — one socket, every fund the desk covers — say
+which one each record belongs to, or it lands in whichever tenant that tab happens to be showing:
+
+```ts
+sink.receive({ key: 'holding:h1', value, partition: partitionKey('advisor:ana', 'fund:beta') });
+```
+
 **If a purge is interrupted** — the tab closes, storage throws — the partitions it named are marked
 poisoned and refused on the next open until `recover()` finishes the job. A half-emptied partition is
 never served as though it were whole.

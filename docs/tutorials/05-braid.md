@@ -329,7 +329,7 @@ const gateway = createGateway({
 // Mount Braid gateway as the first middleware
 app.use(toNodeMiddleware(gateway));
 
-// Host app routes follow
+// Host app routes follow (for Angular SSR, enable trustProxyHeaders: true on AngularNodeAppEngine)
 app.use(hostAppRouter);
 
 app.listen(3000, () => console.log('Host running on http://localhost:3000'));

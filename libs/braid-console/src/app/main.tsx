@@ -1,6 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { RegistryConsole } from '../lib/registry-console.js';
-import { RegistryEditor } from '../lib/registry-editor.js';
+import { ConsoleApp } from './console-app.js';
 import type { ConsoleApi } from '../lib/client.js';
 
 /**
@@ -18,8 +17,8 @@ const config = readConfig();
 
 // Read-only unless the deployment says otherwise. Editing needs a write API the gateway may not
 // have mounted, and defaulting to an editor that cannot save is a worse first impression than a
-// listing that works.
-createRoot(mount).render(config.edit ? <RegistryEditor api={config} /> : <RegistryConsole api={config} />);
+// listing that works — so `edit` adds a tab rather than replacing the console with one.
+createRoot(mount).render(<ConsoleApp api={config} edit={config.edit === true} />);
 
 function readConfig(): ConsoleApi & { edit?: boolean } {
   const element = document.getElementById('braid-console-config');

@@ -7,6 +7,8 @@ import {
   braidFragmentUrl,
   parseBraidPathname,
   BRAID_SERVICE_WORKER_PATH,
+  BRAID_VITALS_BEACON_PATH,
+  BRAID_VITALS_SCRIPT_PATH,
 } from './protocol.js';
 import {
   canFetch,
@@ -18,7 +20,15 @@ import {
   ResolvedFragmentManifest,
 } from './registry.js';
 import { createDiscoveryHandler, DiscoveryOptions } from './discovery.js';
-import { pierceShellHtml, PierceTarget, prepareFragmentHtml } from './rewriter/transforms.js';
+import { createBreaker, type BreakerOptions } from './breaker.js';
+import { createSingleFlight, singleFlightKey } from './single-flight.js';
+import {
+  parseVitalsBeacon,
+  vitalsCollectorScript,
+  type TelemetryEvent,
+  type TelemetryOptions,
+} from './telemetry.js';
+import { cspNonceOf, pierceShellHtml, PierceTarget, prepareFragmentHtml } from './rewriter/transforms.js';
 
 /**
  * Gateway core: fetch-native, platform-neutral origin-front middleware.
@@ -100,6 +110,52 @@ export interface GatewayOptions {
    * default: paths carry identifiers, and sometimes personal ones.
    */
   observe?: (event: RoutingEvent) => void;
+  /**
+   * Report what the gateway did, and optionally what the browser experienced — per fragment.
+   *
+   * Distinct from {@link GatewayOptions.observe}, which records *which* fragments composed where
+   * so a registry change can be analysed offline. This one records how they *behaved*: fetch
+   * outcomes and durations on the server, and web vitals in the browser attributed to the fragment
+   * whose subtree they happened in.
+   *
+   * Off unless configured. Unlike `observe`, the hook is wrapped — a throwing telemetry sink is
+   * reported once and then ignored, because a feature meant to be left on in production must not
+   * be able to take the site down with it.
+   */
+  telemetry?: TelemetryOptions;
+  /**
+   * Stop paying a broken fragment's timeout on every request.
+   *
+   * A fragment endpoint that is down already costs its full `timeoutMs`; without a breaker it
+   * costs that *again* on the next request, and the one after. This converts a slow repeated
+   * failure into a fast one — the fallback the manifest already declares is served immediately
+   * instead of after the budget expires.
+   *
+   * `true` takes the defaults (3 consecutive failures, 10s cooldown). Off unless configured,
+   * because shedding load is a behaviour change and a deployment should opt into it knowingly.
+   */
+  breaker?: boolean | Partial<BreakerOptions>;
+  /**
+   * Collapse concurrent identical fragment fetches into one.
+   *
+   * A CDN in front of this gateway caches the composed document and does nothing for the origin
+   * fetches a cache *miss* still costs. An unbound widget pierced into every page is fetched once
+   * per render; fifty concurrent renders are fifty identical fetches. This makes them one.
+   *
+   * Not a cache: nothing outlives the request that started it, so there is no TTL, no
+   * invalidation, and no dependence on which instance a request lands on — which is what makes it
+   * safe on ECS or any horizontally scaled deployment.
+   *
+   * Requests only share a fetch when their `cookie`, `authorization`, `user-agent`, and
+   * negotiation headers match exactly, so personalized fragments are never shared between users,
+   * and a fragment declaring `access` rules is never shared at all.
+   *
+   * **On by default**, because it changes how many times an identical fetch is made and nothing
+   * else: no response is stored, reused later, or shared across identities. A fragment whose
+   * endpoint varies on something the gateway cannot see sets `coalesce: false` on its manifest;
+   * set this to `false` to turn the whole mechanism off.
+   */
+  coalesceFragmentFetches?: boolean;
   /**
    * Serve Braid's service worker from `/__braid/sw.js`. Off by default.
    *
@@ -185,6 +241,43 @@ export function createGateway(options: GatewayOptions): BraidGateway {
     ? (options.serviceWorker === true ? {} : options.serviceWorker)
     : null;
   const isDevelopment = mode === 'development';
+  const telemetry = options.telemetry ?? null;
+  const singleFlight = options.coalesceFragmentFetches === false ? null : createSingleFlight();
+  const breaker = options.breaker
+    ? createBreaker(options.breaker === true ? {} : options.breaker, (transition) =>
+        // Routed through the same hook as everything else: a circuit opening is the single most
+        // useful thing this gateway can tell an operator, and it should not need its own sink.
+        emit({
+          kind: 'breaker',
+          fragmentId: transition.fragmentId,
+          from: transition.from,
+          to: transition.to,
+          failures: transition.failures,
+          at: Date.now(),
+        }),
+      )
+    : null;
+  const vitalsEnabled = telemetry?.webVitals === true;
+  let telemetryBroken = false;
+
+  /**
+   * Emits a telemetry event, and survives a sink that throws.
+   *
+   * `observe` deliberately does not do this — a broken analysis hook should fail loudly, because
+   * its data is used to make decisions and silently recording nothing is worse than an error. This
+   * hook has the opposite risk profile: it is meant to be left on in production, in front of every
+   * request, so a bad sink taking the site down would make the safe choice "leave telemetry off".
+   * Reported once, then muted, so a sink failing per-request cannot flood the log either.
+   */
+  function emit(event: TelemetryEvent): void {
+    if (!telemetry || telemetryBroken) return;
+    try {
+      telemetry.on(event);
+    } catch (error) {
+      telemetryBroken = true;
+      console.error('[braid-gateway] telemetry hook threw; telemetry disabled for this process', error);
+    }
+  }
 
   /**
    * Resolves the caller, but only when some manifest actually restricts something — a fully
@@ -205,6 +298,21 @@ export function createGateway(options: GatewayOptions): BraidGateway {
 
       if (serviceWorker && requestUrl.pathname === BRAID_SERVICE_WORKER_PATH) {
         return serviceWorkerResponse(serviceWorker);
+      }
+
+      if (vitalsEnabled && requestUrl.pathname === BRAID_VITALS_SCRIPT_PATH) {
+        return new Response(vitalsCollectorScript(BRAID_VITALS_BEACON_PATH, telemetry?.sampleRate ?? 1), {
+          headers: {
+            'content-type': 'text/javascript; charset=utf-8',
+            // Immutable: the script is generated from this gateway's config and changes only when
+            // that does, at which point the deployment restarts anyway.
+            'cache-control': 'public, max-age=3600',
+          },
+        });
+      }
+
+      if (vitalsEnabled && requestUrl.pathname === BRAID_VITALS_BEACON_PATH) {
+        return handleVitalsBeacon(request);
       }
 
       const route = parseBraidPathname(requestUrl.pathname);
@@ -395,7 +503,13 @@ export function createGateway(options: GatewayOptions): BraidGateway {
         ? prepareFragmentHtml(result.response.body, { fragmentId: fragment.id })
         : result.response.body;
 
-    const forwarded = new Response(body, result.response);
+    const isNullBody =
+      result.response.status === 204 ||
+      result.response.status === 205 ||
+      result.response.status === 304 ||
+      (result.response.status >= 100 && result.response.status < 200);
+
+    const forwarded = new Response(isNullBody ? null : body, result.response);
     forwarded.headers.append(BRAID_FRAGMENT_ID_HEADER, fragment.id);
     if (prepare) {
       // the body was transformed, so any length the endpoint declared no longer describes it
@@ -418,6 +532,8 @@ export function createGateway(options: GatewayOptions): BraidGateway {
     /** The path on the fragment's own endpoint, query included. */
     path: string,
     fragment: ResolvedFragmentManifest,
+    /** What this fetch is for. Only used to label telemetry. */
+    phase: 'pierce' | 'namespace' = 'namespace',
   ): Promise<FragmentFetchResult> {
     const { endpoint } = fragment;
 
@@ -488,12 +604,67 @@ export function createGateway(options: GatewayOptions): BraidGateway {
     // per-fragment timeout budget from the manifest
     const timeoutSignal = AbortSignal.timeout(fragment.timeoutMs);
 
+    // Refuse before spending the budget. The caller's fallback handling is identical either way —
+    // this only changes how long it waits to get there.
+    if (breaker && !breaker.allows(fragment.id)) {
+      emit({
+        kind: 'fragment-fetch',
+        fragmentId: fragment.id,
+        phase,
+        outcome: 'shed',
+        durationMs: 0,
+        at: Date.now(),
+      });
+      return { ok: false, error: new BreakerOpenError(fragment.id), timedOut: false };
+    }
+
+    // Measured around the fetch only. The header work above is this process's own time, and
+    // attributing it to the fragment's endpoint would make every fragment look slower than it is.
+    const startedAt = performance.now();
+
     try {
       // don't follow redirects: they are sent all the way to the client, which can then decide
       // to follow them or not (this keeps window.location correct in the fragment's realm)
-      const response = await fragmentFetch(fragmentRequest, { redirect: 'manual', signal: timeoutSignal });
+      // Coalesced only when the manifest declares no access rules. A gated fragment's response
+      // depends on an authorization decision this layer has already made per-request, and sharing
+      // one across two callers would share that decision with it.
+      const key =
+        singleFlight && fragment.coalesce !== false && !hasAccessRules(fragment)
+          ? singleFlightKey(fragmentRequest, fragmentRequestUrl.href)
+          : null;
+
+      const response = key
+        ? await singleFlight!.run(key, () => fragmentFetch(fragmentRequest, { redirect: 'manual', signal: timeoutSignal }))
+        : await fragmentFetch(fragmentRequest, { redirect: 'manual', signal: timeoutSignal });
+
+      // A 5xx is a reachable endpoint, but it is not a working one — a fragment returning 500 on
+      // every request would otherwise hold the circuit closed forever and keep paying for it.
+      if (response.status >= 500) breaker?.failed(fragment.id);
+      else breaker?.succeeded(fragment.id);
+
+      emit({
+        kind: 'fragment-fetch',
+        fragmentId: fragment.id,
+        phase,
+        // A 5xx is a response, not a failed fetch. Reported as `ok` with its status rather than as
+        // an error, because the distinction the operator needs is "did we reach it" — and folding
+        // a reachable-but-broken endpoint into the same bucket as an unreachable one loses it.
+        outcome: 'ok',
+        status: response.status,
+        durationMs: performance.now() - startedAt,
+        at: Date.now(),
+      });
       return { ok: true, response };
     } catch (error) {
+      breaker?.failed(fragment.id);
+      emit({
+        kind: 'fragment-fetch',
+        fragmentId: fragment.id,
+        phase,
+        outcome: timeoutSignal.aborted ? 'timeout' : 'error',
+        durationMs: performance.now() - startedAt,
+        at: Date.now(),
+      });
       return { ok: false, error, timedOut: timeoutSignal.aborted };
     }
   }
@@ -548,7 +719,12 @@ export function createGateway(options: GatewayOptions): BraidGateway {
     }
 
     const shell = await next();
-    const passthrough = new Response(shell.body, shell);
+    const isNullBody =
+      shell.status === 204 ||
+      shell.status === 205 ||
+      shell.status === 304 ||
+      (shell.status >= 100 && shell.status < 200);
+    const passthrough = new Response(isNullBody ? null : shell.body, shell);
     passthrough.headers.append('vary', 'sec-fetch-dest');
     applyPierceCacheControl(passthrough.headers);
     return passthrough;
@@ -574,10 +750,15 @@ export function createGateway(options: GatewayOptions): BraidGateway {
       // A bound fragment renders the page's own route, so the endpoint gets the page path. An
       // unbound one is chrome: its content lives at one fixed path, and asking a notifications
       // endpoint for `/billing/invoices` is a question it has no answer to.
-      ...matches.map((fragment) => fetchFragment(request, requestUrl, fragmentPath(fragment, requestUrl), fragment)),
+      ...matches.map((fragment) => fetchFragment(request, requestUrl, fragmentPath(fragment, requestUrl), fragment, 'pierce')),
     ]);
 
-    const shell = new Response(shellResponse.body, shellResponse);
+    const isShellNullBody =
+      shellResponse.status === 204 ||
+      shellResponse.status === 205 ||
+      shellResponse.status === 304 ||
+      (shellResponse.status >= 100 && shellResponse.status < 200);
+    const shell = new Response(isShellNullBody ? null : shellResponse.body, shellResponse);
     shell.headers.append('vary', 'sec-fetch-dest');
     applyPierceCacheControl(shell.headers);
 
@@ -631,7 +812,20 @@ export function createGateway(options: GatewayOptions): BraidGateway {
       };
     });
 
-    const pierced = new Response(pierceShellHtml({ shell: shell.body, fragments: targets }), shell);
+    const pierced = new Response(
+      pierceShellHtml({
+        shell: shell.body,
+        fragments: targets,
+        // From the shell's own policy — see `cspNonceOf`. Without this, a strict CSP drops the
+        // slot layout rule and the collector silently, leaving a page that renders wrong with
+        // nothing in any server log to explain it.
+        nonce: cspNonceOf(shell.headers),
+        // `defer` rather than `async`: the collector registers buffered observers, so it does not
+        // race the paint it measures, and deferring keeps it off the parser's critical path.
+        ...(vitalsEnabled ? { headScript: `<script src="${BRAID_VITALS_SCRIPT_PATH}" defer></script>` } : {}),
+      }),
+      shell,
+    );
     // the body is transformed, so any length/encoding the shell declared no longer describes it
     pierced.headers.delete('content-length');
     pierced.headers.delete('content-encoding');
@@ -688,13 +882,37 @@ export function createGateway(options: GatewayOptions): BraidGateway {
     });
   }
 
+  /**
+   * Receives a vitals beacon.
+   *
+   * Always answers 204, including for a body it rejected. The browser cannot act on an error here
+   * — `sendBeacon` fires as the page unloads and nothing is listening for the response — so a
+   * status code would only be a signal to whoever is probing the endpoint about what it accepts.
+   */
+  async function handleVitalsBeacon(request: Request): Promise<Response> {
+    if (request.method !== 'POST') return new Response(null, { status: 405 });
+
+    try {
+      const body: unknown = await request.json();
+      const known = new Set((await registry.listFragments()).map((fragment) => fragment.id));
+      for (const event of parseVitalsBeacon(body, known)) emit(event);
+    } catch {
+      // A malformed beacon is not worth a log line: it is either a truncated unload or someone
+      // poking the endpoint, and neither is actionable.
+    }
+
+    return new Response(null, { status: 204 });
+  }
+
   function describeFragmentFailure(
     fragment: ResolvedFragmentManifest,
     result: { timedOut: boolean },
   ): string {
-    return result.timedOut
-      ? `fragment "${fragment.id}" exceeded its ${fragment.timeoutMs}ms timeout budget`
-      : `fetching fragment "${fragment.id}" failed`;
+    if (result.timedOut) return `fragment "${fragment.id}" exceeded its ${fragment.timeoutMs}ms timeout budget`;
+    if (breaker?.stateOf(fragment.id) === 'open') {
+      return `fragment "${fragment.id}" has an open circuit after repeated failures; serving its fallback without attempting a fetch`;
+    }
+    return `fetching fragment "${fragment.id}" failed`;
   }
 
   function describeEndpoint(fragment: ResolvedFragmentManifest): string {
@@ -834,6 +1052,20 @@ export function resolveEndpointUrl(endpoint: string, strippedUrl: URL, fragmentI
 
 /** Thrown when a namespace request would reach outside its fragment endpoint's declared path. */
 class EndpointScopeError extends Error {}
+
+/**
+ * The breaker refused a request without making it.
+ *
+ * A distinct type so the failure description can say the circuit is open rather than blame the
+ * endpoint for a request it never received — an operator reading "fetching fragment X failed"
+ * about a fetch that never happened would go and check the wrong system.
+ */
+class BreakerOpenError extends Error {
+  constructor(fragmentId: string) {
+    super(`fragment "${fragmentId}" has an open circuit; not attempting a fetch`);
+    this.name = 'BreakerOpenError';
+  }
+}
 
 function stringStream(content: string): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({

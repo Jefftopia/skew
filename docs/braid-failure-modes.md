@@ -13,6 +13,10 @@ Every entry here was observed in a real browser during development, not imagined
 
 ## A routed fragment mounted by client-side navigation hijacks the host URL
 
+**Fixed.** Kept here because the trace is the clearest illustration of how realm navigation reaches
+the top document, and because the first fix for it was wrong in an instructive way. See *The fix*
+below for what actually holds.
+
 **Symptom.** The host router navigates to a route — say `/reports` — and the URL immediately becomes
 one of the *fragment's* routes instead. The page renders the wrong component. A direct load or a
 full reload of the same URL works perfectly.
@@ -45,24 +49,37 @@ document load are fine, because the host is not mid-`pushState` when the realms 
 the composed billing page works and a client-side hop to another page mounting the same fragment
 does not.
 
-**Workarounds today.**
+**The fix, and the wrong version of it.**
 
-| | |
-| --- | --- |
-| Reach the page by document load | correct but defeats client-side routing |
-| Mount routed fragments only on routes they own | what the POC does; the composed page is entered directly |
-| Use a fragment without its own router on such pages | what the demo page does |
+The first attempt gated the privilege on *boot*: a bound fragment's history calls were confined to
+its own realm until its scripts had finished running. That is the right shape and the wrong clock.
+**Scripts having run is not the same as the router having settled** — Angular resolves its initial
+route asynchronously, measured at ~170ms after mount, long after the last `<script>` returned. The
+window had already reopened by the time the redirect landed, so the bug survived its own fix and
+reproduced exactly as before.
 
-**The real fix is the `contract-blob` realm kind**, which boots from a runtime-authored `blob:` URL
-and has *zero* interaction with the joint session history — the realm manager already says this
-eliminates "the whole class of back/forward corruption that http-booted realms have to work
-around". This is a concrete instance of that class. Contract-blob realms exist and are tested, but
-only contract-mode fragments can use them, because compat mode needs a real `http:` URL to make
-`location`/`history` truthful.
+No timing constant fixes that honestly; the next router is slower than whatever delay is chosen.
+The gate is therefore **causal, not temporal**:
 
-So the honest statement of the limitation: **compat mode buys zero app changes and pays for it in
-session-history fidelity.** A routed compat fragment is safe on the routes it owns, and unsafe as a
-passenger on someone else's client-side navigation.
+> A bound fragment may drive the host URL only once the user has acted inside it. Until then, every
+> mutating history call is applied to the fragment's own realm.
+
+A navigation the user did not ask for stays inside the realm, whenever it happens. The fragment
+still settles into its route — it simply does so in its own `location` instead of the address bar.
+
+**Verified both directions.** Mounting the routed `billing` fragment on `/demo` — the case that used
+to bounce the host — now leaves the host at `/demo` while the fragment's own realm resolves to
+`/billing/invoices`. Clicking a link inside that fragment on its own page still moves the host to
+`/billing/settings`, so real navigation is untouched.
+
+**The cost, stated plainly.** A bound fragment that redirects with no user input — an async auth
+check, say — now changes only its own location. That is the safer of the two defaults: the host URL
+staying where the host put it is the property worth keeping, and a fragment that genuinely needs to
+move the host can do it from a user gesture.
+
+`contract-blob` realms remain the structurally cleaner answer for contract-mode fragments, since
+they never touch the joint session history at all. Compat still needs a real `http:` URL to keep
+`location` truthful, which is why it needs this gate instead.
 
 ## Host integration
 
@@ -119,6 +136,21 @@ but an adapter is missing you get a named `adapter-resolution` error instead of 
 **Prevention.** Angular needs `CUSTOM_ELEMENTS_SCHEMA` on the component that renders the slot.
 Vue needs `compilerOptions.isCustomElement`. React needs nothing.
 
+### Angular SSR warns: `Received "x-forwarded-proto" header but "trustProxyHeaders" was not set up to allow it`
+
+**Symptom.** Angular SSR logs a console warning on incoming requests when running behind the Braid gateway.
+
+**Cause.** The gateway sets standard `x-forwarded-proto` and `x-forwarded-host` headers when fronting the host app. Angular's `@angular/ssr/node` (`AngularNodeAppEngine`) validates proxy headers for SSR security and warns if `trustProxyHeaders` is omitted.
+
+**Prevention.** Pass `trustProxyHeaders: true` in your server's `AngularNodeAppEngine` configuration:
+
+```ts
+const angularApp = new AngularNodeAppEngine({
+  allowedHosts: ['localhost', '127.0.0.1'],
+  trustProxyHeaders: true,
+});
+```
+
 ---
 
 ## Fragment (remote app) integration
@@ -153,6 +185,25 @@ close themselves on `versionchange` so a sibling's upgrade is not blocked, and a
 upgrade reports which database and collections are involved instead of hanging. If you are pinned to
 an older version, the workaround is to have every application on the origin declare an identical
 collection list.
+
+### One client's unsent edit appears on another client's screen
+
+**Symptom.** An advisor (or any user who works on behalf of others) has two tabs open on different
+clients. An edit queued offline for the first client shows up as pending on the second — same record
+id, wrong tenant. It corrects itself on reload, which makes it look like a rendering glitch.
+
+**Cause (fixed).** The optimistic overlay was keyed by record id alone. The outbox is deliberately
+*session*-scoped — a queued write belongs to the session that made it, not to whichever client was on
+screen — so both tabs read one queue, and `holding:h1` means something different in each.
+
+**Fix.** Upgrade `@skewkit/data`. Overlays now carry the partition they were made for, and a reader
+only applies the ones belonging to the partition it is reading. The queue stays session-scoped, so
+the edit still flushes from whichever tab is open — scoping the queue too would strand a trade behind
+a client the advisor had closed.
+
+**Worth checking in your own code:** anything else keyed by record id across a tenant switch. Records,
+invalidation, and fetch de-duplication were already partition-scoped; the overlay was the one that was
+not.
 
 ### Two fragments write the same record and one edit disappears
 

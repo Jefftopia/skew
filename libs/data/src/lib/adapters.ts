@@ -40,6 +40,15 @@ export interface PushRecord {
   value: unknown;
   /** Tags to mark stale, for queries that hold lists rather than this key. */
   tags?: string[];
+  /**
+   * Which tenant partition this record belongs to. Defaults to the client's current one.
+   *
+   * One socket often carries events for more than one tenant — an advisor subscribed to every client
+   * they cover, a desk subscribed to every fund. Filing all of it under whichever tenant happened to
+   * be on screen would put one client's position in another's cache, so a stream that knows better
+   * says so.
+   */
+  partition?: string;
 }
 
 /** What a push adapter writes into. Supplied by the client; never implemented by callers. */

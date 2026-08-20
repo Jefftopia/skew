@@ -65,6 +65,16 @@ export interface FragmentManifest {
   /** Per-fragment budget for endpoint fetches, in milliseconds. */
   timeoutMs?: number;
   /**
+   * Opt this fragment out of concurrent-fetch coalescing. Defaults to `true` (coalesced).
+   *
+   * The gateway only shares a fetch between requests whose `cookie`, `authorization`, `user-agent`,
+   * and negotiation headers match, which covers how endpoints normally vary. Set this to `false`
+   * when yours varies on something the gateway cannot see — a tenant header, a feature-flag
+   * header, anything bespoke — because two such requests would otherwise look identical to it and
+   * share one render.
+   */
+  coalesce?: boolean;
+  /**
    * What the gateway renders into the slot when this fragment can't be server-rendered.
    *
    * - `placeholder` (default) — the slot is left empty and marked `data-braid-fallback`, so the

@@ -33,6 +33,11 @@ export const BRAID_NAMESPACE_PREFIX = BRAID_FRAGMENT_PREFIX;
 /** Where the gateway serves its generated service worker, when asked to. */
 export const BRAID_SERVICE_WORKER_PATH = '/__braid/sw.js';
 
+/** The web-vitals collector, served only when telemetry's `webVitals` is on. */
+export const BRAID_VITALS_SCRIPT_PATH = '/__braid/vitals.js';
+/** Where that collector beacons its report. */
+export const BRAID_VITALS_BEACON_PATH = '/__braid/vitals';
+
 export const BRAID_PROTOCOL_VERSION = '2';
 
 /** Name of the `<meta>` element carrying the protocol version in the realm stub document. */

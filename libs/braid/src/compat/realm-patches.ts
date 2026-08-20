@@ -164,13 +164,37 @@ export function initializeRealmContext(
    * following a `redirectTo`, normalizing a trailing slash. That is the fragment settling into the
    * route it was *given*, not the user navigating, and letting it reach the host's History API
    * means a fragment can rewrite the host's URL the instant it mounts.
-   *
-   * Which is not hypothetical: mounting a routed fragment on a page reached by client-side
-   * navigation used to bounce the host straight back to one of the fragment's own routes. Deferring
-   * the privilege until boot finishes fixes it for **any** router, because it constrains when the
-   * fragment may act rather than what it may call.
    */
   let booting = true;
+
+  /**
+   * Whether the user has acted inside this fragment.
+   *
+   * **Scripts having run is not the same as the router having settled**, and assuming it was is
+   * what let this bug survive its first fix. Angular resolves its initial route asynchronously —
+   * measured at ~170ms after mount, long after the last `<script>` returned — so a window that
+   * closed when boot finished was already open again by the time the redirect landed, and a
+   * fragment mounted on a page it does not own dragged the host to one of its own routes.
+   *
+   * No timing fix survives that honestly: the next router is slower than whatever delay we pick.
+   * So the gate is causal rather than temporal — a navigation the user did not ask for stays
+   * inside the realm, whenever it happens. The fragment still navigates itself; it just cannot
+   * move the address bar until someone touches it.
+   *
+   * The cost is deliberate: a bound fragment that redirects with no user input (an async auth
+   * check, say) now changes only its own location. That is the safer default of the two, and the
+   * host URL staying where the host put it is the property worth keeping.
+   */
+  let userHasActed = false;
+
+  // Capture phase, so a fragment that stops propagation on its own handlers cannot also suppress
+  // the signal that it is being used.
+  for (const eventName of ['pointerdown', 'keydown', 'touchstart'] as const) {
+    braidDocumentElement.addEventListener(eventName, () => void (userHasActed = true), {
+      capture: true,
+      signal: fragmentAbortController.signal,
+    });
+  }
 
   if (boundNavigation) {
     setInternalReference(realmWindow, 'history');
@@ -181,7 +205,7 @@ export function initializeRealmContext(
           return function (this: unknown, ...args: unknown[]) {
             // During boot, a bound fragment's navigation is confined to its own realm: the host
             // keeps the URL it navigated to, and the fragment still gets the location it asked for.
-            if (booting && MUTATING_HISTORY_METHODS.has(property as string)) {
+            if ((booting || !userHasActed) && MUTATING_HISTORY_METHODS.has(property as string)) {
               return Reflect.apply(
                 History.prototype.replaceState as Function,
                 getInternalReference(realmWindow, 'history'),

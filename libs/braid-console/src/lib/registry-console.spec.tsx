@@ -119,7 +119,10 @@ describe('<RegistryConsole>', () => {
 
     expect(container.textContent).toContain('billing');
     expect(container.textContent).toContain('reviews');
-    expect(container.textContent).toContain('2 fragments');
+    // The total lives in the summary strip rather than beside the title, so it is asserted as the
+    // labelled statistic it now is rather than as a sentence fragment.
+    expect(container.textContent).toContain('Fragments registered');
+    expect(container.querySelector('.braid-console__statvalue')?.textContent).toBe('2');
   });
 
   it('injects its stylesheet exactly once per document', async () => {

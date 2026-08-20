@@ -108,6 +108,9 @@ function captureDownstreamResponse(res: ServerResponse, next: (error?: unknown) 
 
   let committed = false;
 
+  const isNullBodyStatus = (status: number) =>
+    status === 204 || status === 205 || status === 304 || (status >= 100 && status < 200);
+
   const commit = () => {
     if (committed) return;
     committed = true;
@@ -120,7 +123,8 @@ function captureDownstreamResponse(res: ServerResponse, next: (error?: unknown) 
       }
     }
 
-    resolve(new Response(body, { status: res.statusCode, headers }));
+    const responseBody = isNullBodyStatus(res.statusCode) ? null : body;
+    resolve(new Response(responseBody, { status: res.statusCode, headers }));
   };
 
   const enqueue = (chunk: unknown, encoding?: unknown) => {
