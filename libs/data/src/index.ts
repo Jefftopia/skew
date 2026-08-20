@@ -67,3 +67,26 @@ export type {
   PushSink,
   CommandAdapter,
 } from './lib/adapters.js';
+
+export { createEventBus } from './lib/events.js';
+export type {
+  EventBus,
+  EventBusOptions,
+  Channel,
+  ChannelOptions,
+  SubscribeOptions,
+  BusEvent,
+  Delivery,
+} from './lib/events.js';
+
+export { createIntentRegistry, NoIntentHandlerError } from './lib/intents.js';
+export type {
+  IntentRegistry,
+  IntentRegistryOptions,
+  IntentHandlerOptions,
+  IntentCandidate,
+  IntentResult,
+  ResolvePolicy,
+  RaiseOptions,
+} from './lib/intents.js';
+

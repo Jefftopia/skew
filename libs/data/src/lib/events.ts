@@ -1,0 +1,557 @@
+import type { VersionedSchema } from '@skewkit/core';
+import { drainOutbox, type FlushResult } from './flush.js';
+import { sharedInvalidator, type BroadcastChannelLike, type Invalidator } from './invalidation.js';
+import { createOutbox, type Outbox } from './outbox.js';
+import type { RecordDriver } from './record-store.js';
+import type { Conflict, ConflictPolicy } from './query.js';
+import {
+  createIntentRegistry,
+  type IntentHandlerOptions,
+  type IntentRegistry,
+  type IntentResult,
+  type RaiseOptions,
+} from './intents.js';
+
+/**
+ * Eventing across independently deployed applications: channels, durable queues, and conflict.
+ *
+ * This lives in `@skewkit/data` rather than in Braid because none of it is about composition — it is
+ * about a queue, a lock, and a versioned payload, which is what this package already is. A Module
+ * Federation deployment with no Braid at all should be able to use it, and Braid's context bus should
+ * be able to sit on top rather than beside it.
+ *
+ * **Almost nothing here is new.** Durability is the outbox, one record per entry. Draining is
+ * `drainOutbox`, with its ordering, its cross-context lock, and its give-up rule. Waking another
+ * realm is the invalidator. Surviving version skew is `versioned()`. The parts that are genuinely
+ * new are the two decisions below.
+ *
+ * **1. State is not an event.** FDC3 conflates them: `broadcast` sets a channel's current context
+ * *and* replays it to late joiners, so it means both "this happened" and "this is now true". That
+ * works for a selected row and fails for anything with a verb. Here `broadcast`/`state` is the
+ * former and `emit`/`addEventListener` is the latter.
+ *
+ * **2. Durable fan-out is one queue per consumer, not one queue with acknowledgements.** An
+ * at-least-once event is written once per registered consumer, into that consumer's own queue, and
+ * *deletion on success is the acknowledgement*. It costs N copies of the payload and buys three
+ * things: no new storage shape, no ack bookkeeping to keep consistent, and — the one that matters —
+ * a consumer whose handler keeps failing blocks only itself. A shared entry with an ack set gives
+ * every consumer the same head-of-line blocking.
+ */
+
+export type Delivery = 'at-most-once' | 'at-least-once';
+
+export interface BusEvent<T = unknown> {
+  /** Stable per emit, so an at-least-once consumer can dedupe if it must. */
+  eventId: string;
+  channel: string;
+  type: string;
+  payload: T;
+  /** ISO 8601. Used for the retention window. */
+  at: string;
+  /** Which application emitted it. */
+  source: string;
+}
+
+export interface EventBusOptions {
+  /**
+   * This application's identity, as the outbox's `owner` is. Durable delivery is addressed to it,
+   * and two applications sharing one name will replay each other's events.
+   */
+  consumer: string;
+  /** Tenant partition. Events are scoped like every other record. */
+  partition?: () => string;
+  /** Storage for durable channels. Without it, `at-least-once` is refused rather than downgraded. */
+  driver?: RecordDriver;
+  /**
+   * Every application that may consume a durable event on this origin.
+   *
+   * Fan-out writes one entry per name, so a queue cannot wait for an acknowledgement from a consumer
+   * it does not know exists. In a Braid deployment this comes from the manifests; anywhere else it is
+   * a list. A registered consumer that is not currently mounted is *waiting*, not gone.
+   */
+  consumers?: readonly string[];
+  /** Cross-context wake-up and page-scoped fan-out. Defaults to the shared one for the partition. */
+  invalidator?: Invalidator;
+  /** Origin-scope transport. Injectable for tests; defaults to a `BroadcastChannel`. */
+  broadcastChannel?: (name: string) => BroadcastChannelLike | undefined;
+  /** Attempts before a queued event is abandoned. */
+  maxAttempts?: number;
+  /** Never silent: retention drops and abandoned handlers are reported here. */
+  onEventError?: (message: string, detail?: unknown) => void;
+}
+
+export interface ChannelOptions {
+  /**
+   * `'page'` reaches every realm on this page; `'origin'` reaches every tab as well.
+   *
+   * Per channel rather than per bus, because the answer differs by channel on the same page: a
+   * selected row is page state, a sign-out is origin-wide. One global setting is how a UI selection
+   * ends up broadcast to five tabs.
+   */
+  scope?: 'page' | 'origin';
+  /** What to do when two publishers disagree about this channel's state. Defaults to `'raise'`. */
+  onConflict?: ConflictPolicy<unknown>;
+  /** How long a queued event stays deliverable. Defaults to one hour. */
+  ttlMs?: number;
+  /** Queue depth per consumer *on this channel*, after which the oldest is dropped loudly. Defaults to 500. */
+  maxDepth?: number;
+  /**
+   * Instances this channel per entity: a fund, a tenant, a portfolio, a conversation.
+   *
+   * `channel('selection', { entity: 'fund:f1' })` and `channel('selection', { entity: 'fund:f2' })`
+   * are two separate contexts that happen to share a shape. State does not cross between them,
+   * events are addressed to one of them, and an origin-scoped pair gets a transport each.
+   *
+   * **Deliberately not a `scope` value.** Reach and instance are different questions and a channel
+   * has to answer both: this fund's selection is page state, while this fund's orders want to reach
+   * every tab. Folding entity into `scope` would force one answer for both.
+   *
+   * Not a security boundary — that is what a partition is. Two entities in one partition are
+   * separated here for correctness and clarity, not for isolation; a different *tenant* belongs in a
+   * different partition, and then none of this applies because the storage differs too.
+   */
+  entity?: string;
+}
+
+export interface SubscribeOptions {
+  /** The contract version this subscriber speaks. Projected per subscriber, as the context bus does. */
+  as?: number;
+  signal?: AbortSignal;
+  consumer?: string;
+}
+
+export interface Channel<S = unknown> {
+  readonly name: string;
+  /** Sets this channel's current state. Last value wins; late subscribers receive it. */
+  broadcast(value: S): void;
+  /** The current state, projected to `as`. */
+  state(options?: { as?: number }): S | undefined;
+  /** Subscribes to state. Called immediately with the current value when there is one. */
+  subscribe(listener: (value: S) => void, options?: SubscribeOptions): () => void;
+  /** Publishes an occurrence. Not replayed unless it is durable and unacknowledged. */
+  emit<T>(type: string, payload: T, options?: { delivery?: Delivery }): Promise<void>;
+  /** Handles occurrences of one type. */
+  addEventListener<T>(
+    type: string,
+    handler: (event: BusEvent<T>) => void | Promise<void>,
+    options?: SubscribeOptions,
+  ): () => void;
+  /** The last state conflict raised on this channel, if any. */
+  conflict(): Conflict<unknown> | null;
+  acknowledgeConflict(): void;
+}
+
+export interface EventBus extends Pick<IntentRegistry, 'candidates'> {
+  channel<S = unknown>(name: string, options?: ChannelOptions): Channel<S>;
+  /** Registers a handler for an intent raised by any application on this page. */
+  addIntentListener<T>(intent: string, options: IntentHandlerOptions<T>): () => void;
+  /** Asks whoever can handle this to handle it. Resolution policy decides between candidates. */
+  raiseIntent<R = unknown>(intent: string, payload: unknown, options?: RaiseOptions): Promise<IntentResult<R>>;
+  /** Declares the contract a state key or event type carries, so delivery can project per reader. */
+  register<T>(type: string, schema: VersionedSchema<T>): void;
+  /** Drains this consumer's queue of durable events. Called on wake-up; call it after mounting. */
+  flush(): Promise<FlushResult>;
+  close(): void;
+}
+
+const EVENT_COLLECTION = 'skew-events';
+const DEFAULT_TTL_MS = 60 * 60 * 1000;
+const DEFAULT_MAX_DEPTH = 500;
+
+/** The queue owner for a consumer's events, kept clear of its mutation outbox's lock and records. */
+const queueOwner = (consumer: string) => `events:${consumer}`;
+/** The tag that says "your event queue moved" — the same wake-up trick the overlay uses. */
+const wakeTag = (consumer: string) => `skew:events#${consumer}`;
+/** One mutation id per channel+type, so `drainOutbox` can find the handler by name after a reload. */
+const runnerId = (channel: string, type: string) => `event:${channel}:${type}`;
+
+export function createEventBus(options: EventBusOptions): EventBus {
+  const partition = options.partition ?? (() => 'default');
+  const invalidator = options.invalidator ?? sharedInvalidator({ partition: partition() });
+  const schemas = new Map<string, VersionedSchema<unknown>>();
+  const channels = new Map<string, ChannelState>();
+  const handlers = new Map<string, Set<(event: BusEvent) => void | Promise<void>>>();
+  const maxAttempts = options.maxAttempts ?? 5;
+
+  /** This consumer's own durable queue. One outbox, every channel's events. */
+  const queue: Outbox | null = options.driver
+    ? createOutbox({
+        driver: options.driver,
+        owner: queueOwner(options.consumer),
+        partition: partition(),
+        collection: EVENT_COLLECTION,
+      })
+    : null;
+
+  interface ChannelState {
+    /** The logical name — what the payload's contract is registered under. */
+    readonly name: string;
+    /** Name plus entity: what state, transports, and queued events are keyed by. */
+    readonly key: string;
+    readonly options: ChannelOptions;
+    state: unknown;
+    conflict: Conflict<unknown> | null;
+    readonly stateListeners: Set<{ listener: (value: unknown) => void; as?: number }>;
+    /** Only origin-scoped channels open one. */
+    readonly wire?: BroadcastChannelLike | undefined;
+  }
+
+  /** Projects a value to one reader's version, exactly as the context bus does. */
+  function project(type: string, value: unknown, as: number | undefined): unknown {
+    const schema = schemas.get(type);
+    if (!schema) return structuredClone(value);
+
+    const envelope = as === undefined || as === schema.version ? schema.write(value) : schema.write(value, { as });
+    return structuredClone(envelope.payload);
+  }
+
+  function openWire(name: string): BroadcastChannelLike | undefined {
+    const wireName = `skew:events:${partition()}:${name}`;
+    if (options.broadcastChannel) return options.broadcastChannel(wireName);
+    return typeof BroadcastChannel === 'undefined'
+      ? undefined
+      : (new BroadcastChannel(wireName) as unknown as BroadcastChannelLike);
+  }
+
+  function channelState(name: string, channelOptions: ChannelOptions): ChannelState {
+    // One entity's channel is not another's, so the identity carries it — while the contract stays
+    // registered under the logical name, because every fund's selection has the same shape.
+    const key = channelOptions.entity ? `${name}@${channelOptions.entity}` : name;
+    const existing = channels.get(key);
+    if (existing) return existing;
+
+    const scope = channelOptions.scope ?? 'page';
+    const wire = scope === 'origin' ? openWire(key) : undefined;
+    const created: ChannelState = {
+      name,
+      key,
+      options: channelOptions,
+      state: undefined,
+      conflict: null,
+      stateListeners: new Set(),
+      wire,
+    };
+
+    // A BroadcastChannel never delivers to its own sender, so a message arriving here is always from
+    // another context — no de-duplication needed, which is the same property invalidation relies on.
+    wire?.addEventListener('message', (event) => {
+      const message = event.data as { kind: 'state' | 'event'; value?: unknown; event?: BusEvent } | undefined;
+      if (message?.kind === 'state') applyState(created, message.value, { local: false });
+      if (message?.kind === 'event' && message.event) deliverLive(message.event);
+    });
+
+    channels.set(key, created);
+    return created;
+  }
+
+  /**
+   * Applies a new state value and tells the subscribers.
+   *
+   * Conflict is compared only against a value this context published: another context's broadcast is
+   * news, not a disagreement. Two publishers racing end in last-write-wins, and the policy decides
+   * whether anyone is told — the same contract, and the same words, as a mutation's confirmation.
+   */
+  function applyState(channel: ChannelState, value: unknown, { local }: { local: boolean }): void {
+    const previous = channel.state;
+    let stored = value;
+
+    if (local && previous !== undefined && !same(previous, value)) {
+      const policy = channel.options.onConflict ?? 'raise';
+      const conflict: Conflict<unknown> = {
+        expected: previous,
+        actual: value,
+        paths: differingKeys(previous, value),
+      };
+
+      if (typeof policy === 'function') stored = policy(conflict);
+      else if (policy === 'raise') channel.conflict = conflict;
+    }
+
+    channel.state = stored;
+
+    for (const subscription of [...channel.stateListeners]) {
+      // Isolated per subscriber: one application's bad deploy must not present as a different
+      // application silently failing to update.
+      try {
+        subscription.listener(project(channel.name, stored, subscription.as));
+      } catch (error) {
+        options.onEventError?.(`[skew/data] a "${channel.name}" state subscriber threw`, error);
+      }
+    }
+  }
+
+  /** Fan-out to handlers in this context. Used by at-most-once, and by the queue drain. */
+  function deliverLive(event: BusEvent): void {
+    for (const handler of [...(handlers.get(runnerId(event.channel, event.type)) ?? [])]) {
+      try {
+        void handler(event);
+      } catch (error) {
+        options.onEventError?.(`[skew/data] a "${event.type}" handler threw`, error);
+      }
+    }
+  }
+
+  /**
+   * Writes one entry per registered consumer, then wakes them.
+   *
+   * The emitting application is included: its own handlers are served by draining, not by a direct
+   * call, so a durable event is delivered by exactly one path no matter who is listening. Two paths
+   * would mean a mounted consumer handled the event twice.
+   */
+  async function enqueue(event: BusEvent, channel: ChannelState): Promise<void> {
+    if (!options.driver) {
+      throw new TypeError(
+        '[skew/data] at-least-once delivery needs a `driver` on the bus: an event that must survive ' +
+          'a reload has to be written somewhere. Pass one, or emit at-most-once.',
+      );
+    }
+
+    const recipients = options.consumers?.length ? options.consumers : [options.consumer];
+    const ttl = channel.options.ttlMs ?? DEFAULT_TTL_MS;
+    const depth = channel.options.maxDepth ?? DEFAULT_MAX_DEPTH;
+
+    for (const consumer of recipients) {
+      const consumerQueue = createOutbox({
+        driver: options.driver,
+        owner: queueOwner(consumer),
+        partition: partition(),
+        collection: EVENT_COLLECTION,
+      });
+
+      await trim(consumerQueue, consumer, channel.key, ttl, depth);
+      await consumerQueue.enqueue({ mutationId: runnerId(event.channel, event.type), input: event });
+    }
+
+    // One tag for every consumer: the wake-up crosses realms and, with cross-context invalidation on,
+    // tabs — which is the whole reason a queued event reaches an application that was not running.
+    invalidator.invalidate(...recipients.map(wakeTag));
+  }
+
+  /**
+   * Enforces the retention bounds before adding to a queue.
+   *
+   * Both bounds are needed and both are reported. Fan-out retention is unbounded by nature —
+   * consumers × events × until-handled — so a queue with no policy is a storage quota that dies
+   * unattended, and one that drops silently is worse than one that fills up.
+   */
+  async function trim(
+    consumerQueue: Outbox,
+    consumer: string,
+    channelKey: string,
+    ttlMs: number,
+    maxDepth: number,
+  ): Promise<void> {
+    // Scoped to this channel: one consumer's queue holds every channel's events, and a busy channel
+    // must not evict a quiet one's — least of all one entity's evicting another's.
+    const mine = (await consumerQueue.mine()).filter((entry) => (entry.input as BusEvent).channel === channelKey);
+    const cutoff = Date.now() - ttlMs;
+
+    for (const entry of mine) {
+      const event = entry.input as BusEvent;
+      if (Date.parse(event.at) >= cutoff) continue;
+      await consumerQueue.remove(entry.id);
+      options.onEventError?.(
+        `[skew/data] dropped "${event.type}" for "${consumer}" — it sat in the queue past its ${ttlMs}ms window`,
+        event,
+      );
+    }
+
+    const remaining = (await consumerQueue.mine()).filter(
+      (entry) => (entry.input as BusEvent).channel === channelKey,
+    );
+    const excess = remaining.length + 1 - maxDepth;
+    for (const entry of remaining.slice(0, Math.max(0, excess))) {
+      await consumerQueue.remove(entry.id);
+      options.onEventError?.(
+        `[skew/data] dropped "${(entry.input as BusEvent).type}" for "${consumer}" — the queue is at its ${maxDepth} limit`,
+        entry.input,
+      );
+    }
+  }
+
+  /**
+   * Drains this consumer's queue through `drainOutbox`.
+   *
+   * Everything about *how* a queue drains — one at a time across tabs, oldest first, stop at the
+   * first failure, abandon loudly after `maxAttempts` — is the same code that replays mutations. A
+   * second implementation of those rules would be a second set of bugs, and this package already
+   * paid for that lesson once.
+   */
+  /**
+   * Serializes this bus's own flushes, for the reason the data client had to.
+   *
+   * The cross-context lock declines a drain another context is already running, which is right —
+   * waiting would drain a queue that context has already emptied. Applied to *one* bus's overlapping
+   * calls that rule is a trap: an emit wakes us, the wake-up flush is still finishing, and the
+   * caller's own `flush()` reports `skipped` and quietly does nothing. Within one bus, a second
+   * flush waits for the first and then runs, picking up whatever arrived in between.
+   */
+  let flushing: Promise<FlushResult> | null = null;
+
+  async function flush(): Promise<FlushResult> {
+    if (flushing) await flushing.catch(() => undefined);
+
+    const run = drain();
+    flushing = run;
+    try {
+      return await run;
+    } finally {
+      if (flushing === run) flushing = null;
+    }
+  }
+
+  async function drain(): Promise<FlushResult> {
+    if (!queue) return { sent: 0, failed: 0, remaining: 0, skipped: false };
+
+    return drainOutbox({
+      outbox: queue,
+      owner: queueOwner(options.consumer),
+      runnerFor: (mutationId) => {
+        const registered = handlers.get(mutationId);
+        if (!registered?.size) return undefined;
+        return async (input) => {
+          const event = input as BusEvent;
+          // Sequentially: handlers for one event type on one consumer are ordered by registration,
+          // and a throwing handler must fail the entry so it is retried rather than lost.
+          for (const handler of [...registered]) await handler(event);
+        };
+      },
+      maxAttempts,
+      ...(options.onEventError === undefined ? {} : { onError: options.onEventError }),
+    });
+  }
+
+  const intents = createIntentRegistry({
+    consumer: options.consumer,
+    // Intents project through the same registered contracts state and events do, so an application
+    // declares a shape once and every path respects it.
+    schemaFor: (intent) => schemas.get(intent),
+    ...(options.onEventError === undefined ? {} : { onEventError: options.onEventError }),
+  });
+
+  // Woken by any context that queued something for us — including our own emit.
+  const stopWaking = invalidator.subscribe(
+    () => [wakeTag(options.consumer)],
+    () => void flush().catch(() => undefined),
+  );
+
+  return {
+    channel<S>(name: string, channelOptions: ChannelOptions = {}): Channel<S> {
+      const channel = channelState(name, channelOptions);
+
+      return {
+        name,
+
+        broadcast(value: S): void {
+          applyState(channel, value, { local: true });
+          channel.wire?.postMessage({ kind: 'state', value: channel.state });
+        },
+
+        state(readOptions): S | undefined {
+          return channel.state === undefined ? undefined : (project(name, channel.state, readOptions?.as) as S);
+        },
+
+        subscribe(listener, subscribeOptions): () => void {
+          const subscription = {
+            listener: listener as (value: unknown) => void,
+            ...(subscribeOptions?.as === undefined ? {} : { as: subscribeOptions.as }),
+          };
+          channel.stateListeners.add(subscription);
+
+          // Called immediately with the current value: a fragment that mounts late still needs to
+          // know what is true, which is the half of FDC3's broadcast that *is* state.
+          if (channel.state !== undefined) {
+            try {
+              subscription.listener(project(name, channel.state, subscription.as));
+            } catch (error) {
+              options.onEventError?.(`[skew/data] a "${name}" state subscriber threw on subscribe`, error);
+            }
+          }
+
+          const unsubscribe = () => void channel.stateListeners.delete(subscription);
+          subscribeOptions?.signal?.addEventListener('abort', unsubscribe, { once: true });
+          return unsubscribe;
+        },
+
+        async emit<T>(type: string, payload: T, emitOptions?: { delivery?: Delivery }): Promise<void> {
+          const event: BusEvent<T> = {
+            eventId: crypto.randomUUID(),
+            // The instance, not the logical name: a handler on fund f1 must not be handed f2's
+            // event, and retention must not let one entity evict another's queue.
+            channel: channel.key,
+            type,
+            payload,
+            at: new Date().toISOString(),
+            source: options.consumer,
+          };
+
+          if ((emitOptions?.delivery ?? 'at-most-once') === 'at-least-once') {
+            await enqueue(event as BusEvent, channel);
+            return;
+          }
+
+          deliverLive(event as BusEvent);
+          channel.wire?.postMessage({ kind: 'event', event });
+        },
+
+        addEventListener<T>(
+          type: string,
+          handler: (event: BusEvent<T>) => void | Promise<void>,
+          subscribeOptions?: SubscribeOptions,
+        ): () => void {
+          const id = runnerId(channel.key, type);
+          let registered = handlers.get(id);
+          if (!registered) {
+            registered = new Set();
+            handlers.set(id, registered);
+          }
+
+          const wrapped = async (event: BusEvent) => {
+            await handler({
+              ...event,
+              payload: project(type, event.payload, subscribeOptions?.as) as T,
+            });
+          };
+          registered.add(wrapped);
+
+          const unsubscribe = () => void registered.delete(wrapped);
+          subscribeOptions?.signal?.addEventListener('abort', unsubscribe, { once: true });
+          return unsubscribe;
+        },
+
+        conflict: () => channel.conflict,
+        acknowledgeConflict: () => void (channel.conflict = null),
+      };
+    },
+
+    register<T>(type: string, schema: VersionedSchema<T>): void {
+      schemas.set(type, schema as VersionedSchema<unknown>);
+    },
+
+    addIntentListener: intents.addIntentListener,
+    raiseIntent: intents.raiseIntent,
+    candidates: intents.candidates,
+
+    flush,
+
+    close(): void {
+      stopWaking();
+      for (const channel of channels.values()) channel.wire?.close();
+      channels.clear();
+      handlers.clear();
+      invalidator.close();
+    },
+  };
+}
+
+/** Which top-level keys two states disagree about. Same rule as a mutation's conflict. */
+function differingKeys(previous: unknown, next: unknown): string[] {
+  const before = (previous ?? {}) as Record<string, unknown>;
+  const after = (next ?? {}) as Record<string, unknown>;
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  return [...keys].filter((key) => !same(before[key], after[key]));
+}
+
+function same(a: unknown, b: unknown): boolean {
+  return a === b || JSON.stringify(a) === JSON.stringify(b);
+}

@@ -71,11 +71,25 @@ export const braidContext = {
     return schemas.get(key);
   },
 
-  /** Publishes a context value to every fragment (and host code) subscribed to the key. */
+  /**
+   * Publishes a context value to every fragment (and host code) subscribed to the key.
+   *
+   * **Every subscriber is isolated.** One fragment throwing in its listener — or declaring a version
+   * that became unreachable after it subscribed — must not stop delivery to the fragments after it
+   * in the set. Without that, a bad deploy of one app presents as a *different* app silently
+   * failing to update, which is the least debuggable shape a bug can take on a composed page.
+   */
   set(key: string, value: unknown): void {
     values.set(key, value);
+
     for (const subscription of [...(subscriptions.get(key) ?? [])]) {
-      subscription.listener(project(key, value, subscription.as));
+      try {
+        subscription.listener(project(key, value, subscription.as));
+      } catch (error) {
+        // Reported rather than swallowed: a subscriber that never hears anything again is worth
+        // knowing about, and this is the only place that can see it happen.
+        console.error(`braid: a "${key}" context subscriber threw; other subscribers were unaffected`, error);
+      }
     }
   },
 

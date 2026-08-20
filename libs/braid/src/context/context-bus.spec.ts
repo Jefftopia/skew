@@ -156,3 +156,43 @@ describe('lifecycle', () => {
     expect(braidContext.get('instrument', { as: 1 })).toEqual({ ticker: 'IBM' });
   });
 });
+
+describe('one bad subscriber', () => {
+  it('does not stop delivery to the others', () => {
+    const before = vi.fn();
+    const after = vi.fn();
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    braidContext.subscribe('selection', before);
+    braidContext.subscribe('selection', () => {
+      throw new Error('this fragment has a bug');
+    });
+    braidContext.subscribe('selection', after);
+
+    braidContext.set('selection', { id: 'row-1' });
+
+    // Without isolation, one app's bad deploy presents as a *different* app silently not updating.
+    expect(before).toHaveBeenCalledOnce();
+    expect(after).toHaveBeenCalledOnce();
+    expect(errors).toHaveBeenCalledWith(expect.stringContaining('context subscriber threw'), expect.anything());
+
+    errors.mockRestore();
+  });
+
+  it('keeps delivering after a subscriber whose version became unreachable', () => {
+    // The chain is registered *after* the subscription, so subscribe-time validation could not have
+    // caught it — this is the case that reaches the fan-out.
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const healthy = vi.fn();
+
+    braidContext.subscribe('instrument', vi.fn(), { as: 1 });
+    braidContext.subscribe('instrument', healthy);
+    braidContext.register('instrument', OneWay);
+
+    braidContext.set('instrument', { ticker: 'IBM', market: 'XNYS' });
+
+    expect(healthy).toHaveBeenCalledOnce();
+    errors.mockRestore();
+  });
+});
+

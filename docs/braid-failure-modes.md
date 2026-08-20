@@ -167,7 +167,7 @@ store holds whichever arrived second.
 **Fix.** The ordering has to be decided where the writes actually meet, which is the server. Add a
 version or etag check and reject the stale write; the losing fragment's `mutate` then reports it as
 `{ expected, actual, paths }` rather than losing silently. See
-[the storefront tutorial's composition section](tutorials/07-storefront.md#6-what-happens-when-two-fragments-race).
+[the storefront tutorial's composition section](tutorials/07-storefront.md#7-what-happens-when-two-fragments-race).
 
 Note the asymmetry while you are here: two fragments *reading* the same key are serialized by a
 per-key Web Lock and produce one fetch. Reads are coordinated; writes are not.

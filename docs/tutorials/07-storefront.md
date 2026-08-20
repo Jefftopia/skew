@@ -578,7 +578,31 @@ build one thing carefully on this page, build this one — and there is a safety
 session, so a fragment that mounts late, or wakes from a background tab, does not resume a session
 that ended.
 
-### 6. What happens when two fragments race
+### 6. Eventing between fragments
+
+Tag invalidation says "this went stale". When fragments need to tell each other *things*, there is a
+bus in the same package:
+
+```ts
+const bus = createEventBus({ consumer: 'checkout', partition: tenancy.partition, driver });
+const orders = bus.channel('orders', { scope: 'origin' });
+
+await orders.emit('order.placed', order, { delivery: 'at-least-once' });
+```
+
+Three points that matter on a composed page. **`scope: 'origin'`** reaches other realms *and* other
+tabs, for the same reason `crossContextInvalidation` has to be on. **`at-least-once`** means a
+fragment that had not mounted yet still gets the event when it arrives — it is queued in the same
+outbox your mutations use. And **`entity`** gives one channel name a separate context per thing:
+
+```ts
+bus.channel('selection', { entity: `customer:${id}` });
+```
+
+Same shape, separate state, separate queue — which is what you want the moment the page shows more
+than one of something.
+
+### 7. What happens when two fragments race
 
 Sharing a partition means two independently deployed apps write to one place. It is worth being
 precise about what that does and does not protect you from, because the answer is different for
