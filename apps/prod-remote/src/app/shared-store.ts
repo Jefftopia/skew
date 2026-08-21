@@ -5,7 +5,7 @@ import {
   type StorageDriver,
   type VersionedSchema,
   type VersionedStore,
-} from '@braid/skew';
+} from '@braidlabs/skew';
 
 export type DriverKind = 'local' | 'indexeddb';
 
@@ -51,7 +51,7 @@ export function storeOn<T>(schema: VersionedSchema<T>): VersionedStore<T> {
   return createVersionedStore(schema, { driver: driverFor(readDriverKind()) });
 }
 
-/** Raw bytes at a key, read without going through `@braid/skew`. */
+/** Raw bytes at a key, read without going through `@braidlabs/skew`. */
 export async function rawAt(fullKey: string): Promise<string | null> {
   if (readDriverKind() === 'local') {
     try {

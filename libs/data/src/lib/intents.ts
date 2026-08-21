@@ -1,4 +1,4 @@
-import type { VersionedSchema } from '@braid/skew';
+import type { VersionedSchema } from '@braidlabs/skew';
 
 /**
  * Intents: "somebody handle this", and deciding who.

@@ -1,16 +1,16 @@
-# @braid/react
+# @braidlabs/react
 
 The React binding for [Braid](../braid). A typed component over `<fragment-slot>`, and a hook that
 tells bound fragments when the host has navigated.
 
 ```tsx
 // entry file, module scope
-import { initBraidReact } from '@braid/react';
+import { initBraidReact } from '@braidlabs/react';
 initBraidReact();
 ```
 
 ```tsx
-import { BraidFragment } from '@braid/react';
+import { BraidFragment } from '@braidlabs/react';
 
 <BraidFragment name="billing" onReady={() => setLoaded(true)} />;
 ```

@@ -6,7 +6,7 @@ export default defineConfig({
   cacheDir: '../../node_modules/.vite/libs/contract',
   resolve: {
     alias: {
-      '@braid/skew': resolve(import.meta.dirname, '../skew/src/index.ts'),
+      '@braidlabs/skew': resolve(import.meta.dirname, '../skew/src/index.ts'),
     },
   },
   test: {

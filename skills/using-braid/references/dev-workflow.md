@@ -64,7 +64,7 @@ true HMR inside a fragment, point the fragment dev server's HMR at itself (`serv
 
 ```jsonc
 // nx.json
-{ "plugins": ["@braid/cli/nx"] }
+{ "plugins": ["@braidlabs/cli/nx"] }
 ```
 
 Every project with a `braid.config.{json,mjs,js}` gains a `braid-dev` target, marked continuous

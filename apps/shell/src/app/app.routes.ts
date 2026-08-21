@@ -1,5 +1,5 @@
 import { Route } from '@angular/router';
-import { lazy } from '@braid/angular-router';
+import { lazy } from '@braidlabs/angular-router';
 import { fakeChunkError, shouldFailNextChunk } from './simulator';
 
 export const appRoutes: Route[] = [

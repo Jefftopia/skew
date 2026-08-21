@@ -1,11 +1,11 @@
 /**
- * @braid/console — a read-only view of a Braid gateway's fragment registry.
+ * @braidlabs/console — a read-only view of a Braid gateway's fragment registry.
  *
  * Two ways to use it, from one package:
  *
  * ```tsx
  * // as a library, inside an admin app you already run
- * import { RegistryConsole } from '@braid/console';
+ * import { RegistryConsole } from '@braidlabs/console';
  * <RegistryConsole api={{ baseUrl: '/api/gateway' }} />
  * ```
  *

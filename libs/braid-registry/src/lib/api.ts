@@ -1,4 +1,4 @@
-import type { FragmentManifest } from '@braid/gateway';
+import type { FragmentManifest } from '@braidlabs/gateway';
 import { createSnapshot, type RegistrySnapshot } from './snapshot.js';
 import type { SnapshotStore } from './store.js';
 import { diffRegistries, validateRegistry, type RegistryFinding } from './analysis.js';

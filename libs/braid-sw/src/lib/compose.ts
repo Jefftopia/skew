@@ -4,7 +4,7 @@ import {
   pierceShellHtml,
   type FragmentManifest,
   type PierceTarget,
-} from '@braid/gateway';
+} from '@braidlabs/gateway';
 
 /**
  * Offline composition: the gateway's own piercing, run inside the worker.

@@ -3,7 +3,7 @@
  *
  * Reload guard passed to withReloadGuard() in app.config.ts.
  *
- * Contract (assumed from @braid/angular-router): a SkewReloadGuard is a
+ * Contract (assumed from @braidlabs/angular-router): a SkewReloadGuard is a
  * function that receives the recovery context and returns (a promise of)
  * true  -> automatic reload is allowed
  * false -> automatic reload is vetoed; the recovery is surfaced as
@@ -21,7 +21,7 @@
  *     differs from its defaultValue (covers plain elements, third-party
  *     widgets that render native inputs, and contenteditable regions).
  */
-import type { SkewReloadGuard, SkewRecoveryContext } from '@braid/angular-router';
+import type { SkewReloadGuard, SkewRecoveryContext } from '@braidlabs/angular-router';
 
 function hasDirtyAngularForm(): boolean {
   return document.querySelector('.ng-dirty') !== null;

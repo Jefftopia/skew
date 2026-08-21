@@ -1,4 +1,4 @@
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 import { withLock } from './locks.js';
 import { copyPartition, type CopyPartitionResult, type PartitionConflictPolicy } from './partitions.js';
 import { createRecordStore, type RecordDriver } from './record-store.js';

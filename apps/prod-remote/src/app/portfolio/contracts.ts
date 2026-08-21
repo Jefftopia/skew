@@ -1,4 +1,4 @@
-import { MigrationContext, registerSchema, versioned, versionedList } from '@braid/skew';
+import { MigrationContext, registerSchema, versioned, versionedList } from '@braidlabs/skew';
 
 /**
  * The remote's view of the same portfolio contract — a near-copy of the
@@ -141,7 +141,7 @@ export const FundSchemaV2 = versioned<FundV1>('portfolio-fund').next<FundV2>(
 /**
  * Contribute this build's steps to the page-wide registry. This is the
  * federation dividend: the HOST is a v1-only build, but both bundles share
- * one `@braid/skew` instance, so once this (newer) bundle has loaded, the
+ * one `@braidlabs/skew` instance, so once this (newer) bundle has loaded, the
  * host's own `read()` can migrate a v2 fund *down* through the step
  * registered here — its `ahead` dead end becomes an honest, lossy projection.
  */

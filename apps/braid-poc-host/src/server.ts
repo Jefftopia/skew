@@ -1,9 +1,9 @@
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
-import { createGateway, type TelemetryEvent } from '@braid/gateway';
-import type { FragmentManifest } from '@braid/gateway';
-import { toNodeMiddleware } from '@braid/gateway/node';
-import { createRegistryApi, createRoutingObservations, createSnapshot, serializeObservations } from '@braid/registry';
-import { fileSnapshotStore } from '@braid/registry/node';
+import { createGateway, type TelemetryEvent } from '@braidlabs/gateway';
+import type { FragmentManifest } from '@braidlabs/gateway';
+import { toNodeMiddleware } from '@braidlabs/gateway/node';
+import { createRegistryApi, createRoutingObservations, createSnapshot, serializeObservations } from '@braidlabs/registry';
+import { fileSnapshotStore } from '@braidlabs/registry/node';
 import { mountDemoApi } from './demo-api.js';
 import express from 'express';
 import { writeFile } from 'node:fs/promises';

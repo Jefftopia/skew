@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { createSkewStoreToken, provideSkewStore } from './provide';
 import { injectSkewStore, injectSkewSignal } from './inject';
-import { versioned, memoryDriver } from '@braid/skew';
+import { versioned, memoryDriver } from '@braidlabs/skew';
 
 const TestSchema = versioned<{ val: string }>('test-schema');
 

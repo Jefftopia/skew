@@ -1,5 +1,5 @@
 {
-  "name": "@braid/registry",
+  "name": "@braidlabs/registry",
   "version": "0.0.1",
   "description": "Immutable, content-addressed snapshots of a Braid fragment registry, with validation and diff analysis.",
   "keywords": ["braid", "micro-frontends", "registry", "configuration", "snapshots"],
@@ -14,7 +14,7 @@
     "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "@braid/gateway": "^0.0.1"
+    "@braidlabs/gateway": "^0.0.1"
   },
   "publishConfig": { "access": "public" },
   "repository": {

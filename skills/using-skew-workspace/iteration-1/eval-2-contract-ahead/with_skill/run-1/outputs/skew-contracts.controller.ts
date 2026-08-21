@@ -16,8 +16,8 @@
  *    pointing at the contract that explains it, so clients discover the URL
  *    without hardcoding it.
  *
- * @braid/contract is framework-free and dependency-free, so it runs inside
- * Nest directly — no @braid/nest package is needed (or shipped).
+ * @braidlabs/contract is framework-free and dependency-free, so it runs inside
+ * Nest directly — no @braidlabs/nest package is needed (or shipped).
  */
 import {
   Controller,
@@ -28,8 +28,8 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { contractFingerprint, wellKnownContractUrl } from '@braid/contract';
-import { formatSkewContractHeader, SKEW_CONTRACT_HEADER } from '@braid/skew';
+import { contractFingerprint, wellKnownContractUrl } from '@braidlabs/contract';
+import { formatSkewContractHeader, SKEW_CONTRACT_HEADER } from '@braidlabs/skew';
 import {
   FundV2,
   PORTFOLIO_FUND_CONTRACT,

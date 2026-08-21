@@ -1,19 +1,19 @@
 /**
  * Installs the page-wide skew devtools hook.
  *
- * `@braid/skew` emits one trace event per `read()` / `write()` into
+ * `@braidlabs/skew` emits one trace event per `read()` / `write()` into
  * `globalThis.__SKEW_DEVTOOLS_HOOK__` when one is installed — and because the
- * host and the remote share a single `@braid/skew` instance via federation's
+ * host and the remote share a single `@braidlabs/skew` instance via federation's
  * `sharedMappings`, this one hook observes BOTH builds' schema activity: the
  * host's v1 reads, the remote's v2 writes, contract cures, outbox flushes.
  *
  * Runtime-import free on purpose (`import type` only): this module is loaded
  * from `main.ts` *before* `initFederation` resolves the import map, and a
  * static runtime import of a shared package there would bundle a second copy
- * of `@braid/skew` into the host entry and break the singleton the whole demo
+ * of `@braidlabs/skew` into the host entry and break the singleton the whole demo
  * depends on. A hook is just an object with `emit`; it needs no library code.
  */
-import type { SkewTraceEvent } from '@braid/skew';
+import type { SkewTraceEvent } from '@braidlabs/skew';
 
 const BUFFER_LIMIT = 200;
 

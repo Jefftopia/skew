@@ -1,5 +1,5 @@
 /**
- * Versioned schema for WeeklyContent drafts, built on @braid/skew.
+ * Versioned schema for WeeklyContent drafts, built on @braidlabs/skew.
  *
  * Version history
  * ---------------
@@ -18,7 +18,7 @@ import {
   registerSchema,
   type MigrationStep,
   type VersionedSchema,
-} from '@braid/skew';
+} from '@braidlabs/skew';
 
 /** Stable wire name for this document type (checked against envelope `n`). */
 export const WEEKLY_CONTENT_SCHEMA_NAME = 'bulletin.weekly-content';

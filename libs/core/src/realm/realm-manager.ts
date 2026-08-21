@@ -437,7 +437,7 @@ function verifyRealmStub(iframe: HTMLIFrameElement, fragmentId: string): void {
         fragmentId,
         stage: 'realm-boot',
         fixHint: protocol
-          ? 'upgrade @braid/core and @braid/gateway to the same package version'
+          ? 'upgrade @braidlabs/core and @braidlabs/gateway to the same package version'
           : `ensure the braid gateway is mounted in front of this app and has a manifest registered for fragment id "${fragmentId}"`,
       },
     );

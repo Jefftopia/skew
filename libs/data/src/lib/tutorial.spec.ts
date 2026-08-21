@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 import { memoryRecordDriver } from './memory-driver.js';
 import { createRecordStore } from './record-store.js';
 import { createDataClient } from './query.js';

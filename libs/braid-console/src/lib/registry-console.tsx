@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { DiscoveryEntry } from '@braid/gateway';
+import type { DiscoveryEntry } from '@braidlabs/gateway';
 import { fetchRegistry, type ConsoleApi, type RegistryListing } from './client.js';
 import { ensureStyles } from './styles.js';
 import { buildTopology } from './topology.js';

@@ -1,4 +1,4 @@
-# @braid/cli
+# @braidlabs/cli
 
 Run a composed application locally, with everything still live-reloading.
 
@@ -59,7 +59,7 @@ unaffected.
 
 ```jsonc
 // nx.json
-{ "plugins": ["@braid/cli/nx"] }
+{ "plugins": ["@braidlabs/cli/nx"] }
 ```
 
 Any project with a `braid.config.{json,mjs,js}` gains a `braid-dev` target — continuous,

@@ -27,11 +27,11 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: '@braid/gateway',
+        find: '@braidlabs/gateway',
         replacement: resolve(import.meta.dirname, '../braid-gateway/src/index.ts'),
       },
       {
-        find: '@braid/registry',
+        find: '@braidlabs/registry',
         replacement: resolve(import.meta.dirname, '../braid-registry/src/index.ts'),
       },
     ],

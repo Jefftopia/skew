@@ -1,4 +1,4 @@
-import type { FragmentManifest } from '@braid/gateway';
+import type { FragmentManifest } from '@braidlabs/gateway';
 
 /**
  * A registry snapshot: an immutable, content-addressed set of fragment manifests.

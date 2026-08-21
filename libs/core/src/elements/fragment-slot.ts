@@ -144,7 +144,7 @@ export class FragmentSlot extends HTMLElement {
         throw new BraidError('the untrusted tier is not available in this build', {
           fragmentId,
           stage: 'slot-config',
-          fixHint: 'this build of @braid/core ships the trusted compat tier only',
+          fixHint: 'this build of @braidlabs/core ships the trusted compat tier only',
         });
       }
 

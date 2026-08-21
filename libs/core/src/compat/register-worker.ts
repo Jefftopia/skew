@@ -37,7 +37,7 @@ export interface RegisterBraidServiceWorkerOptions {
  * Registers the worker and introduces the page to it.
  *
  * ```ts
- * import { registerBraidServiceWorker } from '@braid/core';
+ * import { registerBraidServiceWorker } from '@braidlabs/core';
  * await registerBraidServiceWorker({ buildId: BUILD_ID });
  * ```
  *

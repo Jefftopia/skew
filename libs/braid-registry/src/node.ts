@@ -1,5 +1,5 @@
 /**
- * Node bindings for `@braid/registry`.
+ * Node bindings for `@braidlabs/registry`.
  *
  * Separate from the main entry so the core stays platform-neutral — a browser bundling the
  * console must not drag `node:fs` in behind it.

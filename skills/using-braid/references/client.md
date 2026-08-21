@@ -1,7 +1,7 @@
-# @braid/core — the client runtime
+# @braidlabs/core — the client runtime
 
 ```ts
-import { initBraid } from '@braid/core';
+import { initBraid } from '@braidlabs/core';
 
 initBraid({
   dev: true,

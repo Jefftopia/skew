@@ -1,4 +1,4 @@
-import type { DiscoveryEntry } from '@braid/gateway';
+import type { DiscoveryEntry } from '@braidlabs/gateway';
 
 /**
  * The composition topology of a gateway, derived from a discovery listing.

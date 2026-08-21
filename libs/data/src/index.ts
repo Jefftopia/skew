@@ -1,11 +1,11 @@
 /**
- * @braid/data — the local-first data layer.
+ * @braidlabs/data — the local-first data layer.
  *
  * Persistence-first: IndexedDB is the source of truth and memory is a derived view. Every record is
- * enveloped by `@braid/skew` and projected to *this* reader's version on the way out, which is
+ * enveloped by `@braidlabs/skew` and projected to *this* reader's version on the way out, which is
  * what lets independently deployed apps read the same store at different contract versions.
  *
- * Framework-neutral. Angular bindings live in `@braid/angular-data`.
+ * Framework-neutral. Angular bindings live in `@braidlabs/angular-data`.
  */
 
 export { createRecordStore } from './lib/record-store.js';

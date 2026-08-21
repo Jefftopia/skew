@@ -266,7 +266,7 @@ trip, and the location illusion its router depends on. That is not a limitation 
 or Vue app running as a fragment gets exactly the same thing, for the same reason. The POC's
 `braid-poc-remote` (Angular) and `braid-poc-react-remote` (React) both boot this way.
 
-**`@braid/angular` is a host-side package**, and it does not pick a realm at all. It gives an
+**`@braidlabs/angular` is a host-side package**, and it does not pick a realm at all. It gives an
 Angular *host* a `<braid-fragment>` component to render slots with typed inputs and outputs, and
 `provideBraid()` to tell Braid when the router navigates. If your Angular app is the shell, that is
 the package you want; if it is the fragment, you need nothing at all.

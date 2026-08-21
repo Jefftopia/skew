@@ -1,5 +1,5 @@
 {
-  "name": "@braid/data",
+  "name": "@braidlabs/data",
   "version": "0.0.1",
   "description": "Local-first client data layer: persistence-first, skew-tolerant across independently deployed readers.",
   "keywords": ["local-first", "indexeddb", "offline", "outbox", "micro-frontends", "skew"],
@@ -12,7 +12,7 @@
     ".": { "types": "./src/index.d.ts", "default": "./src/index.js" },
     "./package.json": "./package.json"
   },
-  "peerDependencies": { "@braid/skew": "^0.0.1" },
+  "peerDependencies": { "@braidlabs/skew": "^0.0.1" },
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",

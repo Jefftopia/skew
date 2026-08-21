@@ -74,11 +74,11 @@ tooling, contract documents — is an application of the same idea to a
 specific boundary, and every package is independently adoptable.
 
 ```sh
-npm install @braid/skew @braid/build
+npm install @braidlabs/skew @braidlabs/build
 ```
 
 ```ts
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 
 // Snapshot shapes: frozen copies of what each version looked like.
 interface DraftV1 { id: string; body: string }
@@ -125,21 +125,21 @@ under the running host.
 
 | Package                                               | What it does                                                                                            |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **[`@braid/skew`](libs/skew)**                         | Envelopes, migration chains, versioned storage, build identity, the shared schema registry. No deps.    |
-| **[`@braid/contract`](libs/contract)**                 | Migration history published as a document the API serves; clients resolve it at runtime.                |
-| **[`@braid/build`](libs/build)**                       | `skew-stamp` (build identity + manifest) and `skew-contract gen` (frozen types from a contract).        |
-| **[`@braid/studio`](libs/studio)**                     | Inspection tooling: structural payload diffs that mark guessed and discarded values. Framework-free.    |
-| **[`@braid/angular-core`](libs/angular/core)**         | Angular DI and signal wrappers for versioned stores.                                                    |
-| **[`@braid/angular-router`](libs/angular/router)**     | Chunk-load recovery for lazy routes, without reload loops or lost work.                                 |
-| **[`@braid/angular-data`](libs/angular/data)**         | Normalized entity store, tag invalidation, and a durable mutation outbox.                               |
-| **[`@braid/angular-workflow`](libs/angular/workflow)** | Multi-step flows whose drafts survive refresh, deploys, and device changes.                             |
-| **[`@braid/core`](libs/core)**                       | Braid client runtime: isolated iframe realms, declarative shadow DOM, and compat adapter for microfrontends. |
-| **[`@braid/gateway`](libs/braid-gateway)**       | Fetch-native origin-front middleware with manifest routing, clean namespaces, and server-side piercing.      |
-| **[`@braid/angular`](libs/braid-angular)**       | Angular binding for Braid: typed `<braid-fragment>` component and router integration.                        |
-| **[`@braid/react`](libs/braid-react)**           | React binding for Braid: `<BraidFragment>` component and router integration.                                 |
-| **[`@braid/cli`](libs/braid-cli)**               | Braid CLI (`braid dev`): local dev server orchestration with live reload.                                   |
+| **[`@braidlabs/skew`](libs/skew)**                         | Envelopes, migration chains, versioned storage, build identity, the shared schema registry. No deps.    |
+| **[`@braidlabs/contract`](libs/contract)**                 | Migration history published as a document the API serves; clients resolve it at runtime.                |
+| **[`@braidlabs/build`](libs/build)**                       | `skew-stamp` (build identity + manifest) and `skew-contract gen` (frozen types from a contract).        |
+| **[`@braidlabs/studio`](libs/studio)**                     | Inspection tooling: structural payload diffs that mark guessed and discarded values. Framework-free.    |
+| **[`@braidlabs/angular-core`](libs/angular/core)**         | Angular DI and signal wrappers for versioned stores.                                                    |
+| **[`@braidlabs/angular-router`](libs/angular/router)**     | Chunk-load recovery for lazy routes, without reload loops or lost work.                                 |
+| **[`@braidlabs/angular-data`](libs/angular/data)**         | Normalized entity store, tag invalidation, and a durable mutation outbox.                               |
+| **[`@braidlabs/angular-workflow`](libs/angular/workflow)** | Multi-step flows whose drafts survive refresh, deploys, and device changes.                             |
+| **[`@braidlabs/core`](libs/core)**                       | Braid client runtime: isolated iframe realms, declarative shadow DOM, and compat adapter for microfrontends. |
+| **[`@braidlabs/gateway`](libs/braid-gateway)**       | Fetch-native origin-front middleware with manifest routing, clean namespaces, and server-side piercing.      |
+| **[`@braidlabs/angular`](libs/braid-angular)**       | Angular binding for Braid: typed `<braid-fragment>` component and router integration.                        |
+| **[`@braidlabs/react`](libs/braid-react)**           | React binding for Braid: `<BraidFragment>` component and router integration.                                 |
+| **[`@braidlabs/cli`](libs/braid-cli)**               | Braid CLI (`braid dev`): local dev server orchestration with live reload.                                   |
 
-Every package depends on `@braid/skew` and never on a sibling. You can adopt
+Every package depends on `@braidlabs/skew` and never on a sibling. You can adopt
 one, several, or none of the Angular ones; nothing is load-bearing for
 anything else.
 
@@ -151,20 +151,20 @@ These are the groupings that come up in practice.
 
 ### An app that autosaves drafts or caches API data locally
 
-**`@braid/skew`** (+ **`@braid/angular-core`** in Angular).
+**`@braidlabs/skew`** (+ **`@braidlabs/angular-core`** in Angular).
 
 The moment you write `JSON.parse(raw) as Draft`, you have an assertion where
 you need a check, and the first release that changes the model breaks every
 record already sitting in users' browsers. `versioned()` +
 `createVersionedStore` replaces the cast with migration at the boundary.
-`@braid/angular-core` adds the DI token and signal wrappers
+`@braidlabs/angular-core` adds the DI token and signal wrappers
 (`provideSkewStore`, `injectSkewSignal`) so components consume the store
 without a flash of empty state. You do not need anything else for this —
 no build stamping, no contracts.
 
 ### An app whose users keep tabs open across deploys
 
-**`@braid/build`** + **`@braid/angular-router`** (+ `@braid/skew`, which they build on).
+**`@braidlabs/build`** + **`@braidlabs/angular-router`** (+ `@braidlabs/skew`, which they build on).
 
 Chunk recovery needs two things migrations don't: a *build identity* to
 compare against (that's `skew-stamp`, which generates a build-id module and a
@@ -178,11 +178,11 @@ deleted route means "redirect, reloading will 404 forever".
 
 ### Offline-capable data entry
 
-**`@braid/skew`** + **`@braid/build`** + **`@braid/angular-data`**.
+**`@braidlabs/skew`** + **`@braidlabs/build`** + **`@braidlabs/angular-data`**.
 
 A mutation queued while offline must survive a page reload, which means it
 must be persisted — and anything persisted can outlive the build that wrote
-it. The outbox in `@braid/angular-data` therefore needs `@braid/skew`'s
+it. The outbox in `@braidlabs/angular-data` therefore needs `@braidlabs/skew`'s
 versioning twice over: queued payloads carry the schema version they were
 authored under (so a flush after a deploy can migrate them before sending),
 and a queue written by a *newer* build is left untouched rather than
@@ -193,26 +193,26 @@ just arrive later, with less context.
 
 ### A multi-step wizard users abandon and resume
 
-**`@braid/skew`** + **`@braid/angular-workflow`** (+ **`@braid/angular-router`**
+**`@braidlabs/skew`** + **`@braidlabs/angular-workflow`** (+ **`@braidlabs/angular-router`**
 if the steps are lazy-loaded routes).
 
 A six-step application form is abandoned on Thursday and resumed on Monday;
 in between, a release added a step and renamed two fields. The workflow
 package owns step↔route mapping, guarded deep links, resumption, and
-idempotent submit — and takes a `schema` from `@braid/skew` so the parked
+idempotent submit — and takes a `schema` from `@braidlabs/skew` so the parked
 draft is migrated on resume instead of silently corrupted. If the steps are
 lazily loaded, the deploy can also break the *code* loading mid-wizard,
 which is the router package's job.
 
 ### An API whose clients you cannot force-update
 
-**`@braid/contract`** + **`@braid/skew`** + **`@braid/build`**, on both sides.
+**`@braidlabs/contract`** + **`@braidlabs/skew`** + **`@braidlabs/build`**, on both sides.
 
 Mobile release trains, partner integrations, or simply many web clients on
 different deploy cadences: the server moves to v2 while v1 clients keep
 running for weeks. Code-shipped migration chains cannot fix the direction
 that matters here — a v1 client reading v2 data (`ahead`) needs knowledge
-that didn't exist when it was built. `@braid/contract` closes the gap: the
+that didn't exist when it was built. `@braidlabs/contract` closes the gap: the
 server publishes its migration history as a data document at
 `/.well-known/skew/contracts/:name`, and clients resolve it at runtime
 (`readResolving`) to read newer data as an honest, labeled projection. On
@@ -223,8 +223,8 @@ one definition. See [Contracts as data](#contracts-as-data--migrations-without-a
 
 ### Independently deployed micro-frontends on one page
 
-**`@braid/skew`** + **`@braid/build`** + **`@braid/angular-router`**
-(+ **`@braid/contract`** if the host and remotes also disagree with an API).
+**`@braidlabs/skew`** + **`@braidlabs/build`** + **`@braidlabs/angular-router`**
+(+ **`@braidlabs/contract`** if the host and remotes also disagree with an API).
 
 A host built against v1 and a remote built against v2 share one JavaScript
 runtime. Three boundaries are live at once: the remote's chunk can vanish
@@ -236,7 +236,7 @@ can downgrade v2 records it could never have understood alone, with the
 discarded fields named. The registry also detects two builds that disagree
 about what a version *means*, via content fingerprints on every step.
 
-## `@braid/skew` in more depth
+## `@braidlabs/skew` in more depth
 
 ### Results, not exceptions
 
@@ -365,7 +365,7 @@ the running demo is in the sections below it:
 ## The shared registry — when both builds share a page
 
 In a federated page, the host built against v1 and the remote built against
-v2 are loaded into the same JavaScript runtime and share one `@braid/skew`
+v2 are loaded into the same JavaScript runtime and share one `@braidlabs/skew`
 instance. The remote's bundle contains exactly the migration knowledge the
 host lacks, and `registerSchema()` lets it say so:
 

@@ -1,4 +1,4 @@
-import type { FragmentManifest } from '@braid/gateway';
+import type { FragmentManifest } from '@braidlabs/gateway';
 import { fieldOwner } from './analysis.js';
 
 /**
@@ -28,7 +28,7 @@ export interface FragmentDescriptor {
   contractVersion?: string;
   events?: Record<string, { detail: string }>;
   /**
-   * Context schema versions this app reads and writes, per context type — `@braid/skew` chain
+   * Context schema versions this app reads and writes, per context type — `@braidlabs/skew` chain
    * versions, not spec versions. Not yet consumed by anything; reserved for the FDC3 work, where
    * a generated descriptor is the inference half of "infer where possible, assume safely
    * elsewhere".

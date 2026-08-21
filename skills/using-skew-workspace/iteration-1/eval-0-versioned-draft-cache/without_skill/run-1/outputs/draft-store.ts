@@ -1,6 +1,6 @@
 /**
  * localStorage-backed store for WeeklyContent drafts, versioned with
- * @braid/skew.
+ * @braidlabs/skew.
  *
  * Storage layout (current builds):
  *

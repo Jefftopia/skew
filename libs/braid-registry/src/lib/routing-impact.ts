@@ -1,5 +1,5 @@
-import { Registry } from '@braid/gateway';
-import type { FragmentManifest } from '@braid/gateway';
+import { Registry } from '@braidlabs/gateway';
+import type { FragmentManifest } from '@braidlabs/gateway';
 import type { ObservationSet } from './observations.js';
 
 /**

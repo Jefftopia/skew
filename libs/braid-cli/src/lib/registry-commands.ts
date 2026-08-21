@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import type { FragmentManifest } from '@braid/gateway';
+import type { FragmentManifest } from '@braidlabs/gateway';
 import {
   accessMatrix,
   ANONYMOUS,
@@ -20,8 +20,8 @@ import {
   type RegistryDiff,
   type RoutingImpact,
   type RegistryFinding,
-} from '@braid/registry';
-import { fileSnapshotStore } from '@braid/registry/node';
+} from '@braidlabs/registry';
+import { fileSnapshotStore } from '@braidlabs/registry/node';
 import { findConfig, loadConfig } from './config.js';
 
 const BOLD = '[1m';
@@ -243,7 +243,7 @@ async function impactCommand(argv: string[]): Promise<number> {
   if (!observationsPath || !against) {
     process.stderr.write(
       'braid registry impact: --observations <file> and --against <ref> are both required\n' +
-        '  observations come from a gateway configured with `observe`; see @braid/registry\n',
+        '  observations come from a gateway configured with `observe`; see @braidlabs/registry\n',
     );
     return 1;
   }

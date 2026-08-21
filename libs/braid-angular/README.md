@@ -1,10 +1,10 @@
-# @braid/angular
+# @braidlabs/angular
 
 The Angular binding for [Braid](../braid). A typed component over `<fragment-slot>`, and one
 provider that wires host navigation to the Angular router.
 
 ```ts
-import { provideBraid } from '@braid/angular';
+import { provideBraid } from '@braidlabs/angular';
 
 bootstrapApplication(App, {
   providers: [provideRouter(routes), provideClientHydration(), provideBraid()],

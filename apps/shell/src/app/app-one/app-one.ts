@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { createVersionedStore, webStorageDriver } from '@braid/skew';
-import { injectWorkflow } from '@braid/angular-workflow';
+import { createVersionedStore, webStorageDriver } from '@braidlabs/skew';
+import { injectWorkflow } from '@braidlabs/angular-workflow';
 import { DRAFT_KEY, DraftSchemaV1, type DraftV1, VERSIONS, wizardV1 } from '../domain';
 
 interface Outcome {

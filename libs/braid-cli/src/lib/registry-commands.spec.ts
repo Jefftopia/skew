@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { FragmentManifest } from '@braid/gateway';
-import { parseSnapshot } from '@braid/registry';
+import type { FragmentManifest } from '@braidlabs/gateway';
+import { parseSnapshot } from '@braidlabs/registry';
 import { registry } from './registry-commands.js';
 
 /** Strips ANSI so assertions read as plain text. */

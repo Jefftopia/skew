@@ -1,10 +1,10 @@
 {
-  "name": "@braid/angular-workflow",
+  "name": "@braidlabs/angular-workflow",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/core": "^22.0.0",
     "@angular/router": "^22.0.0",
-    "@braid/skew": "^0.0.1"
+    "@braidlabs/skew": "^0.0.1"
   },
   "sideEffects": false,
   "description": "Durable multi-step workflows for Angular: router-integrated, resumable, and versioned drafts.",

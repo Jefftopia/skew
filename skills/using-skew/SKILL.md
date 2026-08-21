@@ -1,11 +1,11 @@
 ---
 name: using-skew
 description: >-
-  How to correctly use the @braid/* npm packages (@braid/skew, @braid/contract,
-  @braid/build, @braid/angular-core, @braid/angular-router, @braid/angular-data,
-  @braid/angular-workflow) for surviving version skew: versioned schemas and
+  How to correctly use the @braidlabs/* npm packages (@braidlabs/skew, @braidlabs/contract,
+  @braidlabs/build, @braidlabs/angular-core, @braidlabs/angular-router, @braidlabs/angular-data,
+  @braidlabs/angular-workflow) for surviving version skew: versioned schemas and
   data migrations, contract documents, chunk-load recovery, durable outboxes,
-  and resumable workflows. Use this skill whenever a task involves any @braid
+  and resumable workflows. Use this skill whenever a task involves any @braidlabs
   package, schema/data migrations for persisted or cached data, ChunkLoadError
   recovery after deploys, localStorage/IndexedDB caches that break when a model
   changes, offline mutation queues, multi-step wizard drafts, API version
@@ -31,20 +31,20 @@ fail loudly.**
 
 | Symptom / task | Package | Reference |
 |---|---|---|
-| Persisted/cached data breaks when the model changes; `JSON.parse(raw) as T` | `@braid/skew` (`versioned`, `createVersionedStore`) | [references/core.md](references/core.md) |
-| Detect stale client vs stale origin; build identity; `skew-manifest.json` | `@braid/skew` (`createVersionProbe`) + `@braid/build` (`skew-stamp`) | [core.md](references/core.md), [build.md](references/build.md) |
-| Old clients must read data from a *newer* API without redeploying | `@braid/contract` | [references/contract.md](references/contract.md) |
-| Generate frozen version types from a contract JSON | `@braid/build` (`skew-contract gen`) | [references/build.md](references/build.md) |
-| Wire a versioned store into Angular DI / signals | `@braid/angular-core` | [references/angular.md](references/angular.md) |
-| `ChunkLoadError` after deploys; lazy route recovery without reload loops | `@braid/angular-router` | [references/angular.md](references/angular.md) |
-| Normalized entity cache, optimistic writes, offline outbox in Angular | `@braid/angular-data` | [references/angular.md](references/angular.md) |
-| Multi-step wizard whose draft must survive refresh *and* deploys | `@braid/angular-workflow` | [references/angular.md](references/angular.md) |
+| Persisted/cached data breaks when the model changes; `JSON.parse(raw) as T` | `@braidlabs/skew` (`versioned`, `createVersionedStore`) | [references/core.md](references/core.md) |
+| Detect stale client vs stale origin; build identity; `skew-manifest.json` | `@braidlabs/skew` (`createVersionProbe`) + `@braidlabs/build` (`skew-stamp`) | [core.md](references/core.md), [build.md](references/build.md) |
+| Old clients must read data from a *newer* API without redeploying | `@braidlabs/contract` | [references/contract.md](references/contract.md) |
+| Generate frozen version types from a contract JSON | `@braidlabs/build` (`skew-contract gen`) | [references/build.md](references/build.md) |
+| Wire a versioned store into Angular DI / signals | `@braidlabs/angular-core` | [references/angular.md](references/angular.md) |
+| `ChunkLoadError` after deploys; lazy route recovery without reload loops | `@braidlabs/angular-router` | [references/angular.md](references/angular.md) |
+| Normalized entity cache, optimistic writes, offline outbox in Angular | `@braidlabs/angular-data` | [references/angular.md](references/angular.md) |
+| Multi-step wizard whose draft must survive refresh *and* deploys | `@braidlabs/angular-workflow` | [references/angular.md](references/angular.md) |
 
-Adoption rule: every package depends on `@braid/skew` and **never on a
+Adoption rule: every package depends on `@braidlabs/skew` and **never on a
 sibling**. Adopt one, all, or none — never install a package the task doesn't
-need. (READMEs mention `@braid/react-*` / `@braid/node` / `@braid/nest` as related
+need. (READMEs mention `@braidlabs/react-*` / `@braidlabs/node` / `@braidlabs/nest` as related
 work; only the packages in the table above are shipped. For servers, use
-`@braid/skew` + `@braid/contract` directly — they are dependency-free and run
+`@braidlabs/skew` + `@braidlabs/contract` directly — they are dependency-free and run
 anywhere.)
 
 ## The rules that protect user data
@@ -56,7 +56,7 @@ Hold every change against them.
    types.** Each `versioned<V1>().next<V2>(…)` step is written against `V1`,
    `V2` interfaces that are *copies frozen at that version*. The moment a
    migration references a live interface, editing that interface silently
-   changes what old migrations produce. With `@braid/contract`, `skew-contract
+   changes what old migrations produce. With `@braidlabs/contract`, `skew-contract
    gen` generates these frozen types so they can't drift.
 
 2. **Never edit or reorder an existing `next()` step or contract step.** Data
@@ -82,7 +82,7 @@ Hold every change against them.
 
 6. **Never auto-reload when the origin is stale.** `staleOrigin` (origin older
    than the running client) means a reload fetches the same stale bundle and
-   loops forever. The probe and `@braid/angular-router` classify this; keep the
+   loops forever. The probe and `@braidlabs/angular-router` classify this; keep the
    distinction when building your own recovery.
 
 7. **Contract documents carry data, never code.** Ops come from a closed
@@ -95,7 +95,7 @@ Hold every change against them.
 ## Canonical quick start (browser cache, framework-free)
 
 ```ts
-import { versioned, createVersionedStore, webStorageDriver } from '@braid/skew';
+import { versioned, createVersionedStore, webStorageDriver } from '@braidlabs/skew';
 
 // Frozen snapshots — copies, not imports of live types.
 interface V1 { id: string; themeQuote?: { text: string } }
@@ -110,7 +110,7 @@ export const WeeklyContent = versioned<V1>('weekly-content')
 
 const drafts = createVersionedStore(WeeklyContent, {
   driver: webStorageDriver('local'),   // degrades to memory under private mode/SSR
-  buildId: BUILD_ID,                   // from @braid/build's generated build-id.ts
+  buildId: BUILD_ID,                   // from @braidlabs/build's generated build-id.ts
   onReadFailure: (key, f) => telemetry.warn('stale draft', { key, ...f }),
 });
 
@@ -127,7 +127,7 @@ if (!result.ok) {
 
 ## Angular conventions
 
-All `@braid/angular-*` packages are standalone-only (`provideSkew*()`
+All `@braidlabs/angular-*` packages are standalone-only (`provideSkew*()`
 functions, no NgModules), signal-based, zoneless-safe, and SSR-safe. Wire
 stores through DI (`createSkewStoreToken` + `provideSkewStore`), consume with
 `injectSkewSignal` to avoid empty-state flashes, and generate `BUILD_ID` /

@@ -1,4 +1,4 @@
-# @braid/gateway
+# @braidlabs/gateway
 
 > Every `/__braid/…` URL this package serves — what asks for it, when, and what comes back — is
 > walked through in [Braid, explained](../../docs/braid-explained.md#4-the-__braid-urls).
@@ -17,7 +17,7 @@ Also see: [failure modes](../../docs/braid-failure-modes.md) ·
 ## Usage
 
 ```ts
-import { createGateway } from '@braid/gateway';
+import { createGateway } from '@braidlabs/gateway';
 
 const gateway = createGateway({
   registry: [
@@ -89,7 +89,7 @@ covered by integration tests against the real frameworks (`bindings.spec.ts`).
 and the gateway reads what it writes:
 
 ```ts
-import { toNodeMiddleware } from '@braid/gateway/node';
+import { toNodeMiddleware } from '@braidlabs/gateway/node';
 
 app.use(toNodeMiddleware(gateway));
 ```
@@ -114,7 +114,7 @@ app.use(toNodeMiddleware(gateway));
 **Nitro / h3 / Workers / Deno / Bun** — wrap the app's fetch handler:
 
 ```ts
-import { toFetchHandler } from '@braid/gateway';
+import { toFetchHandler } from '@braidlabs/gateway';
 import { toWebHandler } from 'h3';
 
 export default toFetchHandler(gateway, toWebHandler(app));

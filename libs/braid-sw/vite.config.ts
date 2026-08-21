@@ -7,15 +7,15 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: '@braid/gateway',
+        find: '@braidlabs/gateway',
         replacement: resolve(import.meta.dirname, '../braid-gateway/src/index.ts'),
       },
       {
-        find: '@braid/skew',
+        find: '@braidlabs/skew',
         replacement: resolve(import.meta.dirname, '../skew/src/index.ts'),
       },
       {
-        find: '@braid/data',
+        find: '@braidlabs/data',
         replacement: resolve(import.meta.dirname, '../data/src/index.ts'),
       },
     ],

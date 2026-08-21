@@ -3,13 +3,13 @@ import {
   makeEnvironmentProviders,
   provideEnvironmentInitializer,
 } from '@angular/core';
-import { setSkewDisabled } from '@braid/skew';
+import { setSkewDisabled } from '@braidlabs/skew';
 
 /**
  * ⚠️ NOT PUBLIC API. Undocumented on purpose. Do not use in an application.
  *
- * Angular-shaped wrapper around `setSkewDisabled()` from `@braid/skew`. Read the
- * module comment in `@braid/skew`'s `disabled.ts` first — it explains what this
+ * Angular-shaped wrapper around `setSkewDisabled()` from `@braidlabs/skew`. Read the
+ * module comment in `@braidlabs/skew`'s `disabled.ts` first — it explains what this
  * turns off, why it exists, and why it is deliberately absent from the README,
  * the package docs, and every example.
  *
@@ -21,8 +21,8 @@ import { setSkewDisabled } from '@braid/skew';
  * Two things worth knowing before using it anyway:
  *
  * **It is not scoped to this injector.** The flag lives in a module-level
- * variable in `@braid/skew`, because core is framework-agnostic and has no
- * injector to read from. Calling this affects every `@braid` package sharing
+ * variable in `@braidlabs/skew`, because core is framework-agnostic and has no
+ * injector to read from. Calling this affects every `@braidlabs` package sharing
  * that instance of core — including any other Angular application on the page.
  * It is `provide*`-shaped for familiarity, not because it is scoped.
  *
@@ -31,8 +31,8 @@ import { setSkewDisabled } from '@braid/skew';
  * Every check reads the flag at the moment it runs, so a later toggle takes
  * effect on the next read, navigation or write with no reload.
  *
- * This lives in `@braid/angular-router` for want of a shared Angular package;
- * it belongs in `@braid/angular-core` once that lands, since it governs all of
+ * This lives in `@braidlabs/angular-router` for want of a shared Angular package;
+ * it belongs in `@braidlabs/angular-core` once that lands, since it governs all of
  * them and nothing here is router-specific.
  *
  * @internal

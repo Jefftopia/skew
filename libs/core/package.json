@@ -1,5 +1,5 @@
 {
-  "name": "@braid/core",
+  "name": "@braidlabs/core",
   "version": "0.0.1",
   "description": "Braid client runtime — compose independently deployed frontend apps into one page. This build ships the compat adapter (the contained web-fragments-style emulation layer) as the default adapter.",
   "keywords": [

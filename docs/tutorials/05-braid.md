@@ -1,6 +1,6 @@
 # Tutorial 5 — Compose without colliding: Enterprise Microfrontends with Braid
 
-**Packages:** `@braid/gateway` · `@braid/core` · **Time:** ~30 minutes · **Prerequisites:** Basic understanding of JavaScript/TypeScript, Single-Page Applications (SPAs), and client/server rendering concepts.
+**Packages:** `@braidlabs/gateway` · `@braidlabs/core` · **Time:** ~30 minutes · **Prerequisites:** Basic understanding of JavaScript/TypeScript, Single-Page Applications (SPAs), and client/server rendering concepts.
 
 ---
 
@@ -118,7 +118,7 @@ Let's look at how these pieces work together.
 
 ## The Core Concepts of Braid
 
-### 1. The Gateway (`@braid/gateway`)
+### 1. The Gateway (`@braidlabs/gateway`)
 
 The Braid Gateway is a lightweight, fetch-native middleware that sits at the front of your origin (Express, Fastify, Cloudflare Workers, Node, or Vite in development).
 
@@ -308,8 +308,8 @@ In your server or edge layer:
 ```ts
 // server.ts
 import express from 'express';
-import { createGateway } from '@braid/gateway';
-import { toNodeMiddleware } from '@braid/gateway/node';
+import { createGateway } from '@braidlabs/gateway';
+import { toNodeMiddleware } from '@braidlabs/gateway/node';
 
 const app = express();
 

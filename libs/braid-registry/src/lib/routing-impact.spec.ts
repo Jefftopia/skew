@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FragmentManifest, RoutingEvent } from '@braid/gateway';
+import type { FragmentManifest, RoutingEvent } from '@braidlabs/gateway';
 import { createRoutingObservations, parseObservations, serializeObservations } from './observations.js';
 import { routingImpact } from './routing-impact.js';
 

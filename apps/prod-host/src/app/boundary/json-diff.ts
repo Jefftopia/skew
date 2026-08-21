@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { diffPayloads } from '@braid/studio';
+import { diffPayloads } from '@braidlabs/studio';
 
 /**
  * A git-style diff of the payload before and after a cast.
@@ -8,7 +8,7 @@ import { diffPayloads } from '@braid/studio';
  * answers the question people ask next — "show me the record" — in the one
  * format every developer already knows how to read.
  *
- * All of the thinking lives in `@braid/studio`'s `diffPayloads`: pairing lines
+ * All of the thinking lives in `@braidlabs/studio`'s `diffPayloads`: pairing lines
  * by key path rather than by line number, and carrying the migration's own
  * vocabulary (a guessed value is not the same claim as a carried one). This
  * component is the renderer, and the remote app has its own copy of exactly

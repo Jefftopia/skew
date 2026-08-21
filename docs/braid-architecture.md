@@ -7,7 +7,7 @@
 
 - **Status:** Draft for review.
 - **Name:** **Braid** — independent strands composed into one strong cord, where every strand keeps its own identity and dependencies, while remaining unbraidable (incremental migration is completely reversible).
-- **Positioning:** Braid is a **composition layer with skew handling built in**. Its thesis is the elimination of version-skew errors across independently deployed frontend applications. It removes *dependency skew* structurally (isolated JavaScript realms and per-fragment import maps prevent co-deployed apps from colliding) and surfaces *contract skew* at the fragment boundary, where the contract-migration engine in `@braid/skew` bridges version differences over the context bus.
+- **Positioning:** Braid is a **composition layer with skew handling built in**. Its thesis is the elimination of version-skew errors across independently deployed frontend applications. It removes *dependency skew* structurally (isolated JavaScript realms and per-fragment import maps prevent co-deployed apps from colliding) and surfaces *contract skew* at the fragment boundary, where the contract-migration engine in `@braidlabs/skew` bridges version differences over the context bus.
 - **Provenance:** Successor concept to [web-fragments](https://github.com/web-fragments/web-fragments) (MIT, Cloudflare-sponsored). Key subsystems were rebuilt and matrix-tested in our research forks (document facade, strict host isolation, exact gateway routing), and empirical results from those tests inform the architecture below.
 
 ---
@@ -33,7 +33,7 @@ Earlier experiments attempted to emulate the entire browser environment so that 
 Independently deployed frontends naturally introduce version skew: pages compose artifacts built at different times, against different dependency trees, and with different data contracts. Braid handles these two types of skew deliberately:
 
 - **Dependency Skew is Eliminated Structurally:** Realm-per-fragment isolation and independent import maps ensure that conflicting libraries (e.g. React 18 alongside React 19, or zoneless Angular alongside zoned Angular) never share global scope.
-- **Contract Skew is Explicitly Typed and Migrated:** Props, custom events, and shared state cross fragment boundaries as versioned schemas. When a fragment expects schema v2 but the host publishes v3, the bidirectional migration engine in `@braid/skew` bridges the gap on the fly across the context bus.
+- **Contract Skew is Explicitly Typed and Migrated:** Props, custom events, and shared state cross fragment boundaries as versioned schemas. When a fragment expects schema v2 but the host publishes v3, the bidirectional migration engine in `@braidlabs/skew` bridges the gap on the fly across the context bus.
 
 ---
 
@@ -47,7 +47,7 @@ To ensure Braid remains practical and maintainable in production, the architectu
 | **Authoring a fragment (modern framework)** | 0 app logic changes + $\le$ 5 lines of adapter setup |
 | **Authoring a fragment (legacy app, compat mode)** | 0 code changes (configuration only) |
 | **Local development startup** | 1 command (`braid dev`), starts all services in under 30s |
-| **Time to first working demo** | Under 10 minutes from `npm create @braid/core` |
+| **Time to first working demo** | Under 10 minutes from `npm create @braidlabs/core` |
 | **Actionable error messages** | Every runtime error identifies the fragment, the failure stage, and a clear fix hint |
 | **Host page overhead when idle** | Zero — no global patches, listeners, or observers on the host window |
 | **Version safety** | Client and gateway package versions stay aligned; mismatches throw descriptive named errors |
@@ -196,7 +196,7 @@ erDiagram
 | **Registry** | The collection of manifests consulted by the gateway for routing and SSR piercing. |
 | **Gateway** | Origin-front middleware handling namespace routing, HTML piercing, and shell proxying. |
 | **Context Bus** | Typed channel for props, custom events, and shared state between host and fragments. |
-| **Migration Registry** | The contract-migration repository (`@braid/skew`) used to translate versioned context payloads. |
+| **Migration Registry** | The contract-migration repository (`@braidlabs/skew`) used to translate versioned context payloads. |
 | **Conformance Kit** | Test runner certifying that a fragment behaves consistently standalone and slotted. |
 
 ---
@@ -223,7 +223,7 @@ interface FragmentSlotElement extends HTMLElement {
 }
 ```
 
-Thin typed wrappers (`@braid/react`, `@braid/angular`, `@braid/vue`) provide idiomatic component bindings with typed props and events for each framework.
+Thin typed wrappers (`@braidlabs/react`, `@braidlabs/angular`, `@braidlabs/vue`) provide idiomatic component bindings with typed props and events for each framework.
 
 ### 2. Realm Manager
 
@@ -271,7 +271,7 @@ Framework adapters are lightweight functions that connect `FragmentEnv` to the f
 
 ```ts
 // React Fragment Entry Example
-import { defineFragment } from '@braid/react';
+import { defineFragment } from '@braidlabs/react';
 import { App } from './App';
 
 export default defineFragment(App);
@@ -279,7 +279,7 @@ export default defineFragment(App);
 
 ```ts
 // Angular Fragment Entry Example
-import { defineFragment } from '@braid/angular';
+import { defineFragment } from '@braidlabs/angular';
 import { AppComponent } from './app.component';
 
 export default defineFragment(AppComponent, {
@@ -305,8 +305,8 @@ All emulation mechanisms are strictly confined to the fragment's realm and shado
 The gateway runs as fetch-native middleware across Node.js, Express, Cloudflare Workers, and Deno:
 
 ```ts
-import { createGateway } from '@braid/gateway';
-import { toNodeMiddleware } from '@braid/gateway/node';
+import { createGateway } from '@braidlabs/gateway';
+import { toNodeMiddleware } from '@braidlabs/gateway/node';
 
 const gateway = createGateway({ registry: './braid.registry.json' });
 app.use(toNodeMiddleware(gateway));

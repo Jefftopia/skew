@@ -26,8 +26,8 @@ import {
   createContractResolver,
   versionedFromContract,
   wellKnownContractUrl,
-} from '@braid/contract';
-import { parseSkewContractHeader, SKEW_CONTRACT_HEADER } from '@braid/skew';
+} from '@braidlabs/contract';
+import { parseSkewContractHeader, SKEW_CONTRACT_HEADER } from '@braidlabs/skew';
 import {
   FundV1,
   PORTFOLIO_FUND_CONTRACT,

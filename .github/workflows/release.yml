@@ -65,7 +65,7 @@ jobs:
       - name: Publish to npm
         run: npx nx release publish --tag "${{ inputs.tag }}" ${{ inputs.dry-run && '--dry-run' || '' }}
         env:
-          # Classic automation token, or a granular token scoped to the @braid
+          # Classic automation token, or a granular token scoped to the @braidlabs
           # org with read+write. Repo → Settings → Secrets → Actions.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true

@@ -91,7 +91,7 @@ export function resolveAdapter(name: string | null | undefined, fragmentId: stri
       fixHint:
         adapterName === DEFAULT_ADAPTER
           ? 'call initBraid() before any <fragment-slot> connects, so the default compat adapter is installed'
-          : `this build of @braid/core ships only the "compat" adapter; either set "adapter": "compat" in the fragment's manifest (or omit it — compat is the default), or install a client build that provides "${adapterName}"`,
+          : `this build of @braidlabs/core ships only the "compat" adapter; either set "adapter": "compat" in the fragment's manifest (or omit it — compat is the default), or install a client build that provides "${adapterName}"`,
     });
   }
   return adapter;

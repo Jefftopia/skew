@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { memoryRecordDriver } from './memory-driver.js';
 import { createRecordStore, type RecordDriver } from './record-store.js';
 import { createTenancy, partitionKey, TenancyRecordSchema } from './tenancy.js';
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 
 /**
  * Tenancy's job is not "which key do we use" — it is what sign-out destroys, and what happens when

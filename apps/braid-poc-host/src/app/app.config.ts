@@ -1,4 +1,4 @@
-import { provideSkewData } from '@braid/angular-data';
+import { provideSkewData } from '@braidlabs/angular-data';
 import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
 import { provideClientHydration, withIncrementalHydration } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';

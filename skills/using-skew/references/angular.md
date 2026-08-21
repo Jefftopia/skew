@@ -1,19 +1,19 @@
-# @braid/angular-* — Angular bindings
+# @braidlabs/angular-* — Angular bindings
 
-Four independent packages. Each depends on `@braid/skew`, never on a sibling.
+Four independent packages. Each depends on `@braidlabs/skew`, never on a sibling.
 All are standalone-only (no NgModules — configure via `provideSkew*()`),
 signal-based (no RxJS surface), zoneless-safe, and SSR-safe.
 
 Contents: [angular-core](#skewangular-core) · [angular-router](#skewangular-router)
 · [angular-data](#skewangular-data) · [angular-workflow](#skewangular-workflow)
 
-## @braid/angular-core
+## @braidlabs/angular-core
 
-DI and signal wrappers for `@braid/skew` stores.
+DI and signal wrappers for `@braidlabs/skew` stores.
 
 ```ts
-import { createSkewStoreToken, provideSkewStore, injectSkewStore, injectSkewSignal } from '@braid/angular-core';
-import { webStorageDriver } from '@braid/skew';
+import { createSkewStoreToken, provideSkewStore, injectSkewStore, injectSkewSignal } from '@braidlabs/angular-core';
+import { webStorageDriver } from '@braidlabs/skew';
 
 export const USER_STORE = createSkewStoreToken<UserProfile>('USER_STORE');
 
@@ -34,14 +34,14 @@ Use `injectSkewStore(USER_STORE)` when you need the raw store and want to
 branch on `SkewResult` reasons yourself (services, guards) — e.g. treating
 `ahead` as "refetch", not as an error.
 
-## @braid/angular-router
+## @braidlabs/angular-router
 
 Chunk recovery for lazy routes that classifies the failure before acting —
 flaky network, CDN miss, offline, deleted route, or stale origin each get a
 different response, and none bricks the tab.
 
 ```ts
-import { provideSkewRecovery, lazy } from '@braid/angular-router';
+import { provideSkewRecovery, lazy } from '@braidlabs/angular-router';
 import { BUILD_IDENTITY } from './generated/build-id';   // from skew-stamp
 
 bootstrapApplication(App, {
@@ -76,7 +76,7 @@ Behavior worth knowing:
 - Manual recovery UI: `inject(SkewRecoveryService)` exposes `pending()` signal
   and `recover()` — render a "new version available" banner on `'notify'`.
 
-## @braid/angular-data
+## @braidlabs/angular-data
 
 Normalized entity store + tag invalidation + **durable mutation outbox**.
 Exists because `resource()`/`httpResource()` are per-call caches with no
@@ -143,7 +143,7 @@ Manual: `inject(CacheRegistry).invalidate('bulletins')`.
 Known gaps: `resource()` can't normalize into this store (use `query()`), and
 server-driven invalidation isn't shipped (tags are per-tab).
 
-## @braid/angular-workflow
+## @braidlabs/angular-workflow
 
 Durable multi-step flows: step↔route mapping, guard-checked deep links, a back
 button that walks the workflow, resumption after refresh *and* after a deploy

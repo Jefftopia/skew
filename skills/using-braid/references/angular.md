@@ -1,4 +1,4 @@
-# @braid/angular
+# @braidlabs/angular
 
 ```ts
 bootstrapApplication(App, {

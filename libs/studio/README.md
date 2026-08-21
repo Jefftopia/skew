@@ -1,4 +1,4 @@
-# @braid/studio
+# @braidlabs/studio
 
 Inspection tooling for version skew. Framework-free, no dependencies.
 
@@ -12,7 +12,7 @@ A structural diff of one payload against another, in the vocabulary the
 migration itself uses.
 
 ```ts
-import { diffPayloads } from '@braid/studio';
+import { diffPayloads } from '@braidlabs/studio';
 
 const result = FundSchemaV1.read(body);           // or readResolving, or a store get
 

@@ -1,5 +1,5 @@
-import { versioned } from '@braid/skew';
-import { defineWorkflow } from '@braid/angular-workflow';
+import { versioned } from '@braidlabs/skew';
+import { defineWorkflow } from '@braidlabs/angular-workflow';
 
 /**
  * The demo's premise.

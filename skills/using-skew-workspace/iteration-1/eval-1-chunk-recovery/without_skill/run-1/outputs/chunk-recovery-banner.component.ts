@@ -19,7 +19,7 @@
  * Usage: drop <app-chunk-recovery-banner /> once into the root AppComponent
  * template, above <router-outlet />.
  *
- * Assumed @braid/angular-router runtime surface:
+ * Assumed @braidlabs/angular-router runtime surface:
  *   SkewRecoveryService.blockedRecoveries — Signal<SkewBlockedRecovery | null>
  *     (buildId of the newer build if known, reason, failed route)
  *   SkewRecoveryService.reload()          — user-initiated reload; bypasses
@@ -31,7 +31,7 @@
  *   SkewRecoveryService.dismiss()         — clear the current blocked state.
  */
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { SkewRecoveryService } from '@braid/angular-router';
+import { SkewRecoveryService } from '@braidlabs/angular-router';
 
 @Component({
   selector: 'app-chunk-recovery-banner',

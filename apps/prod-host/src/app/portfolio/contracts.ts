@@ -1,5 +1,5 @@
-import { versioned } from '@braid/skew';
-import { createContractResolver, wellKnownContractUrl } from '@braid/contract';
+import { versioned } from '@braidlabs/skew';
+import { createContractResolver, wellKnownContractUrl } from '@braidlabs/contract';
 
 /**
  * The host's view of the portfolio contract — v1 only. It has never heard of

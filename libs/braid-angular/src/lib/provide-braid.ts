@@ -3,7 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, NavigationSkipped, Router } from '@angular/router';
 import { filter } from 'rxjs';
-import { initBraid, type BraidOptions } from '@braid/core';
+import { initBraid, type BraidOptions } from '@braidlabs/core';
 
 /**
  * Initializes Braid for an Angular host, and tells it when the router navigates.

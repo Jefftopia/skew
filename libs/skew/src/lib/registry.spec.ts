@@ -11,7 +11,7 @@ import { versioned } from './versioned.js';
 
 /**
  * The scenario: a HOST bundle built against v1 and a REMOTE bundle built
- * against v2, loaded into one page, sharing one `@braid/skew` instance. The
+ * against v2, loaded into one page, sharing one `@braidlabs/skew` instance. The
  * remote registers its chain; the host — which has never heard of v2 —
  * becomes able to read v2 data anyway.
  */

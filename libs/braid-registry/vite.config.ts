@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 
 /**
- * `@braid/gateway` is a type-only import in the package itself, but the integration spec
+ * `@braidlabs/gateway` is a type-only import in the package itself, but the integration spec
  * calls `createGateway` for real — so tests need it resolved to source.
  */
 export default defineConfig({
@@ -11,7 +11,7 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: '@braid/gateway',
+        find: '@braidlabs/gateway',
         replacement: resolve(import.meta.dirname, '../braid-gateway/src/index.ts'),
       },
     ],

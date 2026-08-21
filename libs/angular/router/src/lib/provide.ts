@@ -16,7 +16,7 @@ import { lazyDefaults } from './lazy';
  *   providers: [
  *     provideRouter(routes),
  *     provideSkewRecovery({
- *       identity: BUILD_IDENTITY,          // from @braid/build
+ *       identity: BUILD_IDENTITY,          // from @braidlabs/build
  *       manifestUrl: '/skew-manifest.json',
  *     }),
  *   ],

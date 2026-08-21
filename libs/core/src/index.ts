@@ -1,11 +1,11 @@
 /**
- * @braid/core — the Braid client runtime.
+ * @braidlabs/core — the Braid client runtime.
  *
  * This build ships the compat adapter as the only — and default — adapter: legacy apps
  * compose as fragments with zero app-code changes, config only.
  *
  * ```ts
- * import { initBraid } from '@braid/core';
+ * import { initBraid } from '@braidlabs/core';
  * initBraid();
  * ```
  * ```html

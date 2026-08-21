@@ -3,7 +3,7 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
-import { provideSkewData } from '@braid/angular-data';
+import { provideSkewData } from '@braidlabs/angular-data';
 import { BUILD_IDENTITY } from '../generated/build-id';
 
 /**
@@ -14,13 +14,13 @@ import { BUILD_IDENTITY } from '../generated/build-id';
  * injector, with the host's providers and the host's build id. Anything the
  * exposed component needs from DI is something the host has to have
  * configured, sight unseen — which is why `FundDetail` asks for nothing beyond
- * `HttpClient`, the router, and `OutboxService` from `@braid/angular-data`.
+ * `HttpClient`, the router, and `OutboxService` from `@braidlabs/angular-data`.
  *
  * That last one deserves a note. `FundDetail`'s order submission goes through
  * the outbox (see `order-outbox.ts`), and `OutboxService` requires
  * `provideSkewData()` to have run somewhere in the injector tree. Federated
  * into the host, it already has: the host's `app.config.ts` provides it for
- * the Basics tab's wizard drafts, and `@braid/angular-data` is a shared
+ * the Basics tab's wizard drafts, and `@braidlabs/angular-data` is a shared
  * singleton across the federation boundary (see `sharedMappings` in
  * `federation.config.mjs`), so `FundDetail` reuses that same outbox instance
  * rather than needing anything added on its behalf. Standalone, there is no

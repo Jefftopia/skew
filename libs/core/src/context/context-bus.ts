@@ -1,4 +1,4 @@
-import type { VersionedSchema } from '@braid/skew';
+import type { VersionedSchema } from '@braidlabs/skew';
 import { BraidError } from '../errors.js';
 
 /**
@@ -10,7 +10,7 @@ import { BraidError } from '../errors.js';
  *
  * **Versioning is what makes this a bus rather than an event emitter.** A page composes fragments
  * built at different times, so the publisher and a subscriber routinely disagree about what a
- * context payload looks like. Register a `@braid/skew` schema for a key and every delivery is
+ * context payload looks like. Register a `@braidlabs/skew` schema for a key and every delivery is
  * projected to the version that subscriber asked for — older subscribers get the older shape, and
  * neither side has to know the other exists.
  *

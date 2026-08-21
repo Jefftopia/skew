@@ -1,4 +1,4 @@
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createInvalidator, resetSharedInvalidators, type BroadcastChannelLike } from './invalidation.js';
 import { memoryRecordDriver } from './memory-driver.js';

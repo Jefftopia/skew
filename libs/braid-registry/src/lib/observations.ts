@@ -1,4 +1,4 @@
-import type { RoutingEvent } from '@braid/gateway';
+import type { RoutingEvent } from '@braidlabs/gateway';
 
 /**
  * Aggregated routing observations: which page paths a gateway actually serves, and what composes

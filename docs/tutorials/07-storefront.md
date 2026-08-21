@@ -1,6 +1,6 @@
 # Tutorial 7 — Build a storefront, end to end
 
-**Package:** `@braid/data` · **Time:** ~45 minutes ·
+**Package:** `@braidlabs/data` · **Time:** ~45 minutes ·
 **Prerequisites:** none, though [tutorial 6](06-data-storage.md) is the reference for anything here
 you want more detail on.
 
@@ -42,7 +42,7 @@ ceremony: a record written today is read by a build that does not exist yet, and
 last year that is still open in somebody's tab.
 
 ```ts
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 
 export interface Product {
   id: string;
@@ -87,7 +87,7 @@ has to be declared up front — IndexedDB can only create object stores during a
 collection you forgot cannot be conjured later:
 
 ```ts
-import { indexedDbRecordDriver } from '@braid/data';
+import { indexedDbRecordDriver } from '@braidlabs/data';
 
 const driver = indexedDbRecordDriver({
   database: 'storefront',
@@ -98,7 +98,7 @@ const driver = indexedDbRecordDriver({
 In tests, or on the server where there is no IndexedDB, swap the driver and change nothing else:
 
 ```ts
-import { memoryRecordDriver } from '@braid/data';
+import { memoryRecordDriver } from '@braidlabs/data';
 const driver = memoryRecordDriver();
 ```
 
@@ -128,7 +128,7 @@ two shapes, and both are principals:
 - a **customer** — signed in, with orders and addresses
 
 ```ts
-import { createTenancy } from '@braid/data';
+import { createTenancy } from '@braidlabs/data';
 
 const tenancy = createTenancy({
   driver,
@@ -162,7 +162,7 @@ customer who genuinely has no orders, including to your own error handling.
 The client does not own the partition; it *asks* for it on every access:
 
 ```ts
-import { createDataClient, createOutbox } from '@braid/data';
+import { createDataClient, createOutbox } from '@braidlabs/data';
 
 const orders = createDataClient({
   driver,
@@ -745,4 +745,4 @@ decide otherwise.
   the composition section was your first encounter with them
 - [The storefront demo plan](https://github.com/braidjs/braid/blob/main/docs/plans/braid-storefront-demo-plan.md) — this tutorial as a running
   site, split across three deployed fragments. Proposed, not built
-- [`@braid/data` sources](https://github.com/braidjs/braid/tree/main/libs/data/src) — every decision above is commented where it is made
+- [`@braidlabs/data` sources](https://github.com/braidjs/braid/tree/main/libs/data/src) — every decision above is commented where it is made

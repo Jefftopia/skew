@@ -1,4 +1,4 @@
-import type { VersionedSchema } from '@braid/skew';
+import type { VersionedSchema } from '@braidlabs/skew';
 import { drainOutbox, type FlushResult } from './flush.js';
 import { sharedInvalidator, type BroadcastChannelLike, type Invalidator } from './invalidation.js';
 import { createOutbox, type Outbox } from './outbox.js';
@@ -15,7 +15,7 @@ import {
 /**
  * Eventing across independently deployed applications: channels, durable queues, and conflict.
  *
- * This lives in `@braid/data` rather than in Braid because none of it is about composition — it is
+ * This lives in `@braidlabs/data` rather than in Braid because none of it is about composition — it is
  * about a queue, a lock, and a versioned payload, which is what this package already is. A Module
  * Federation deployment with no Braid at all should be able to use it, and Braid's context bus should
  * be able to sit on top rather than beside it.

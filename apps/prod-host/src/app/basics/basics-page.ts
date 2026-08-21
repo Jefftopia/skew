@@ -1,6 +1,6 @@
 import { Component, Type, inject, signal } from '@angular/core';
 import { NgComponentOutlet } from '@angular/common';
-import { injectWorkflow } from '@braid/angular-workflow';
+import { injectWorkflow } from '@braidlabs/angular-workflow';
 import { wizardV1 } from '../domain';
 import { Lab } from '../lab';
 import { loadRemote } from '../load-remote';

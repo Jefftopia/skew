@@ -4,7 +4,7 @@
 > order you would actually build it — tenancy, then reads, then orders, then offline, then sign-out —
 > read [Tutorial 7: Build a storefront](07-storefront.md) and come back here for the detail.
 
-**Package:** `@braid/data` · **Time:** ~40 minutes ·
+**Package:** `@braidlabs/data` · **Time:** ~40 minutes ·
 **Prerequisites:** Tutorial 1 (contracts and `versioned()`). You will need a browser; the store is
 a browser API. No Braid, no micro-frontends, and no Angular are required — the last step shows the
 Angular binding, but everything before it is plain TypeScript.
@@ -18,7 +18,7 @@ You are going to build a small offline-capable feature: it reads data, shows it 
 second visit, and keeps a user's edit safe when the network is not there.
 
 ```sh
-npm install @braid/skew @braid/data
+npm install @braidlabs/skew @braidlabs/data
 ```
 
 ---
@@ -47,7 +47,7 @@ Never store a bare object. Give it a contract, even a one-line one:
 
 ```ts
 // src/contracts/note.ts
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 
 export interface Note {
   id: string;
@@ -70,7 +70,7 @@ guess. It costs one line now and cannot be retrofitted cheaply.
 
 ```ts
 // src/data.ts
-import { indexedDbRecordDriver, createRecordStore } from '@braid/data';
+import { indexedDbRecordDriver, createRecordStore } from '@braidlabs/data';
 import { NoteContract } from './contracts/note';
 
 const driver = indexedDbRecordDriver({
@@ -116,7 +116,7 @@ covered in step 6, and the reason this store exists.
 Most of the time you want a query rather than a raw store:
 
 ```ts
-import { createDataClient } from '@braid/data';
+import { createDataClient } from '@braidlabs/data';
 
 export const data = createDataClient({
   driver,
@@ -237,7 +237,7 @@ and quietly overwriting good data with a default.
 Pass an outbox to the client and durability stops being something you assemble:
 
 ```ts
-import { createDataClient, createOutbox } from '@braid/data';
+import { createDataClient, createOutbox } from '@braidlabs/data';
 
 const data = createDataClient({
   driver,
@@ -300,7 +300,7 @@ difference rather than taking it on faith.
 Queue the same change into two outboxes that differ in exactly one way:
 
 ```ts
-import { memoryRecordDriver } from '@braid/data';
+import { memoryRecordDriver } from '@braidlabs/data';
 
 const durable = createOutbox({ driver, owner: 'demo' });                       // IndexedDB
 const volatile = createOutbox({ driver: memoryRecordDriver(), owner: 'demo' }); // memory
@@ -336,7 +336,7 @@ The binding wires all of the above into DI and signals. This is a sketch of the 
 
 ```ts
 // app.config.ts
-import { provideSkewData } from '@braid/angular-data';
+import { provideSkewData } from '@braidlabs/angular-data';
 
 providers: [
   provideSkewData({
@@ -349,7 +349,7 @@ providers: [
 ```
 
 ```ts
-import { OutboxService } from '@braid/angular-data';
+import { OutboxService } from '@braidlabs/angular-data';
 
 export class NotesPage {
   private readonly outbox = inject(OutboxService);
@@ -378,7 +378,7 @@ production, on someone's unsent work.
 Partitions are the boundary; `createTenancy` is what moves between them and what destroys one.
 
 ```ts
-import { createTenancy } from '@braid/data';
+import { createTenancy } from '@braidlabs/data';
 
 const tenancy = createTenancy({
   driver,

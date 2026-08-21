@@ -1,4 +1,4 @@
-import type { SkewFailureReason, VersionedSchema } from '@braid/skew';
+import type { SkewFailureReason, VersionedSchema } from '@braidlabs/skew';
 import type { RecordDriver } from './record-store.js';
 import { createRecordStore, type RecordStore } from './record-store.js';
 import { sharedInvalidator, type Invalidator } from './invalidation.js';

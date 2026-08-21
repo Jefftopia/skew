@@ -2,7 +2,7 @@
   "run_id": "eval-0-with_skill",
   "expectations": [
     {
-      "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @braid/skew API",
+      "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @braidlabs/skew API",
       "passed": true,
       "evidence": "weekly-content.schema.ts:69-80 \u2014 versioned<WeeklyContentV1>('weekly-content').next<WeeklyContentV2>('rename themeQuote...', fn); no .build(); matches the real fluent API exactly."
     },

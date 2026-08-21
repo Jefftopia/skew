@@ -878,8 +878,8 @@
       data-notes="Emphasise that this is the entire server-side integration. Mount it first, before the host's own routes, because it is middleware that has to see the request before the host does.">
       <div class="eyebrow">Getting started &middot; step 1 of 3</div>
       <h2 class="sm">Mount the gateway in front of your host.</h2>
-      <div class="code"><span class="kw">import</span> { createGateway } <span class="kw">from</span> <span class="s">'@braid/gateway'</span>;
-<span class="kw">import</span> { toNodeMiddleware } <span class="kw">from</span> <span class="s">'@braid/gateway/node'</span>;
+      <div class="code"><span class="kw">import</span> { createGateway } <span class="kw">from</span> <span class="s">'@braidlabs/gateway'</span>;
+<span class="kw">import</span> { toNodeMiddleware } <span class="kw">from</span> <span class="s">'@braidlabs/gateway/node'</span>;
 
 <span class="kw">const</span> gateway = <b>createGateway</b>({
   mode: <span class="s">'production'</span>,

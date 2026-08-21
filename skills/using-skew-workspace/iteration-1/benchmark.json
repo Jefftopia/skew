@@ -29,7 +29,7 @@
       },
       "expectations": [
         {
-          "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @braid/skew API",
+          "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @braidlabs/skew API",
           "passed": true,
           "evidence": "weekly-content.schema.ts:69-80 \u2014 versioned<WeeklyContentV1>('weekly-content').next<WeeklyContentV2>('rename themeQuote...', fn); no .build(); matches the real fluent API exactly."
         },
@@ -191,9 +191,9 @@
       },
       "expectations": [
         {
-          "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @braid/skew API",
+          "text": "Schema is built with versioned<V1>('...').next<V2>(...) chained fluently with no .build() call, matching the real @braidlabs/skew API",
           "passed": false,
-          "evidence": "weekly-content.schema.ts:93-99 invents an object-config API: versioned<WeeklyContent>({ name, version, steps, validate }) with a hand-built MigrationStep[] array. The real API is a fluent versioned<V1>(name).next<V2>() chain; this would not compile against @braid/skew."
+          "evidence": "weekly-content.schema.ts:93-99 invents an object-config API: versioned<WeeklyContent>({ name, version, steps, validate }) with a hand-built MigrationStep[] array. The real API is a fluent versioned<V1>(name).next<V2>() chain; this would not compile against @braidlabs/skew."
         },
         {
           "text": "Migration steps close over frozen snapshot interfaces (V1/V2 declared in the schema file), not the live application WeeklyContent type",
@@ -242,7 +242,7 @@
         {
           "text": "app.config.ts adds provideSkewRecovery({ identity: BUILD_IDENTITY, manifestUrl: ... }) importing identity from the skew-stamp-generated module",
           "passed": false,
-          "evidence": "Invents a feature-composition API: provideSkewChunkRecovery({buildId}, withChunkRetry(...), withDeployManifest(...), withReloadGuard(...), withReloadLoopProtection(...)). None of these exist in @braid/angular-router; the real provider is provideSkewRecovery({ identity, manifestUrl, ... })."
+          "evidence": "Invents a feature-composition API: provideSkewChunkRecovery({buildId}, withChunkRetry(...), withDeployManifest(...), withReloadGuard(...), withReloadLoopProtection(...)). None of these exist in @braidlabs/angular-router; the real provider is provideSkewRecovery({ identity, manifestUrl, ... })."
         },
         {
           "text": "Lazy routes are wrapped as lazy('<module-id>', () => import(...)) so the id cross-references the manifest",
@@ -252,7 +252,7 @@
         {
           "text": "Build wiring runs skew-stamp before the app build to generate build-id.ts and again (or with flags) to emit skew-manifest.json, with --assets pointing at the browser output dir",
           "passed": false,
-          "evidence": "Invents a `skew-build stamp` / `skew-build manifest` CLI with --index-meta/--dist flags. The real @braid/build bin is skew-stamp with --out/--manifest/--assets. Conceptual pre/post structure is right; the tool and flags would not run."
+          "evidence": "Invents a `skew-build stamp` / `skew-build manifest` CLI with --index-meta/--dist flags. The real @braidlabs/build bin is skew-stamp with --out/--manifest/--assets. Conceptual pre/post structure is right; the tool and flags would not run."
         },
         {
           "text": "Manifest is documented/configured to be served with no-store (or explicitly uncached) semantics",
@@ -321,7 +321,7 @@
         {
           "text": "Client pins its schema with versionedFromContract<FundV1>(contract, { at: 1 }) or equivalent pinned construction",
           "passed": false,
-          "evidence": "versionedFromContract<PortfolioFundV1>(pinnedContract, { pinned: 1 }) \u2014 right function, invented option name ({ pinned } instead of { at }); would not compile against @braid/contract."
+          "evidence": "versionedFromContract<PortfolioFundV1>(pinnedContract, { pinned: 1 }) \u2014 right function, invented option name ({ pinned } instead of { at }); would not compile against @braidlabs/contract."
         },
         {
           "text": "Client reads via createContractResolver().readResolving(...) against the well-known URL so 'ahead' data is cured by fetching the contract",

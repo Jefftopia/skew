@@ -1,4 +1,4 @@
-import type { VersionedSchema } from '@braid/skew';
+import type { VersionedSchema } from '@braidlabs/skew';
 
 /**
  * Protocol adapters: the layer never learns how to fetch.

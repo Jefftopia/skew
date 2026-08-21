@@ -1,5 +1,5 @@
 /**
- * `@braid/sw` — skew-aware asset serving for composed pages.
+ * `@braidlabs/sw` — skew-aware asset serving for composed pages.
  *
  * The classic micro-frontend white screen is a deploy landing under an open page: a lazy chunk is
  * requested, the build that wrote it is gone, and nothing on the page can recover. A service worker

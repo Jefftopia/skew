@@ -1,5 +1,5 @@
 {
-  "name": "@braid/gateway",
+  "name": "@braidlabs/gateway",
   "version": "0.0.1",
   "description": "Braid gateway — fetch-native origin-front middleware that routes fragment traffic by exact id under the reserved /__braid/frag/ namespace, loads fragment manifests, and passes everything else through to your existing app.",
   "keywords": [

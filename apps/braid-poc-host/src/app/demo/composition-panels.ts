@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BraidFragment } from '@braid/angular';
+import { BraidFragment } from '@braidlabs/angular';
 import { DemoPanel } from './panel';
 
 /**

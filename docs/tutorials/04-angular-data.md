@@ -1,6 +1,6 @@
 # Tutorial 4 — One graph, durable writes
 
-**Package:** `@braid/angular-data` · **Time:** ~30 minutes ·
+**Package:** `@braidlabs/angular-data` · **Time:** ~30 minutes ·
 **Prerequisites:** Tutorials 1 and 3. An Angular app with an HTTP API to talk
 to — the samples below use the demo's portfolio API
 (`npm run api`, port 3333), but any REST-ish backend works.
@@ -14,7 +14,7 @@ handled at every seam, because a queued write can outlive the deploy that
 queued it.
 
 ```sh
-npm install @braid/skew @braid/angular-data
+npm install @braidlabs/skew @braidlabs/angular-data
 ```
 
 ---
@@ -23,7 +23,7 @@ npm install @braid/skew @braid/angular-data
 
 ```ts
 // src/app/app.config.ts
-import { provideSkewData } from '@braid/angular-data';
+import { provideSkewData } from '@braidlabs/angular-data';
 import { BUILD_ID } from '../generated/build-id';
 
 export const appConfig: ApplicationConfig = {
@@ -53,7 +53,7 @@ agreed on by every query and mutation:
 
 ```ts
 // src/app/portfolio/entities.ts
-import { entity } from '@braid/angular-data';
+import { entity } from '@braidlabs/angular-data';
 
 export interface Fund {
   id: string;
@@ -70,7 +70,7 @@ export const FundEntity = entity<Fund>({ name: 'fund', key: (f) => f.id });
 view:
 
 ```ts
-import { tag } from '@braid/angular-data';
+import { tag } from '@braidlabs/angular-data';
 
 tag.entity(FundEntity, 'f1');  // 'fund#f1'   — one record
 tag.all(FundEntity);           // 'fund#*'    — every fund
@@ -89,7 +89,7 @@ The response object itself is almost never what you render:
 import { Component, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { EntityStore, query } from '@braid/angular-data';
+import { EntityStore, query } from '@braidlabs/angular-data';
 import { FundListSchemaV1 } from './contracts';   // Tutorial 1 habits apply
 import { Fund, FundEntity } from './entities';
 
@@ -150,7 +150,7 @@ Two behaviours you get without asking: out-of-order responses are discarded
 optimistic overlay, rollback, invalidation, and (next step) durability:
 
 ```ts
-import { mutation, tag } from '@braid/angular-data';
+import { mutation, tag } from '@braidlabs/angular-data';
 
 readonly renameFund = mutation({
   operation: (input: { id: string; name: string }) =>

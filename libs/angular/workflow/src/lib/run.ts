@@ -1,4 +1,4 @@
-import { type VersionedSchema, versioned } from '@braid/skew';
+import { type VersionedSchema, versioned } from '@braidlabs/skew';
 import type { StepId } from './definition';
 
 /**

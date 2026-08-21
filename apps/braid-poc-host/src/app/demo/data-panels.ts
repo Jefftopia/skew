@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { DATA_OPTIONS } from '@braid/angular-data';
-import { createDataClient, createOutbox, createRecordStore, type DataClient, type QueryState } from '@braid/data';
-import { registerSchema, versioned } from '@braid/skew';
+import { DATA_OPTIONS } from '@braidlabs/angular-data';
+import { createDataClient, createOutbox, createRecordStore, type DataClient, type QueryState } from '@braidlabs/data';
+import { registerSchema, versioned } from '@braidlabs/skew';
 import { DemoPanel } from './panel';
 
 /**

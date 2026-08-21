@@ -2,7 +2,7 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
-import { createVersionedStore, webStorageDriver } from '@braid/skew';
+import { createVersionedStore, webStorageDriver } from '@braidlabs/skew';
 import { Lab } from '../lab';
 import { PortfolioLive } from './portfolio-live';
 import {

@@ -1,4 +1,4 @@
-# @braid/skew
+# @braidlabs/skew
 
 Framework-agnostic primitives for surviving version skew.
 
@@ -28,7 +28,7 @@ The fourth row is the one most teams miss. A draft written by build 41 and resum
 ## Install
 
 ```sh
-npm install @braid/skew
+npm install @braidlabs/skew
 ```
 
 ---
@@ -38,7 +38,7 @@ npm install @braid/skew
 Declare a type's current version, its history, and the functions that move data between them in one place.
 
 ```ts
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 
 // Snapshot shapes — frozen copies, never your live application types.
 interface V1 { id: string; themeQuote?: { text: string } }
@@ -115,7 +115,7 @@ return JSON.parse(raw) as WeeklyContent;
 The moment the model changes, every cached record on every user's machine has the old shape while being *typed* as the new one. You get `undefined` deep inside a renderer instead of a clean failure at the boundary.
 
 ```ts
-import { createVersionedStore, webStorageDriver } from '@braid/skew';
+import { createVersionedStore, webStorageDriver } from '@braidlabs/skew';
 
 const drafts = createVersionedStore(WeeklyContent, {
   driver: webStorageDriver('local'),
@@ -178,7 +178,7 @@ refetchable caches. Steps are cheap; delete with evidence, not tidiness.
 ## Build identity and skew detection
 
 ```ts
-import { createVersionProbe } from '@braid/skew';
+import { createVersionProbe } from '@braidlabs/skew';
 
 const probe = createVersionProbe({
   identity: { buildId: BUILD_ID, builtAt: BUILT_AT },
@@ -236,12 +236,12 @@ Emit it at build time and serve it uncached:
 
 ## Related packages
 
-`@braid/skew` is consumed by, but never requires, the framework bindings:
+`@braidlabs/skew` is consumed by, but never requires, the framework bindings:
 
-- `@braid/angular-router` — chunk-load recovery for the Angular router
-- `@braid/angular-data` — versioned cache and durable mutation outbox
-- `@braid/angular-workflow` — durable multi-step flows
-- `@braid/react-*` — the same, for React
-- `@braid/node` / `@braid/nest` — server-side negotiation and manifest serving
+- `@braidlabs/angular-router` — chunk-load recovery for the Angular router
+- `@braidlabs/angular-data` — versioned cache and durable mutation outbox
+- `@braidlabs/angular-workflow` — durable multi-step flows
+- `@braidlabs/react-*` — the same, for React
+- `@braidlabs/node` / `@braidlabs/nest` — server-side negotiation and manifest serving
 
 Each is independently installable. None requires the others.

@@ -1,5 +1,5 @@
 {
-  "name": "@braid/cli",
+  "name": "@braidlabs/cli",
   "version": "0.0.1",
   "description": "Braid's command line: run a composed application locally with live reload, scaffold a config, and register fragments.",
   "keywords": [
@@ -28,8 +28,8 @@
     "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "@braid/gateway": "^0.0.1",
-    "@braid/registry": "^0.0.1"
+    "@braidlabs/gateway": "^0.0.1",
+    "@braidlabs/registry": "^0.0.1"
   },
   "publishConfig": {
     "access": "public"

@@ -1,4 +1,4 @@
-# @braid/react
+# @braidlabs/react
 
 ```tsx
 // entry file, module scope — before anything renders a fragment

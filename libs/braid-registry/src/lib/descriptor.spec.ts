@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { FragmentManifest } from '@braid/gateway';
+import type { FragmentManifest } from '@braidlabs/gateway';
 import { fetchDescriptors, mergeDescriptors, type FragmentDescriptor } from './descriptor.js';
 
 const billing: FragmentManifest = { id: 'billing', endpoint: 'https://billing.internal', pierce: ['/billing/*'] };

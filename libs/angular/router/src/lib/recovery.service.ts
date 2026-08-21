@@ -7,7 +7,7 @@ import {
   createVersionProbe,
   isSkewDisabled,
   moduleWasRemoved,
-} from '@braid/skew';
+} from '@braidlabs/skew';
 import {
   type PendingSkew,
   SKEW_RECOVERY_OPTIONS,
@@ -64,7 +64,7 @@ export class SkewRecoveryService {
   private listen(): void {
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationError && isChunkLoadFailure(event.error)) {
-        // Not public API — see `disabled.ts` in @braid/skew. The NavigationError
+        // Not public API — see `disabled.ts` in @braidlabs/skew. The NavigationError
         // is left to propagate untouched: no retry, no manifest probe, no
         // classification, no decision. Whatever the application does next is
         // whatever it would have done without this package installed.

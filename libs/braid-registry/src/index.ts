@@ -1,9 +1,9 @@
 /**
- * @braid/registry — immutable snapshots of a Braid fragment registry, and analysis over
+ * @braidlabs/registry — immutable snapshots of a Braid fragment registry, and analysis over
  * them.
  *
  * ```ts
- * import { createSnapshot, memorySnapshotStore, snapshotRegistry } from '@braid/registry';
+ * import { createSnapshot, memorySnapshotStore, snapshotRegistry } from '@braidlabs/registry';
  *
  * const snapshot = await createSnapshot({ manifests });
  * await store.put(snapshot);
@@ -12,7 +12,7 @@
  * ```
  *
  * Everything exported here is platform-neutral — it runs on Node, Workers, Deno, Bun, and in a
- * browser. The filesystem store lives at `@braid/registry/node`.
+ * browser. The filesystem store lives at `@braidlabs/registry/node`.
  */
 
 export { createSnapshot, verifySnapshot, serializeSnapshot, parseSnapshot, SNAPSHOT_ID_PREFIX } from './lib/snapshot.js';

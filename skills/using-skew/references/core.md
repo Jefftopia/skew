@@ -1,4 +1,4 @@
-# @braid/skew — versioned schemas, storage, and build-skew detection
+# @braidlabs/skew — versioned schemas, storage, and build-skew detection
 
 Framework-agnostic, zero-dependency. Works in browsers, Node, workers, Deno.
 Everything else in the Skew family builds on the primitives here.
@@ -6,7 +6,7 @@ Everything else in the Skew family builds on the primitives here.
 ## Versioned schemas
 
 ```ts
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 
 interface V1 { id: string; themeQuote?: { text: string } }
 interface V2 { id: string; scriptureOfWeek?: { text: string } }
@@ -58,7 +58,7 @@ boundaries, branch on the reason (below) instead of collapsing to a default.
 
 | `result.reason` | Meaning | Correct response |
 |---|---|---|
-| `ahead` | written by a NEWER build; steps to read it don't exist here | refetch from server, leave data untouched, or cure via `@braid/contract` resolver — **never discard** |
+| `ahead` | written by a NEWER build; steps to read it don't exist here | refetch from server, leave data untouched, or cure via `@braidlabs/contract` resolver — **never discard** |
 | `gap` | a migration step is missing from the chain | report a bug (the chain was edited or a step lost) |
 | `invalid` | not an envelope / malformed | discard and refetch |
 | `threw` | a migration function threw | report a bug |
@@ -117,7 +117,7 @@ Replaces `JSON.parse(raw) as T` — an assertion, not a check — with a store
 that migrates on the way out and fails loudly at the boundary.
 
 ```ts
-import { createVersionedStore, webStorageDriver, memoryDriver } from '@braid/skew';
+import { createVersionedStore, webStorageDriver, memoryDriver } from '@braidlabs/skew';
 
 const drafts = createVersionedStore(WeeklyContent, {
   driver: webStorageDriver('local'),   // or 'session', or memoryDriver()
@@ -141,10 +141,10 @@ const immediate = drafts.peek('2026-12-06');      // sync; null on async drivers
 ## Build identity and skew detection
 
 ```ts
-import { createVersionProbe } from '@braid/skew';
+import { createVersionProbe } from '@braidlabs/skew';
 
 const probe = createVersionProbe({
-  identity: { buildId: BUILD_ID, builtAt: BUILT_AT },  // from @braid/build
+  identity: { buildId: BUILD_ID, builtAt: BUILT_AT },  // from @braidlabs/build
   manifestUrl: '/skew-manifest.json',                  // serve Cache-Control: no-store
 });
 const status = await probe.check();

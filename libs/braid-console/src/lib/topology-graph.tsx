@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { DiscoveryEntry } from '@braid/gateway';
+import type { DiscoveryEntry } from '@braidlabs/gateway';
 import {
   buildTopology,
   coTenants,

@@ -1,11 +1,11 @@
-# @braid/core
+# @braidlabs/core
 
 The Braid client runtime — compose independently deployed frontend apps into one cohesive page:
 one origin, one DOM, one accessibility tree, while each app keeps its own JavaScript world, its
 own dependencies, and its own release train.
 
 Skew handling — versioned envelopes, migration chains, and negotiation — lives alongside this
-runtime in [`@braid/skew`](../skew).
+runtime in [`@braidlabs/skew`](../skew).
 
 **Start with [Braid, explained](../../docs/braid-explained.md)** if you are new to this: it defines
 every term this README uses and walks one page load end to end. The founding architecture and its
@@ -83,7 +83,7 @@ goes back to the network.
 Host page:
 
 ```ts
-import { initBraid } from '@braid/core';
+import { initBraid } from '@braidlabs/core';
 
 initBraid({
   // wire your router so bound fragments observe host navigations (Braid never patches
@@ -96,7 +96,7 @@ initBraid({
 <fragment-slot name="legacy-billing"></fragment-slot>
 ```
 
-Server: mount [`@braid/gateway`](../braid-gateway) in front of your app and register a
+Server: mount [`@braidlabs/gateway`](../braid-gateway) in front of your app and register a
 manifest for `legacy-billing`. No fragment code is required.
 
 ## What the compat adapter does

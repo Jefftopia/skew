@@ -1,5 +1,5 @@
 import { Component, signal } from '@angular/core';
-import { BraidFragment, type BraidFragmentError, type BraidFragmentEvent } from '@braid/angular';
+import { BraidFragment, type BraidFragmentError, type BraidFragmentEvent } from '@braidlabs/angular';
 import { DeferredPanel } from './deferred-panel';
 
 /**

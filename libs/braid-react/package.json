@@ -1,5 +1,5 @@
 {
-  "name": "@braid/react",
+  "name": "@braidlabs/react",
   "version": "0.0.1",
   "description": "React binding for Braid: a typed <BraidFragment> component and host-navigation wiring for any router.",
   "keywords": ["react", "micro-frontends", "composition", "fragments", "braid"],
@@ -13,7 +13,7 @@
     "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "@braid/core": "^0.0.1",
+    "@braidlabs/core": "^0.0.1",
     "react": "^18.0.0 || ^19.0.0"
   },
   "publishConfig": { "access": "public" },

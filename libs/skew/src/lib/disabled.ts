@@ -1,7 +1,7 @@
 /**
  * ⚠️ NOT PUBLIC API. Undocumented on purpose. Do not use in an application.
  *
- * A process-wide switch that makes every `@braid` package behave as though it
+ * A process-wide switch that makes every `@braidlabs` package behave as though it
  * were not installed:
  *
  *   - stores write bare payloads and read them back with no envelope check,
@@ -33,13 +33,13 @@
  *
  * ## Why it is global mutable state
  *
- * `@braid/skew` has no framework and no dependencies, so there is no injector to
+ * `@braidlabs/skew` has no framework and no dependencies, so there is no injector to
  * read from. A module-level flag is the only mechanism available to it. The
  * Angular packages wrap this in `provideSkewDisabled()` so an application at
  * least *looks* like it is configuring something, but the state is here.
  *
  * One consequence worth knowing: under Module Federation this is per *bundle
- * instance*, so it only behaves as one switch when `@braid/skew` is genuinely
+ * instance*, so it only behaves as one switch when `@braidlabs/skew` is genuinely
  * shared as a singleton. Two copies of core means two flags.
  */
 

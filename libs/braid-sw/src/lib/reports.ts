@@ -1,4 +1,4 @@
-import { createOutbox, type Outbox, type RecordDriver } from '@braid/data';
+import { createOutbox, type Outbox, type RecordDriver } from '@braidlabs/data';
 import type { AssetReport } from './asset-handler.js';
 import type { SkewDiagnosis } from './skew-report.js';
 
@@ -16,7 +16,7 @@ import type { SkewDiagnosis } from './skew-report.js';
  * to sending reports rather than a replacement for it — the queue flushes opportunistically too, and
  * a browser without `sync` simply gets the opportunistic path.
  *
- * The queue itself is `@braid/data`'s outbox rather than a second implementation: one record per
+ * The queue itself is `@braidlabs/data`'s outbox rather than a second implementation: one record per
  * entry, so appending never reads the queue first and two contexts cannot lose each other's writes.
  * That problem was solved once already, and solving it again here would mean debugging it again too.
  */

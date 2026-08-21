@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
  *
  * ```jsonc
  * // nx.json
- * { "plugins": ["@braid/cli/nx"] }
+ * { "plugins": ["@braidlabs/cli/nx"] }
  * ```
  *
  * The point is that you keep using the commands you already use. `nx run shell:braid-dev` runs

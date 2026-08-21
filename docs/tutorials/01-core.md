@@ -1,6 +1,6 @@
 # Tutorial 1 — Version the data, not the deploy
 
-**Package:** `@braid/skew` · **Time:** ~25 minutes · **Prerequisites:** any
+**Package:** `@braidlabs/skew` · **Time:** ~25 minutes · **Prerequisites:** any
 TypeScript project. No framework required — everything here runs in Node, a
 browser, or a test.
 
@@ -11,7 +11,7 @@ survive a redeploy. At every step you will see exactly what would have broken
 without the envelope.
 
 ```sh
-npm install @braid/skew
+npm install @braidlabs/skew
 ```
 
 ---
@@ -23,7 +23,7 @@ the point is to start writing envelopes now, so every future reader can tell
 what it is looking at.
 
 ```ts
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 
 interface DraftV1 {
   id: string;
@@ -285,7 +285,7 @@ changes, every cached record on every user's machine has the old shape while
 being *typed* as the new one. Route storage through the schema instead:
 
 ```ts
-import { createVersionedStore, webStorageDriver } from '@braid/skew';
+import { createVersionedStore, webStorageDriver } from '@braidlabs/skew';
 
 const drafts = createVersionedStore(Draft, {
   driver: webStorageDriver('local'),
@@ -335,9 +335,9 @@ The op set is closed and non-Turing-complete on purpose: `rename`, `move`,
 evolution fits it; semantic transforms (deriving `summary` from `body`, say)
 deliberately do not — those stay as code. This split is what makes it safe
 for an API to *publish* its migrations as a document a client can fetch at
-runtime (`@braid/contract`), which is where the `ahead` story gets its
+runtime (`@braidlabs/contract`), which is where the `ahead` story gets its
 final act. That is its own tutorial's worth of material — see the
-[`@braid/contract` README](https://github.com/braidjs/braid/blob/main/libs/contract/README.md) when you are
+[`@braidlabs/contract` README](https://github.com/braidjs/braid/blob/main/libs/contract/README.md) when you are
 ready.
 
 ---

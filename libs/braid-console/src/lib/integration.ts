@@ -1,4 +1,4 @@
-import type { DiscoveryEntry } from '@braid/gateway';
+import type { DiscoveryEntry } from '@braidlabs/gateway';
 
 /**
  * The code a host application needs to embed a registered fragment.
@@ -102,7 +102,7 @@ function htmlSnippet(entry: DiscoveryEntry): string {
 
   return [
     js(`Once, anywhere in the host's own bundle:`),
-    `import { initBraid } from '@braid/core';`,
+    `import { initBraid } from '@braidlabs/core';`,
     `initBraid();`,
     ``,
     ...notes,
@@ -120,12 +120,12 @@ function angularSnippet(entry: DiscoveryEntry): string {
 
   return [
     js(`1. Once, in the application's providers:`),
-    `import { provideBraid } from '@braid/angular';`,
+    `import { provideBraid } from '@braidlabs/angular';`,
     ``,
     `bootstrapApplication(App, { providers: [provideBraid()] });`,
     ``,
     js(`2. In the component that shows it:`),
-    `import { BraidFragment } from '@braid/angular';`,
+    `import { BraidFragment } from '@braidlabs/angular';`,
     ``,
     `@Component({`,
     `  imports: [BraidFragment],`,
@@ -147,11 +147,11 @@ function reactSnippet(entry: DiscoveryEntry): string {
 
   return [
     js(`1. Once, before anything renders:`),
-    `import { initBraidReact } from '@braid/react';`,
+    `import { initBraidReact } from '@braidlabs/react';`,
     `initBraidReact();`,
     ``,
     js(`2. Where it should appear:`),
-    `import { BraidFragment } from '@braid/react';`,
+    `import { BraidFragment } from '@braidlabs/react';`,
     ``,
     `export function Host() {`,
     `  return (`,

@@ -1,4 +1,4 @@
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 import { describe, expect, it, vi } from 'vitest';
 import { fromPull, type PushAdapter, type PushSink } from './adapters.js';
 import { memoryRecordDriver } from './memory-driver.js';

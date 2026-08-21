@@ -1,4 +1,4 @@
-import { BRAID_REALM_PREFIX } from '@braid/gateway';
+import { BRAID_REALM_PREFIX } from '@braidlabs/gateway';
 
 /**
  * Realm stub precaching: a fragment boot with no round trip in it.

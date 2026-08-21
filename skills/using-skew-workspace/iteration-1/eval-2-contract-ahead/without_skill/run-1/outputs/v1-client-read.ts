@@ -10,7 +10,7 @@
  *   { id, name, baseCurrency, liquidity: { cashPct, hqlaPct }, navPerShare, asOf }
  *
  * A plain v1 reader would see `currency === undefined` and `cashPct === undefined`
- * and break. With @braid/contract the read comes back as status "ahead"
+ * and break. With @braidlabs/contract the read comes back as status "ahead"
  * (payload version 2 > highest version this build knows, which is 1); the
  * contract resolver cures that by fetching the origin's contract document from
  * /.well-known/skew/contracts/portfolio-fund and running the 2 -> 1 lens
@@ -20,8 +20,8 @@
  *   liquidity.cashPct   -> cashPct             (move inverted, lossless)
  *   liquidity.hqlaPct   -> DROPPED             (v1 has nowhere to put it: LOSSY)
  */
-import { registerSchema, envelopeFromResponse } from '@braid/skew';
-import { versionedFromContract, createContractResolver } from '@braid/contract';
+import { registerSchema, envelopeFromResponse } from '@braidlabs/skew';
+import { versionedFromContract, createContractResolver } from '@braidlabs/contract';
 
 // ---------------------------------------------------------------------------
 // The shape this build of the app actually understands (v1).

@@ -24,10 +24,10 @@
     "postbuild": "skew-stamp --out src/generated/build-id.ts --manifest dist/bulletin-app/browser/skew-manifest.json --assets dist/bulletin-app/browser"
   },
   "dependencies": {
-    "@braid/angular-router": "^1.0.0",
-    "@braid/skew": "^1.0.0"
+    "@braidlabs/angular-router": "^1.0.0",
+    "@braidlabs/skew": "^1.0.0"
   },
   "devDependencies": {
-    "@braid/build": "^1.0.0"
+    "@braidlabs/build": "^1.0.0"
   }
 }

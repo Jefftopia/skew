@@ -8,7 +8,7 @@ import {
   type VersionedStore,
   createVersionedStore,
   webStorageDriver,
-} from '@braid/skew';
+} from '@braidlabs/skew';
 
 export interface WorkflowOptions {
   /**

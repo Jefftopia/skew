@@ -1,10 +1,10 @@
 {
-  "name": "@braid/angular-data",
+  "name": "@braidlabs/angular-data",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/core": "^22.0.0",
     "@angular/common": "^22.0.0",
-    "@braid/data": "^0.0.1"
+    "@braidlabs/data": "^0.0.1"
   },
   "sideEffects": false,
   "description": "Normalized entity store, tag invalidation, and a durable mutation outbox for Angular.",

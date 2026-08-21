@@ -12,7 +12,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { FragmentSlotState } from '@braid/core';
+import type { FragmentSlotState } from '@braidlabs/core';
 
 /** The `detail` of a `braid:error` event, surfaced through the `failed` output. */
 export interface BraidFragmentError {

@@ -1,12 +1,12 @@
-# @braid/gateway
+# @braidlabs/gateway
 
 Fetch-native origin-front middleware. A library, not a service.
 
 ## Mounting
 
 ```ts
-import { createGateway } from '@braid/gateway';
-import { toNodeMiddleware, toNodeUpgradeHandler } from '@braid/gateway/node';
+import { createGateway } from '@braidlabs/gateway';
+import { toNodeMiddleware, toNodeUpgradeHandler } from '@braidlabs/gateway/node';
 
 const gateway = createGateway({ registry, mode: 'production' });
 

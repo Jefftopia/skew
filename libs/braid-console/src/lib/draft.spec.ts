@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FragmentManifest } from '@braid/gateway';
+import type { FragmentManifest } from '@braidlabs/gateway';
 import {
   addFragment,
   createDraft,

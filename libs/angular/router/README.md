@@ -1,4 +1,4 @@
-# `@braid/angular-router`
+# `@braidlabs/angular-router`
 
 Chunk recovery for Angular applications. 
 
@@ -9,8 +9,8 @@ When a lazy chunk fails to load, it can mean a flaky network, a CDN edge miss, a
 Enable skew recovery in your application config:
 
 ```ts
-import { provideSkewRecovery } from '@braid/angular-router';
-// Generate BUILD_IDENTITY with @braid/build
+import { provideSkewRecovery } from '@braidlabs/angular-router';
+// Generate BUILD_IDENTITY with @braidlabs/build
 import { BUILD_IDENTITY } from './generated/build-id'; 
 
 bootstrapApplication(App, {
@@ -27,7 +27,7 @@ bootstrapApplication(App, {
 Then, wrap your lazy imports with `lazy()`:
 
 ```ts
-import { lazy } from '@braid/angular-router';
+import { lazy } from '@braidlabs/angular-router';
 
 export const routes: Routes = [
   { 
@@ -61,7 +61,7 @@ If retries are exhausted, the failure is caught by the recovery service, which c
 
 If the origin is serving a stale entry document (older than your current running client), reloading will fetch the exact same stale bundles and fail again, creating an infinite loop that bricks the tab. 
 
-`@braid/angular-router` prevents this by:
+`@braidlabs/angular-router` prevents this by:
 1. Probing the `manifestUrl` to determine the origin's build timestamp.
 2. Refusing to automatically reload if the origin is older than the client.
 3. Keeping a hard limit on automatic recoveries per session (`maxRecoveries`, default 1).
@@ -73,7 +73,7 @@ Angular does not provide a way for libraries to introspect `CanDeactivate` guard
 To prevent this, components can register unsaved work:
 
 ```ts
-import { trackUnsavedWork } from '@braid/angular-router';
+import { trackUnsavedWork } from '@braidlabs/angular-router';
 
 @Component({ ... })
 export class BulletinEditor {
@@ -94,7 +94,7 @@ If a recovery degrades to `'notify'` (e.g. because of unsaved work or a loop det
 
 ```ts
 import { Component, inject } from '@angular/core';
-import { SkewRecoveryService } from '@braid/angular-router';
+import { SkewRecoveryService } from '@braidlabs/angular-router';
 
 @Component({
   template: `

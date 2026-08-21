@@ -11,8 +11,8 @@ import { dirname } from 'node:path';
  * file changes.
  *
  * This module deliberately duck-types the document rather than importing
- * `@braid/contract`: it runs at build time, needs only the document's shape,
- * and `@braid/build` stays dependency-free.
+ * `@braidlabs/contract`: it runs at build time, needs only the document's shape,
+ * and `@braidlabs/build` stays dependency-free.
  */
 
 interface ContractDocLike {

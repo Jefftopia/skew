@@ -1,5 +1,5 @@
 {
-  "name": "@braid/sw",
+  "name": "@braidlabs/sw",
   "version": "0.0.1",
   "description": "Braid service worker \u2014 skew-aware asset serving for composed pages: each fragment gets its own build-keyed cache partition, so a page already open keeps getting the chunks it was built against after a deploy lands. Ships as a handler to compose into an existing worker, and as a complete worker.",
   "keywords": [

@@ -1,5 +1,5 @@
 import { Injectable, Signal, computed, signal } from '@angular/core';
-import type { OptimisticOverlay, QueuedEntry } from '@braid/data';
+import type { OptimisticOverlay, QueuedEntry } from '@braidlabs/data';
 import type { EntityType } from './entity';
 import type { StoreTransaction } from './store';
 

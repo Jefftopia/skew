@@ -1,12 +1,12 @@
 {
-  "name": "@braid/angular-core",
+  "name": "@braidlabs/angular-core",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/core": "^22.0.0",
-    "@braid/skew": "^0.0.1"
+    "@braidlabs/skew": "^0.0.1"
   },
   "sideEffects": false,
-  "description": "Angular DI and signal wrappers for @braid/skew versioned stores.",
+  "description": "Angular DI and signal wrappers for @braidlabs/skew versioned stores.",
   "publishConfig": {
     "access": "public"
   },

@@ -1,4 +1,4 @@
-import { memoryRecordDriver } from '@braid/data';
+import { memoryRecordDriver } from '@braidlabs/data';
 import { describe, expect, it, vi } from 'vitest';
 import { createReportQueue, type BraidReport } from './reports.js';
 

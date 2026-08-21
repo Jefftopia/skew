@@ -11,10 +11,10 @@ export default withNativeFederation({
    * See the note in `apps/prod-remote/federation.config.mjs`.
    */
   sharedMappings: [
-    '@braid/skew',
-    '@braid/angular-router',
-    '@braid/angular-data',
-    '@braid/angular-workflow',
+    '@braidlabs/skew',
+    '@braidlabs/angular-router',
+    '@braidlabs/angular-data',
+    '@braidlabs/angular-workflow',
   ],
 
   shared: {

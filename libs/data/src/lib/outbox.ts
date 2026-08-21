@@ -1,4 +1,4 @@
-import { versioned } from '@braid/skew';
+import { versioned } from '@braidlabs/skew';
 import type { RecordDriver } from './record-store.js';
 import { createRecordStore, type ProjectedRecord } from './record-store.js';
 

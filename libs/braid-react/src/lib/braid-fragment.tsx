@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
-import type { FragmentSlotState } from '@braid/core';
+import type { FragmentSlotState } from '@braidlabs/core';
 
 /** The `detail` of a `braid:error` event. */
 export interface BraidFragmentError {
