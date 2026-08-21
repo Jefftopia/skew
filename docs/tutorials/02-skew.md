@@ -1,4 +1,4 @@
-# Tutorial 1 — Version the data, not the deploy
+# Tutorial 2 — Version the data, not the deploy
 
 **Package:** `@braidlabs/skew` · **Time:** ~25 minutes · **Prerequisites:** any
 TypeScript project. No framework required — everything here runs in Node, a
@@ -349,5 +349,5 @@ forward with its guesses labeled, migrates backward with its losses named,
 refuses what it cannot honestly read, stores durably, and is reproducible
 under test. The deploy stopped being an event your data has to fear.
 
-**Next:** [Tutorial 2 — Give your build a name](02-build.md), where the
+**Next:** [Tutorial 3 — Give your build a name](03-build.md), where the
 *code* gets the same treatment the data just got.

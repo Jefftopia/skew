@@ -9,7 +9,7 @@ import { createTenancy } from './tenancy.js';
 import type { PushSink } from './adapters.js';
 
 /**
- * The examples from `docs/tutorials/06-data-storage.md`, executed.
+ * The examples from `docs/tutorials/04-data-storage.md`, executed.
  *
  * A tutorial whose snippets do not run is worse than no tutorial: the reader assumes they made the
  * mistake. These follow the tutorial's steps in order and use its exact shapes, so a change that

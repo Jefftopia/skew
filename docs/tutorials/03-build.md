@@ -1,10 +1,10 @@
-# Tutorial 2 — Give your build a name
+# Tutorial 3 — Give your build a name
 
 **Package:** `@braidlabs/build` · **Time:** ~15 minutes · **Prerequisites:**
 any bundled web app (Angular CLI, Vite, webpack — the tool is agnostic).
 
 Version skew is two parties disagreeing about which version of the world they
-are in. Tutorial 1 gave the *data* a version; this one gives the *deployment*
+are in. Tutorial 2 gave the *data* a version; this one gives the *deployment*
 one — a stamped identity, a manifest the origin serves, and the comparison
 that tells a running tab whether reloading will fix things or loop forever.
 You will finish with `skew-contract gen`, which generates frozen types from a
@@ -146,7 +146,7 @@ if (moduleWasRemoved(probe.lastManifest()!, 'admin.routes')) {
 
 ## Step 4 — Generate frozen types from a contract
 
-Tutorial 1's hardest rule — *never edit a past version's interface* — is
+Tutorial 2's hardest rule — *never edit a past version's interface* — is
 discipline, and discipline erodes. If you publish contract documents
 (`@braidlabs/contract`), the second CLI in this package retires the discipline
 by generating the frozen snapshots:
@@ -221,4 +221,4 @@ A build that knows its own name and birthday, an origin that publishes both,
 a client that can tell a fixable stale-tab from an unfixable rollback loop,
 and version snapshots nobody maintains by hand.
 
-**Next:** [Tutorial 3 — Versioned stores, the Angular way](03-angular-core.md).
+**Next:** [Tutorial 5 — Versioned stores, the Angular way](05-angular-core.md).

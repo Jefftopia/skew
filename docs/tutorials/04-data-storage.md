@@ -1,15 +1,15 @@
-# Tutorial 6 — Client storage that survives a reload
+# Tutorial 4 — Client storage that survives a reload
 
 > **This is the feature-by-feature tour.** If you would rather build one working thing in the
 > order you would actually build it — tenancy, then reads, then orders, then offline, then sign-out —
 > read [Tutorial 7: Build a storefront](07-storefront.md) and come back here for the detail.
 
 **Package:** `@braidlabs/data` · **Time:** ~40 minutes ·
-**Prerequisites:** Tutorial 1 (contracts and `versioned()`). You will need a browser; the store is
+**Prerequisites:** Tutorial 2 (contracts and `versioned()`). You will need a browser; the store is
 a browser API. No Braid, no micro-frontends, and no Angular are required — the last step shows the
 Angular binding, but everything before it is plain TypeScript.
 
-> **Tutorial 4 or this one?** [Tutorial 4](04-angular-data.md) builds a normalized graph in an
+> **Tutorial 6 or this one?** [Tutorial 6](06-angular-data.md) builds a normalized graph in an
 > Angular app. This one is the storage engine underneath it — the same records, queue, and
 > versioning, without a framework. Read this one if you are not on Angular, or if tutorial 4 worked
 > and you now want to know what it was doing.
@@ -332,7 +332,7 @@ it.
 ## Step 9 — In an Angular app
 
 The binding wires all of the above into DI and signals. This is a sketch of the shape;
-[Tutorial 4](04-angular-data.md) builds it properly, including the normalized graph:
+[Tutorial 6](06-angular-data.md) builds it properly, including the normalized graph:
 
 ```ts
 // app.config.ts
@@ -456,8 +456,8 @@ push should also refresh list queries, which cannot be rebuilt from one record.
 
 ## Where to go next
 
-- [Tutorial 4](04-angular-data.md) — the same ideas in Angular, with a normalized graph on top
-- [Tutorial 1](01-core.md) — migrations in depth, for when your shape changes
+- [Tutorial 6](06-angular-data.md) — the same ideas in Angular, with a normalized graph on top
+- [Tutorial 2](02-skew.md) — migrations in depth, for when your shape changes
 - [The demo](../braid-poc.md) — every claim above, running, with the evidence on screen
 
 Every snippet in this tutorial is executed by `libs/data/src/lib/tutorial.spec.ts`, so if one of

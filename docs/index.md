@@ -7,11 +7,11 @@ hero:
   tagline: Independently deployed applications composed into one document, one layout, and one accessibility tree — with each app's JavaScript isolated in its own realm.
   actions:
     - theme: brand
+      text: Get started
+      link: /getting-started
+    - theme: alt
       text: Braid, explained
       link: /braid-explained
-    - theme: alt
-      text: Start a fragment
-      link: /tutorials/05-braid
     - theme: alt
       text: View on GitHub
       link: https://github.com/braidjs/braid

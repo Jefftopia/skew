@@ -1,4 +1,4 @@
-# Tutorial 5 — Compose without colliding: Enterprise Microfrontends with Braid
+# Tutorial 1 — Compose without colliding: Enterprise Microfrontends with Braid
 
 **Packages:** `@braidlabs/gateway` · `@braidlabs/core` · **Time:** ~30 minutes · **Prerequisites:** Basic understanding of JavaScript/TypeScript, Single-Page Applications (SPAs), and client/server rendering concepts.
 

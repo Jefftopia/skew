@@ -1,7 +1,7 @@
-# Tutorial 3 — Versioned stores, the Angular way
+# Tutorial 5 — Versioned stores, the Angular way
 
 **Package:** `@braidlabs/angular-core` · **Time:** ~20 minutes ·
-**Prerequisites:** Tutorial 1, and an Angular 17+ app (the demo uses
+**Prerequisites:** Tutorial 2, and an Angular 17+ app (the demo uses
 standalone components, Signals, and `inject()`; no NgModules anywhere).
 
 `@braidlabs/skew` is framework-free. This package is the thin, honest bridge to
@@ -16,7 +16,7 @@ npm install @braidlabs/skew @braidlabs/angular-core
 
 ---
 
-## Step 1 — The schema (from Tutorial 1)
+## Step 1 — The schema (from Tutorial 2)
 
 Contracts live in one file, exported once, imported everywhere. If two parts
 of your app declare the same contract separately, they *will* drift:
@@ -87,7 +87,7 @@ import { webStorageDriver } from '@braidlabs/skew';
 import { provideSkewStore } from '@braidlabs/angular-core';
 import { DraftSchema } from './domain';
 import { DRAFT_STORE } from './draft-store';
-import { BUILD_ID } from '../generated/build-id';   // from Tutorial 2
+import { BUILD_ID } from '../generated/build-id';   // from Tutorial 3
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -222,7 +222,7 @@ export class DraftAdmin {
 }
 ```
 
-Everything Tutorial 1 taught about results — `migratedFrom`,
+Everything Tutorial 2 taught about results — `migratedFrom`,
 `downgradedFrom`, `derivedPaths`, `lossyPaths` — flows through unchanged.
 The Angular layer adds ergonomics, never semantics.
 
@@ -282,5 +282,5 @@ A draft editor that opens month-old records at today's shape, renders
 failures as typed states instead of blank screens, never flickers on load,
 and tests its own migration path against real stored bytes.
 
-**Next:** [Tutorial 4 — One graph, durable writes](04-angular-data.md), for
+**Next:** [Tutorial 6 — One graph, durable writes](06-angular-data.md), for
 the data that lives on a server instead of in a store.

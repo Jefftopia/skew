@@ -1,10 +1,10 @@
 # Tutorial 7 — Build a storefront, end to end
 
 **Package:** `@braidlabs/data` · **Time:** ~45 minutes ·
-**Prerequisites:** none, though [tutorial 6](06-data-storage.md) is the reference for anything here
+**Prerequisites:** none, though [tutorial 6](04-data-storage.md) is the reference for anything here
 you want more detail on.
 
-Tutorial 6 is a tour of the parts. This one builds one thing, in the order you would actually build
+Tutorial 4 is a tour of the parts. This one builds one thing, in the order you would actually build
 it, and every step earns its place by solving a problem the previous step created.
 
 **What you will build:** a storefront that works for a guest, keeps their data separate from the
@@ -738,9 +738,9 @@ decide otherwise.
 
 ## Where to go next
 
-- [Tutorial 6](06-data-storage.md) — the same library feature by feature, when you want the detail
+- [Tutorial 4](04-data-storage.md) — the same library feature by feature, when you want the detail
   behind a step here
-- [Tutorial 4](04-angular-data.md) — the same ideas in Angular, with a normalized graph on top
+- [Tutorial 6](06-angular-data.md) — the same ideas in Angular, with a normalized graph on top
 - [Braid, explained](../braid-explained.md) — what a realm, a fragment, and a slot actually are, if
   the composition section was your first encounter with them
 - [The storefront demo plan](https://github.com/braidjs/braid/blob/main/docs/plans/braid-storefront-demo-plan.md) — this tutorial as a running

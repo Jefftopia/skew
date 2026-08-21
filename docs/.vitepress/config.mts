@@ -41,25 +41,38 @@ export default withMermaid(
 
     themeConfig: {
       nav: [
+        { text: 'Getting started', link: '/getting-started' },
         { text: 'Explained', link: '/braid-explained' },
         { text: 'Tutorials', link: '/tutorials/' },
         { text: 'Talk deck', link: '/braid-deck.html', target: '_blank' },
       ],
 
+      /**
+       * Ordered as the project is: composition first, because that is what Braid is; then the
+       * version skew independently deployed apps produce; then the state layer that holds what
+       * they disagree about. The tutorials are numbered to match, so the sidebar and the
+       * filenames never tell a reader two different stories about where to start.
+       */
       sidebar: [
         {
-          text: 'Braid',
+          text: 'Start here',
           items: [
+            { text: 'Getting started', link: '/getting-started' },
             { text: 'Braid, explained', link: '/braid-explained' },
+          ],
+        },
+        {
+          text: 'Composition',
+          items: [
             { text: 'Architecture', link: '/braid-architecture' },
             { text: 'From Module Federation', link: '/braid-from-module-federation' },
             { text: 'Without the gateway', link: '/braid-without-gateway' },
+            { text: 'The POC', link: '/braid-poc' },
           ],
         },
         {
           text: 'Running it',
           items: [
-            { text: 'The POC', link: '/braid-poc' },
             { text: 'CDN and deployment', link: '/braid-cdn' },
             { text: 'Failure modes', link: '/braid-failure-modes' },
             { text: 'Tooling', link: '/braid-tooling' },
@@ -69,13 +82,13 @@ export default withMermaid(
           text: 'Tutorials',
           items: [
             { text: 'Overview', link: '/tutorials/' },
-            { text: '1 · Core', link: '/tutorials/01-core' },
-            { text: '2 · Build', link: '/tutorials/02-build' },
-            { text: '3 · Angular core', link: '/tutorials/03-angular-core' },
-            { text: '4 · Angular data', link: '/tutorials/04-angular-data' },
-            { text: '5 · Braid', link: '/tutorials/05-braid' },
-            { text: '6 · Data storage', link: '/tutorials/06-data-storage' },
-            { text: '7 · Storefront', link: '/tutorials/07-storefront' },
+            { text: '1 \u00b7 Compose without colliding', link: '/tutorials/01-braid' },
+            { text: '2 \u00b7 Version the data', link: '/tutorials/02-skew' },
+            { text: '3 \u00b7 Name your build', link: '/tutorials/03-build' },
+            { text: '4 \u00b7 Client storage', link: '/tutorials/04-data-storage' },
+            { text: '5 \u00b7 Angular stores', link: '/tutorials/05-angular-core' },
+            { text: '6 \u00b7 Angular data', link: '/tutorials/06-angular-data' },
+            { text: '7 \u00b7 Storefront, end to end', link: '/tutorials/07-storefront' },
           ],
         },
         {

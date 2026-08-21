@@ -34,28 +34,28 @@ interface TutorialEntry {
 
 const TUTORIALS: readonly TutorialEntry[] = [
   {
-    slug: '01-core',
+    slug: '02-skew',
     title: 'Version the data, not the deploy',
     pkg: '@braidlabs/skew',
     summary:
       'Envelopes, migration chains in both directions, labeled guesses, and storage that refuses to lie.',
   },
   {
-    slug: '02-build',
+    slug: '03-build',
     title: 'Give your build a name',
     pkg: '@braidlabs/build',
     summary:
       'Stamped identity, the served manifest, stale-origin detection, and generated frozen types.',
   },
   {
-    slug: '03-angular-core',
+    slug: '05-angular-core',
     title: 'Versioned stores, the Angular way',
     pkg: '@braidlabs/angular-core',
     summary:
       'A versioned store through DI, read as Signals with zero flicker and typed failure states.',
   },
   {
-    slug: '04-angular-data',
+    slug: '06-angular-data',
     title: 'One graph, durable writes',
     pkg: '@braidlabs/angular-data',
     summary:
@@ -119,7 +119,7 @@ export class Tutorials {
   protected readonly tutorials = TUTORIALS;
   protected readonly buildId = BUILD_IDENTITY.buildId;
 
-  protected readonly selected = signal<string>(TUTORIALS[0]?.slug ?? '01-core');
+  protected readonly selected = signal<string>(TUTORIALS[0]?.slug ?? '02-skew');
   protected readonly error = signal<string | null>(null);
   private readonly rendered = signal<SafeHtml | null>(null);
   protected readonly html = computed(() => this.rendered());
@@ -136,7 +136,7 @@ export class Tutorials {
   }
 
   /**
-   * Cross-tutorial links in the markdown (`](02-build.md)`) select in place
+   * Cross-tutorial links in the markdown (`](03-build.md)`) select in place
    * instead of navigating the page to a raw .md file. External links pass
    * through; other repo-relative links are inert here — they exist for the
    * GitHub rendering of the same files.

@@ -1,4 +1,4 @@
-# Tutorial 4 — One graph, durable writes
+# Tutorial 6 — One graph, durable writes
 
 **Package:** `@braidlabs/angular-data` · **Time:** ~30 minutes ·
 **Prerequisites:** Tutorials 1 and 3. An Angular app with an HTTP API to talk
@@ -90,7 +90,7 @@ import { Component, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { EntityStore, query } from '@braidlabs/angular-data';
-import { FundListSchemaV1 } from './contracts';   // Tutorial 1 habits apply
+import { FundListSchemaV1 } from './contracts';   // Tutorial 2 habits apply
 import { Fund, FundEntity } from './entities';
 
 @Component({
@@ -236,7 +236,7 @@ The rules that make it work, each there because of a real failure mode:
   the change happened; it reaches the server when connectivity returns. This
   is the opposite of the memory-durability path, which rolls back — choose
   per mutation.
-- **`schemaVersion` travels with the entry.** This is Tutorial 1 aimed at the
+- **`schemaVersion` travels with the entry.** This is Tutorial 2 aimed at the
   write path: an order queued today may flush against next week's API.
 
 That last point deserves its own step.
