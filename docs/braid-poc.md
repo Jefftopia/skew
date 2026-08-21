@@ -134,7 +134,7 @@ outbox demonstrates nothing against a server that always succeeds instantly. `DE
 serves committed copies when the network is unavailable.
 
 Panel 14 — a reader too far behind to project, refetching rather than guessing — is the one act
-four still lacks; see [the demo plan](plans/braid-data-demo-plan.md).
+four still lacks; see [the demo plan](https://github.com/braidjs/braid/blob/main/docs/plans/braid-data-demo-plan.md).
 
 ## What the POC actually proves
 
@@ -175,7 +175,7 @@ on the same page where a fragment boots into its own realm. Neither mechanism di
 
 **The gateway publishes its registry.** `GET /__braid/registry` lists the composable apps. The
 POC runs in development mode, so it returns everything including internal endpoints; see the
-[gateway README](../libs/braid-gateway/README.md) for how roles, permissions, and pagination work
+[gateway README](https://github.com/braidjs/braid/blob/main/libs/braid-gateway/README.md) for how roles, permissions, and pagination work
 in production.
 
 **The registry console runs alongside it**, at
@@ -187,11 +187,11 @@ Publishing there writes an immutable snapshot to `.braid/registry`. Note the gap
 deliberately visible: **this gateway serves the inline manifests in `server.ts`**, so a published
 snapshot changes nothing until a deploy pins its id. That is the model rather than a shortcoming of
 the demo — configuration changes are deploys, which is what makes rollback a pointer move. See
-[`@braid/registry`](../libs/braid-registry/README.md).
+[`@braid/registry`](https://github.com/braidjs/braid/blob/main/libs/braid-registry/README.md).
 
 ## The host's entire integration
 
-The host uses [`@braid/angular`](../libs/braid-angular/README.md), so the integration is
+The host uses [`@braid/angular`](https://github.com/braidjs/braid/blob/main/libs/braid-angular/README.md), so the integration is
 one provider and one element:
 
 ```ts

@@ -14,7 +14,7 @@ hero:
       link: /tutorials/05-braid
     - theme: alt
       text: View on GitHub
-      link: https://github.com/Jefftopia/skew
+      link: https://github.com/braidjs/braid
 
 features:
   - title: Split where the code runs from where the DOM lives

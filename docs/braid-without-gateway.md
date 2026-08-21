@@ -17,7 +17,7 @@ export default toFetchHandler(gateway, appHandler); // Workers, Deno, Bun, h3/Ni
 ```
 
 There is no extra process, port, container, or deployment. The [gateway
-README](../libs/braid-gateway/README.md) has the binding for each framework.
+README](https://github.com/braidjs/braid/blob/main/libs/braid-gateway/README.md) has the binding for each framework.
 
 If you *cannot* modify the origin server — the classic legacy-monolith case — run the gateway as
 an edge worker or reverse proxy in front of it instead. The monolith stays untouched; the gateway

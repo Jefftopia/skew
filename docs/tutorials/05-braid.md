@@ -392,7 +392,7 @@ No special bundler plugins, no shared dependency negotiations, and no webpack co
 
 ## Further Reading in This Repository
 
-- [gateway.md](file:///Users/jeffreysmith/dev/ngx-drift/skills/using-braid/references/gateway.md) — Complete API reference for gateway configuration, manifest schemas, and access control rules.
-- [client.md](file:///Users/jeffreysmith/dev/ngx-drift/skills/using-braid/references/client.md) — Detailed reference for `<braid-fragment>`, lifecycle states, and events.
-- [braid-from-module-federation.md](file:///Users/jeffreysmith/dev/ngx-drift/docs/braid-from-module-federation.md) — Step-by-step guide for migrating an existing Module Federation application to Braid.
-- [failure-modes.md](file:///Users/jeffreysmith/dev/ngx-drift/skills/using-braid/references/failure-modes.md) — Diagnostic guide for debugging realm mismatches, CORS issues, and routing conflicts.
+- [gateway.md](https://github.com/braidjs/braid/blob/main/skills/using-braid/references/gateway.md) — Complete API reference for gateway configuration, manifest schemas, and access control rules.
+- [client.md](https://github.com/braidjs/braid/blob/main/skills/using-braid/references/client.md) — Detailed reference for `<braid-fragment>`, lifecycle states, and events.
+- [braid-from-module-federation.md](https://github.com/braidjs/braid/blob/main/docs/braid-from-module-federation.md) — Step-by-step guide for migrating an existing Module Federation application to Braid.
+- [failure-modes.md](https://github.com/braidjs/braid/blob/main/skills/using-braid/references/failure-modes.md) — Diagnostic guide for debugging realm mismatches, CORS issues, and routing conflicts.

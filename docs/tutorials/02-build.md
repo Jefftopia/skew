@@ -204,7 +204,7 @@ a generated file is visible in review; drifting silently is not possible.
 
 ## Step 5 — Wire it into a deploy pipeline
 
-The demo's [`tools/deploy-demo.mjs`](../../tools/deploy-demo.mjs) is the
+The demo's [`tools/deploy-demo.mjs`](https://github.com/braidjs/braid/blob/main/tools/deploy-demo.mjs) is the
 reference: **stamp → build → manifest**, with one identity in all three
 places. The order matters — the identity file must exist before the bundler
 runs (your code imports it), and the manifest must describe the output that

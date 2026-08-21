@@ -14,7 +14,7 @@ the same storefront and splits it across several independently deployed micro-fr
 partition.
 
 Every snippet on this page is executed by
-[`storefront.spec.ts`](../../libs/data/src/lib/storefront.spec.ts). If one of them does not work for
+[`storefront.spec.ts`](https://github.com/braidjs/braid/blob/main/libs/data/src/lib/storefront.spec.ts). If one of them does not work for
 you, that is a bug on our side, not yours.
 
 ---
@@ -582,7 +582,7 @@ invisible — the fragment that never heard looks exactly like one that is worki
 property a bug can have.
 
 Both behaviours are pinned down in
-[`composition.spec.ts`](../../libs/data/src/lib/composition.spec.ts): without the channel the second
+[`composition.spec.ts`](https://github.com/braidjs/braid/blob/main/libs/data/src/lib/composition.spec.ts): without the channel the second
 fragment never refetches, with it it does.
 
 ### 5. Sign-out has to reach every fragment
@@ -689,7 +689,7 @@ this is ordering ambiguity rather than double-sending, and it does not arise bet
 which have different owners by construction.
 
 Both behaviours are pinned down in
-[`composition.spec.ts`](../../libs/data/src/lib/composition.spec.ts) — the later write winning
+[`composition.spec.ts`](https://github.com/braidjs/braid/blob/main/libs/data/src/lib/composition.spec.ts) — the later write winning
 whole, and concurrent queue appends keeping every entry.
 
 ### The setup, in one table
@@ -743,6 +743,6 @@ decide otherwise.
 - [Tutorial 4](04-angular-data.md) — the same ideas in Angular, with a normalized graph on top
 - [Braid, explained](../braid-explained.md) — what a realm, a fragment, and a slot actually are, if
   the composition section was your first encounter with them
-- [The storefront demo plan](../plans/braid-storefront-demo-plan.md) — this tutorial as a running
+- [The storefront demo plan](https://github.com/braidjs/braid/blob/main/docs/plans/braid-storefront-demo-plan.md) — this tutorial as a running
   site, split across three deployed fragments. Proposed, not built
-- [`@braid/data` sources](../../libs/data/src) — every decision above is commented where it is made
+- [`@braid/data` sources](https://github.com/braidjs/braid/tree/main/libs/data/src) — every decision above is commented where it is made

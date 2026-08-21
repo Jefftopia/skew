@@ -188,7 +188,7 @@ accepts but normalizes (`north star` → `North Star`) is neither a failure nor
 something to swap in silently: `onConflict` defaults to `'raise'`, while the
 record stored is the server's either way.
 
-The [flow diagram](../../libs/angular/data/README.md#the-whole-flow-end-to-end)
+The [flow diagram](https://github.com/braidjs/braid/blob/main/libs/angular/data/README.md#the-whole-flow-end-to-end)
 traces all of it — query, mutation, offline, reload, flush, invalidation — as
 one numbered sequence.
 
@@ -293,6 +293,6 @@ and re-run by tag; writes that apply instantly, roll back precisely, survive
 reloads, and migrate themselves when the server has moved on since they were
 queued.
 
-**Where next:** the [README](../../README.md)'s production demo ties all four
+**Where next:** the [README](https://github.com/braidjs/braid/blob/main/README.md)'s production demo ties all four
 tutorials into one running system — and its Basics walkthrough is the
 fastest way to *see* every claim these tutorials made.

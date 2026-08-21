@@ -337,7 +337,7 @@ deliberately do not — those stay as code. This split is what makes it safe
 for an API to *publish* its migrations as a document a client can fetch at
 runtime (`@braid/contract`), which is where the `ahead` story gets its
 final act. That is its own tutorial's worth of material — see the
-[`@braid/contract` README](../../libs/contract/README.md) when you are
+[`@braid/contract` README](https://github.com/braidjs/braid/blob/main/libs/contract/README.md) when you are
 ready.
 
 ---

@@ -20,12 +20,21 @@ export default withMermaid(
     title: 'Braid',
     description: 'Many apps. One page. One accessibility tree.',
 
-    // The repo is served at jefftopia.github.io/skew/, so every asset URL needs the prefix.
-    base: '/skew/',
+    // Project pages live under /<repo>/, so every asset and link URL needs that prefix — get it
+    // wrong and the site renders as unstyled HTML because the CSS 404s. Overridable so a fork,
+    // a rename, or a custom domain (where base is '/') does not need a code change.
+    base: process.env.DOCS_BASE ?? '/braid/',
 
     // Planning documents are internal roadmap, not reference material. Excluded deliberately
     // rather than by oversight — publishing them is a decision, not a side effect.
     srcExclude: ['plans/**', '**/node_modules/**'],
+
+    // The tutorials directory index is README.md so github.com renders it when browsing the
+    // folder; VitePress serves a directory from index.md. Mapping it here keeps both working
+    // instead of forcing a choice between them.
+    rewrites: {
+      'tutorials/README.md': 'tutorials/index.md',
+    },
 
     // The deck is a standalone self-contained page; VitePress must copy it, not parse it.
     ignoreDeadLinks: true,
@@ -71,11 +80,11 @@ export default withMermaid(
         },
         {
           text: 'Reference',
-          items: [{ text: 'Skew architecture', link: '/architecture' }],
+          items: [{ text: 'Architecture diagrams', link: '/architecture' }],
         },
       ],
 
-      socialLinks: [{ icon: 'github', link: 'https://github.com/Jefftopia/skew' }],
+      socialLinks: [{ icon: 'github', link: 'https://github.com/braidjs/braid' }],
       search: { provider: 'local' },
       outline: [2, 3],
     },

@@ -84,7 +84,7 @@ export function installDocumentFacade(realmDocument: Document, overrides: Facade
       warnedMembers.add(propertyName);
       console.warn(
         `Braid compat: a fragment accessed 'document.${propertyName}', which has not been audited for compat fragment contexts yet and falls through to the fragment's hidden realm document.\n` +
-          `If the fragment misbehaves in a way related to this API, please report it at https://github.com/Jefftopia/skew/issues`,
+          `If the fragment misbehaves in a way related to this API, please report it at https://github.com/braidjs/braid/issues`,
       );
     }
   }

@@ -1,4 +1,4 @@
-# Skew tutorials
+# Braid tutorials
 
 Hands-on, step-by-step introductions to each package. Every tutorial builds
 something small and real, uses only public API, and ends with the failure it

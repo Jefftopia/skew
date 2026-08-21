@@ -17,11 +17,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Jefftopia/skew.git",
+    "url": "git+https://github.com/braidjs/braid.git",
     "directory": "libs/braid-angular"
   },
-  "homepage": "https://github.com/Jefftopia/skew#readme",
+  "homepage": "https://github.com/braidjs/braid#readme",
   "bugs": {
-    "url": "https://github.com/Jefftopia/skew/issues"
+    "url": "https://github.com/braidjs/braid/issues"
   }
 }

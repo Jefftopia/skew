@@ -11,7 +11,7 @@ An honest status of the developer-facing surface, and the shape of what should c
 | `braid add <id>` | **works** | registers a fragment in the config (`--endpoint`, `--port`, `--pierce`) |
 | `@braid/cli/nx` | **works** | Nx plugin inferring a `braid-dev` target from any `braid.config.*` |
 
-See [the dev workflow](../skills/using-braid/references/dev-workflow.md) for how to use them, and
+See [the dev workflow](https://github.com/braidjs/braid/blob/main/skills/using-braid/references/dev-workflow.md) for how to use them, and
 what dev servers still need configured by hand.
 
 ## What does not exist

@@ -228,7 +228,7 @@ iframe loads it, the browser reads those bytes directly: no socket, no cache loo
 nothing that can be slow or down. **That is how the round trip is avoided** — not a clever
 optimization, simply no request to make. Once the iframe has loaded the URL is revoked, and the
 document it created lives on. The real thing is `createContractBlobRealm` in
-[`libs/core/src/realm/realm-manager.ts`](../libs/core/src/realm/realm-manager.ts).
+[`libs/core/src/realm/realm-manager.ts`](https://github.com/braidjs/braid/blob/main/libs/core/src/realm/realm-manager.ts).
 
 The import map in there is the quiet payoff. Every realm gets its own document, so every realm gets
 its own import map for free — which is how two fragments ship different majors of the same

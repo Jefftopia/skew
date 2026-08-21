@@ -318,7 +318,7 @@ when a child exits non-zero.
 
 **Cause.** A shared cache served a composed page to a request that wanted the plain shell, or the
 reverse. A page URL that a fragment pierces is the only Braid URL with more than one
-representation — see [the three namespaces](../libs/braid-gateway/README.md#the-three-namespaces).
+representation — see [the three namespaces](https://github.com/braidjs/braid/blob/main/libs/braid-gateway/README.md#the-three-namespaces).
 
 **Prevention.** Don't edge-cache pierced pages — the gateway defends this by default, marking
 them `private` so a correct shared cache will not store them. Seeing this failure anyway means
