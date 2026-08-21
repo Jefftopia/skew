@@ -1,5 +1,5 @@
 {
-  "name": "@skewkit/studio",
+  "name": "@braid/studio",
   "version": "0.0.1",
   "description": "Inspection tooling for version skew: structural payload diffs that speak the migration's own vocabulary.",
   "keywords": [

@@ -1,4 +1,4 @@
-import type { DiscoveryEntry } from '@skewkit/braid-gateway';
+import type { DiscoveryEntry } from '@braid/gateway';
 
 /**
  * The composition topology of a gateway, derived from a discovery listing.

@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BraidFragment } from '@skewkit/braid-angular';
+import { BraidFragment } from '@braid/angular';
 import { DemoPanel } from './panel';
 
 /**

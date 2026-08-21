@@ -1,6 +1,6 @@
 # Tutorial 2 — Give your build a name
 
-**Package:** `@skewkit/build` · **Time:** ~15 minutes · **Prerequisites:**
+**Package:** `@braid/build` · **Time:** ~15 minutes · **Prerequisites:**
 any bundled web app (Angular CLI, Vite, webpack — the tool is agnostic).
 
 Version skew is two parties disagreeing about which version of the world they
@@ -11,7 +11,7 @@ You will finish with `skew-contract gen`, which generates frozen types from a
 contract document so nobody has to maintain them by hand.
 
 ```sh
-npm install --save-dev @skewkit/build
+npm install --save-dev @braid/build
 ```
 
 ---
@@ -88,10 +88,10 @@ question it exists for with stale information.
 ## Step 3 — Ask the origin who it is
 
 Now a running tab can compare itself against the origin. The probe lives in
-`@skewkit/core` (zero dependencies, so it can ship in your bundle):
+`@braid/skew` (zero dependencies, so it can ship in your bundle):
 
 ```ts
-import { createVersionProbe } from '@skewkit/core';
+import { createVersionProbe } from '@braid/skew';
 import { BUILD_ID, BUILT_AT } from './generated/build-id';
 
 const probe = createVersionProbe({
@@ -135,7 +135,7 @@ manifest requests, and `check()` deduplicates concurrent callers.
 One more classifier worth knowing:
 
 ```ts
-import { moduleWasRemoved } from '@skewkit/core';
+import { moduleWasRemoved } from '@braid/skew';
 
 if (moduleWasRemoved(probe.lastManifest()!, 'admin.routes')) {
   // the route is GONE in the new build — navigate home instead of retrying
@@ -148,7 +148,7 @@ if (moduleWasRemoved(probe.lastManifest()!, 'admin.routes')) {
 
 Tutorial 1's hardest rule — *never edit a past version's interface* — is
 discipline, and discipline erodes. If you publish contract documents
-(`@skewkit/contract`), the second CLI in this package retires the discipline
+(`@braid/contract`), the second CLI in this package retires the discipline
 by generating the frozen snapshots:
 
 ```sh

@@ -13,7 +13,7 @@ export default withNativeFederation({
   },
 
   /**
-   * The `@skewkit/*` packages are workspace libraries reached through tsconfig
+   * The `@braid/*` packages are workspace libraries reached through tsconfig
    * paths, not npm dependencies, so `shareAll` cannot see them. Without this,
    * each build would bundle its own copy — and `provideSkewWorkflow` in the
    * host would be writing to a different `InjectionToken` than the one
@@ -24,10 +24,10 @@ export default withNativeFederation({
    * while still disagreeing, deliberately, about schema versions.
    */
   sharedMappings: [
-    '@skewkit/core',
-    '@skewkit/angular-router',
-    '@skewkit/angular-data',
-    '@skewkit/angular-workflow',
+    '@braid/skew',
+    '@braid/angular-router',
+    '@braid/angular-data',
+    '@braid/angular-workflow',
   ],
 
   shared: {

@@ -1,4 +1,4 @@
-import type { SkewResult, VersionedEnvelope, VersionedSchema } from '@skewkit/core';
+import type { SkewResult, VersionedEnvelope, VersionedSchema } from '@braid/skew';
 
 /**
  * A record-oriented store: many addressable records per collection, rather than one blob per key.
@@ -11,7 +11,7 @@ import type { SkewResult, VersionedEnvelope, VersionedSchema } from '@skewkit/co
  * With addressable records the read disappears: append is `put`, remove is `delete`, and there is
  * nothing to lose. That holds on any driver, at any number of realms or tabs.
  *
- * Every value is **enveloped** by `@skewkit/core` on the way in and projected on the way out.
+ * Every value is **enveloped** by `@braid/skew` on the way in and projected on the way out.
  * Persistence-first makes that non-negotiable rather than advisable: a record outlives the build
  * that wrote it by arbitrary amounts, so the reader is routinely a different version from the
  * writer, and there is no later moment at which envelopes can be added cheaply.
@@ -34,7 +34,7 @@ export interface StoredRecord {
   partition: string;
   /** Monotonic within a collection; gives FIFO order without a separate index. */
   seq: number;
-  /** The `@skewkit/core` envelope. */
+  /** The `@braid/skew` envelope. */
   envelope: VersionedEnvelope;
   /**
    * Which fragment wrote it. Only that fragment may replay or reinterpret it — the reason a second

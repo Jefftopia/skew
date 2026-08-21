@@ -1,4 +1,4 @@
-import type { FragmentManifest } from '@skewkit/braid-gateway';
+import type { FragmentManifest } from '@braid/gateway';
 
 /**
  * Registry analysis: what is wrong with a set of manifests, and what a proposed set would change.

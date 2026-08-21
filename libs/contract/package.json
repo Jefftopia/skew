@@ -1,5 +1,5 @@
 {
-  "name": "@skewkit/contract",
+  "name": "@braid/contract",
   "version": "0.0.1",
   "description": "Data-driven schema migrations: publish a contract document from your API, resolve it at runtime, and migrate in both directions without shipping new client code.",
   "keywords": [
@@ -22,7 +22,7 @@
     "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "@skewkit/core": "^0.0.1"
+    "@braid/skew": "^0.0.1"
   },
   "publishConfig": {
     "access": "public"

@@ -1,4 +1,4 @@
-import { parseBraidPathname } from '@skewkit/braid-gateway';
+import { parseBraidPathname } from '@braid/gateway';
 
 /**
  * Skew-aware asset serving: the one layer that can keep an open page working after a deploy.

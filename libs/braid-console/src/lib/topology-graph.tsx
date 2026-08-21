@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { DiscoveryEntry } from '@skewkit/braid-gateway';
+import type { DiscoveryEntry } from '@braid/gateway';
 import {
   buildTopology,
   coTenants,

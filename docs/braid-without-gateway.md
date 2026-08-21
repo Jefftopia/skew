@@ -8,7 +8,7 @@ usually decides the answer, so this document separates them.
 
 ## "Do I have to run a gateway as its own service?"
 
-No. `@skewkit/braid-gateway` is a library, not a server. It is middleware inside the server you
+No. `@braid/gateway` is a library, not a server. It is middleware inside the server you
 already run:
 
 ```ts

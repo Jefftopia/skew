@@ -1,5 +1,5 @@
 {
-  "name": "@skewkit/braid-react",
+  "name": "@braid/react",
   "version": "0.0.1",
   "description": "React binding for Braid: a typed <BraidFragment> component and host-navigation wiring for any router.",
   "keywords": ["react", "micro-frontends", "composition", "fragments", "braid"],
@@ -13,7 +13,7 @@
     "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "@skewkit/braid": "^0.0.1",
+    "@braid/core": "^0.0.1",
     "react": "^18.0.0 || ^19.0.0"
   },
   "publishConfig": { "access": "public" },

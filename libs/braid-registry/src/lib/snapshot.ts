@@ -1,4 +1,4 @@
-import type { FragmentManifest } from '@skewkit/braid-gateway';
+import type { FragmentManifest } from '@braid/gateway';
 
 /**
  * A registry snapshot: an immutable, content-addressed set of fragment manifests.

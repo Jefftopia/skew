@@ -1,4 +1,4 @@
-import { LensOp, canonicalJson, fnv1a } from '@skewkit/core';
+import { LensOp, canonicalJson, fnv1a } from '@braid/skew';
 
 /**
  * The contract document — a schema's history as *data*.

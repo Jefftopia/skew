@@ -5,7 +5,7 @@
  * static bundle, and the gateway is already an HTTP server in front of the origin.
  *
  * `tsx` is not a workspace dependency, and Node's own type stripping cannot resolve the workspace's
- * `.js`-suffixed source imports or its `@skewkit/*` path aliases — so both are handed to `tsx` via
+ * `.js`-suffixed source imports or its `@braid/*` path aliases — so both are handed to `tsx` via
  * npx, pointed at the tsconfig that defines them:
  *
  *   TSX_TSCONFIG_PATH=tsconfig.base.json npx tsx tools/braid-console/demo-server.mjs

@@ -1,5 +1,5 @@
 import { Component, inject, signal, viewChild } from '@angular/core';
-import { DATA_OPTIONS, OUTBOX_COLLECTION, OutboxService } from '@skewkit/angular-data';
+import { DATA_OPTIONS, OUTBOX_COLLECTION, OutboxService } from '@braid/angular-data';
 import { DemoComposition } from './composition-panels';
 import { DemoData } from './data-panels';
 import { DemoDurability } from './durability-panels';

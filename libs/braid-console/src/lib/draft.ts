@@ -1,5 +1,5 @@
-import type { FragmentManifest } from '@skewkit/braid-gateway';
-import { diffRegistries, validateRegistry, type RegistryDiff, type RegistryFinding } from '@skewkit/braid-registry';
+import type { FragmentManifest } from '@braid/gateway';
+import { diffRegistries, validateRegistry, type RegistryDiff, type RegistryFinding } from '@braid/registry';
 
 /**
  * A draft registry, held in the browser.

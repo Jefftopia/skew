@@ -1,10 +1,10 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { createOutbox, drainOutbox, type Outbox, type OptimisticOverlay, type QueuedEntry } from '@skewkit/data';
+import { createOutbox, drainOutbox, type Outbox, type OptimisticOverlay, type QueuedEntry } from '@braid/data';
 import { DATA_OPTIONS, OUTBOX_COLLECTION } from './config';
 import { PendingWrites } from './overlay';
 
 /**
- * The durable mutation outbox, as an Angular service over `@skewkit/data`.
+ * The durable mutation outbox, as an Angular service over `@braid/data`.
  *
  * This is the piece that cannot be built with in-flight request machinery. A mutation queued while
  * offline has to survive a page reload — and after a reload there is no pending `Promise` to retry,
@@ -14,7 +14,7 @@ import { PendingWrites } from './overlay';
  * Which forces one API constraint: an outbox mutation must have a stable `id`, because the
  * *operation* is a closure and closures do not serialise. On replay we look the operation up by id.
  *
- * **The store is shared and the entries are owned.** Persistence lives in `@skewkit/data`, one
+ * **The store is shared and the entries are owned.** Persistence lives in `@braid/data`, one
  * record per entry, in a store every app on the origin reads. This service replays only what it
  * owns. Previously the queue was a single blob under one key, so a second app overwrote the first's
  * and then dropped its entries for having no registered runner — silently, unless `onOutboxError`
@@ -120,7 +120,7 @@ export class OutboxService {
    * Drains this app's queue in order.
    *
    * The rules — sequential, stop at the first failure, one drain per owner across every tab, give up
-   * loudly — live in `@skewkit/data`'s `drainOutbox`, because this service used to carry a second
+   * loudly — live in `@braid/data`'s `drainOutbox`, because this service used to carry a second
    * copy of them and the two had already drifted apart on what to do with an entry nobody can
    * replay. What stays here is the Angular half: signals, and re-reading the shared store into them.
    *

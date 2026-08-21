@@ -1,4 +1,4 @@
-import type { RoutingEvent } from '@skewkit/braid-gateway';
+import type { RoutingEvent } from '@braid/gateway';
 
 /**
  * Aggregated routing observations: which page paths a gateway actually serves, and what composes

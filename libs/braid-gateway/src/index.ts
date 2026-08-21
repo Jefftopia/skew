@@ -1,8 +1,8 @@
 /**
- * @skewkit/braid-gateway — the Braid gateway: fetch-native origin-front middleware.
+ * @braid/gateway — the Braid gateway: fetch-native origin-front middleware.
  *
  * ```ts
- * import { createGateway, toWebMiddleware } from '@skewkit/braid-gateway';
+ * import { createGateway, toWebMiddleware } from '@braid/gateway';
  *
  * const gateway = createGateway({
  *   registry: [{ id: 'legacy-billing', endpoint: 'https://billing.internal' }],
@@ -10,7 +10,7 @@
  * });
  * ```
  *
- * Node/Connect binding: `import { toNodeMiddleware } from '@skewkit/braid-gateway/node'`.
+ * Node/Connect binding: `import { toNodeMiddleware } from '@braid/gateway/node'`.
  */
 
 export { createGateway, toWebMiddleware, toFetchHandler } from './gateway.js';

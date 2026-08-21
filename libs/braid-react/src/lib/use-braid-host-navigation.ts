@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { initBraid, type BraidOptions } from '@skewkit/braid';
+import { initBraid, type BraidOptions } from '@braid/core';
 
 /**
  * Tells Braid when the host application has navigated, so *bound* fragments follow along.

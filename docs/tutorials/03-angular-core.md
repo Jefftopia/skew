@@ -1,17 +1,17 @@
 # Tutorial 3 — Versioned stores, the Angular way
 
-**Package:** `@skewkit/angular-core` · **Time:** ~20 minutes ·
+**Package:** `@braid/angular-core` · **Time:** ~20 minutes ·
 **Prerequisites:** Tutorial 1, and an Angular 17+ app (the demo uses
 standalone components, Signals, and `inject()`; no NgModules anywhere).
 
-`@skewkit/core` is framework-free. This package is the thin, honest bridge to
+`@braid/skew` is framework-free. This package is the thin, honest bridge to
 Angular: a versioned store provided through DI, and a Signal wrapper that
 reads it without flicker and without ever throwing at a component. You will
 build a draft editor that survives a schema change *and* a reload — the demo's
 remote editor, reduced to its essentials.
 
 ```sh
-npm install @skewkit/core @skewkit/angular-core
+npm install @braid/skew @braid/angular-core
 ```
 
 ---
@@ -23,7 +23,7 @@ of your app declare the same contract separately, they *will* drift:
 
 ```ts
 // src/app/domain.ts
-import { versioned } from '@skewkit/core';
+import { versioned } from '@braid/skew';
 
 /** v1, frozen. Never edited again. */
 interface DraftV1 {
@@ -74,7 +74,7 @@ provided once at the environment level:
 
 ```ts
 // src/app/draft-store.ts
-import { createSkewStoreToken } from '@skewkit/angular-core';
+import { createSkewStoreToken } from '@braid/angular-core';
 import type { DraftV2 } from './domain';
 
 export const DRAFT_STORE = createSkewStoreToken<DraftV2>('DRAFT_STORE');
@@ -83,8 +83,8 @@ export const DRAFT_STORE = createSkewStoreToken<DraftV2>('DRAFT_STORE');
 ```ts
 // src/app/app.config.ts
 import { ApplicationConfig } from '@angular/core';
-import { webStorageDriver } from '@skewkit/core';
-import { provideSkewStore } from '@skewkit/angular-core';
+import { webStorageDriver } from '@braid/skew';
+import { provideSkewStore } from '@braid/angular-core';
 import { DraftSchema } from './domain';
 import { DRAFT_STORE } from './draft-store';
 import { BUILD_ID } from '../generated/build-id';   // from Tutorial 2
@@ -118,7 +118,7 @@ sub-millisecond reads:
 ```ts
 // src/app/draft-editor.ts
 import { Component, inject } from '@angular/core';
-import { injectSkewSignal } from '@skewkit/angular-core';
+import { injectSkewSignal } from '@braid/angular-core';
 import { DRAFT_STORE } from './draft-store';
 import { DRAFT_KEY, type DraftV2 } from './domain';
 
@@ -201,7 +201,7 @@ The signal covers one key. For imperative work — listing keys, deleting,
 reading in an effect — inject the raw store through the same token:
 
 ```ts
-import { injectSkewStore } from '@skewkit/angular-core';
+import { injectSkewStore } from '@braid/angular-core';
 
 export class DraftAdmin {
   private readonly store = injectSkewStore(DRAFT_STORE);
@@ -236,8 +236,8 @@ migration path, which is the part worth testing:
 
 ```ts
 import { TestBed } from '@angular/core/testing';
-import { memoryDriver } from '@skewkit/core';
-import { provideSkewStore } from '@skewkit/angular-core';
+import { memoryDriver } from '@braid/skew';
+import { provideSkewStore } from '@braid/angular-core';
 import { DraftSchema, DRAFT_KEY } from './domain';
 import { DRAFT_STORE } from './draft-store';
 

@@ -1,5 +1,5 @@
-import { canFetch, canList } from '@skewkit/braid-gateway';
-import type { FragmentManifest, Principal, ResolvedFragmentManifest } from '@skewkit/braid-gateway';
+import { canFetch, canList } from '@braid/gateway';
+import type { FragmentManifest, Principal, ResolvedFragmentManifest } from '@braid/gateway';
 
 /**
  * Who can see and load what, and what a proposed change would do to that.

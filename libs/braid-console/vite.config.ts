@@ -27,11 +27,11 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: '@skewkit/braid-gateway',
+        find: '@braid/gateway',
         replacement: resolve(import.meta.dirname, '../braid-gateway/src/index.ts'),
       },
       {
-        find: '@skewkit/braid-registry',
+        find: '@braid/registry',
         replacement: resolve(import.meta.dirname, '../braid-registry/src/index.ts'),
       },
     ],

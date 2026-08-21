@@ -1,5 +1,5 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
-import { isSkewDisabled, registerSchema } from '@skewkit/core';
+import { isSkewDisabled, registerSchema } from '@braid/skew';
 import { rawAt, storeOn } from '../shared-store';
 import {
   listenForCommands,
@@ -7,7 +7,7 @@ import {
   type RemoteAction,
   type RemoteResult,
 } from '../commands';
-import { runSchema } from '@skewkit/angular-workflow';
+import { runSchema } from '@braid/angular-workflow';
 import {
   DRAFT_KEY,
   DraftSchemaV2,
@@ -221,7 +221,7 @@ export class Editor {
     return storeOn(runSchema);
   }
 
-  /** Mirrors the host's switch — the flag lives in the shared `@skewkit/core`. */
+  /** Mirrors the host's switch — the flag lives in the shared `@braid/skew`. */
   private get guarded(): boolean {
     return !isSkewDisabled();
   }
@@ -257,7 +257,7 @@ export class Editor {
         };
       case 'register-schema': {
         // Contribute this build's chain — up AND down — to the registry both
-        // bundles reach through the one shared @skewkit/core instance. From this
+        // bundles reach through the one shared @braid/skew instance. From this
         // moment the v1-only host can downgrade a v2 record it could only
         // refuse before. Idempotent; a second registration of the same chain
         // is a no-op.

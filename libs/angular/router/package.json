@@ -1,11 +1,11 @@
 {
-  "name": "@skewkit/angular-router",
+  "name": "@braid/angular-router",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/core": "^22.0.0",
     "@angular/router": "^22.0.0",
     "@angular/common": "^22.0.0",
-    "@skewkit/core": "^0.0.1"
+    "@braid/skew": "^0.0.1"
   },
   "sideEffects": false,
   "description": "Recovers from stale lazy-chunk failures after a deploy, with classification that avoids reload loops.",

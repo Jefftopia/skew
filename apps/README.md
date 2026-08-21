@@ -67,7 +67,7 @@ partitioned per origin, and the port is part of the origin).
    under 0.2 with its payload migrated.
 6. **The remote as a standalone app** — the same editor at its own URL.
 
-A **protections switch** at the top of the host makes the `@skewkit` packages
+A **protections switch** at the top of the host makes the `@braid` packages
 inert (`setSkewDisabled()`, deliberately undocumented, only for this
 comparison) so every scenario can be re-run to watch the unprotected code
 fail on its own merits.
@@ -147,7 +147,7 @@ would erase:
 - **cannot be carried** (red bar) — the older shape has nowhere to put this,
   so a downgrade drops it. These are the `lossyPaths`.
 
-The engine is `diffPayloads` from **`@skewkit/studio`** — the first shipped
+The engine is `diffPayloads` from **`@braid/studio`** — the first shipped
 piece of the web debugger, where the same view is the drill-down from a
 trace event. The apps only supply a renderer.
 
@@ -171,7 +171,7 @@ It appears in three places:
 
 Below the activity feed sits **Skew devtools — live schema activity**: one
 row per `read()`/`write()` on the page, from *both* builds, because the host
-installs the `@skewkit/core` trace hook (`__SKEW_DEVTOOLS_HOOK__`, in
+installs the `@braid/skew` trace hook (`__SKEW_DEVTOOLS_HOOK__`, in
 `main.ts`, before federation resolves) and the two builds share one core
 instance. Run any scenario with it open: a v1→v2 migration shows as ↑ with
 its derived paths, a registry- or contract-cured read as ↓ with its lossy
@@ -190,7 +190,7 @@ projects the response down to v1 with every dropped path named. Watch the
 devtools drawer while pressing it — `ahead`, then `↓ downgraded from v2`.
 
 **Submitting an order** on a fund detail exercises the client↔API boundary:
-the order goes through the `@skewkit/angular-data` outbox, and `/api/v2/orders`
+the order goes through the `@braid/angular-data` outbox, and `/api/v2/orders`
 refuses v1-shaped orders with `409 version-skew`; a "queue as v1" button lets
 you watch the outbox runner catch the 409, migrate the payload, and retry.
 

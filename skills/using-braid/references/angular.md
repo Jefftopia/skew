@@ -1,4 +1,4 @@
-# @skewkit/braid-angular
+# @braid/angular
 
 ```ts
 bootstrapApplication(App, {

@@ -2,8 +2,8 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { createVersionedStore, webStorageDriver } from '@skewkit/core';
-import { OutboxService } from '@skewkit/angular-data';
+import { createVersionedStore, webStorageDriver } from '@braid/skew';
+import { OutboxService } from '@braid/angular-data';
 import {
   API_BASE,
   BreachSchemaV1,

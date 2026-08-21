@@ -9,7 +9,7 @@ An honest status of the developer-facing surface, and the shape of what should c
 | `braid dev` | **works** | starts the shell and fragment dev servers, waits for them, serves the gateway in front on one origin, proxies HTTP and websockets, prefixes logs |
 | `braid init` | **works** | writes a starter `braid.config.json` |
 | `braid add <id>` | **works** | registers a fragment in the config (`--endpoint`, `--port`, `--pierce`) |
-| `@skewkit/braid-cli/nx` | **works** | Nx plugin inferring a `braid-dev` target from any `braid.config.*` |
+| `@braid/cli/nx` | **works** | Nx plugin inferring a `braid-dev` target from any `braid.config.*` |
 
 See [the dev workflow](../skills/using-braid/references/dev-workflow.md) for how to use them, and
 what dev servers still need configured by hand.
@@ -43,7 +43,7 @@ $ braid add-gateway
   detected: Angular 22, SSR (outputMode: server, ssr.entry present)
   → apps/shell/src/server.ts   mount toNodeMiddleware(gateway) before the Angular handler
   → braid.config.json          created
-  → package.json               added @skewkit/braid-gateway
+  → package.json               added @braid/gateway
 ```
 
 The detection matrix is the valuable part, because the right answer really does differ:
@@ -67,7 +67,7 @@ Zero application code, by design. It configures the dev server's serve path, add
 entry with the matching endpoint, and — where it can detect one — sets `outputHashing` so stale
 bundles stop biting.
 
-### `braid ng-add` (or `nx g @skewkit/braid-angular:setup`)
+### `braid ng-add` (or `nx g @braid/angular:setup`)
 
 Host-side wiring for Angular, as a generator so it is idempotent and reviewable in a diff:
 `provideBraid()`, hydration in a *shared* config, per-request render mode for pierced routes, and

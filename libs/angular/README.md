@@ -1,37 +1,37 @@
-# `@skewkit/angular` Integrations
+# `@braid/angular` Integrations
 
 The Angular packages in the Skew workspace provide first-class bindings for managing version skew risk within the Angular ecosystem. 
 
-These packages bridge the gap between `@skewkit/core`'s framework-agnostic primitives (envelopes, migrations, results) and Angular's reactivity and dependency injection systems.
+These packages bridge the gap between `@braid/skew`'s framework-agnostic primitives (envelopes, migrations, results) and Angular's reactivity and dependency injection systems.
 
 ## Packages
 
-The Angular integration is broken down into four independent packages. **Adoption rule:** Every package depends on `@skewkit/core` but never on a sibling. You can adopt one, all, or none.
+The Angular integration is broken down into four independent packages. **Adoption rule:** Every package depends on `@braid/skew` but never on a sibling. You can adopt one, all, or none.
 
-### 1. [`@skewkit/angular-core`](core/README.md)
-Provides the baseline dependency injection (`provideSkewStore`, `injectSkewStore`) and reactive Signal wrappers (`injectSkewSignal`) to easily integrate `@skewkit/core` stores into Angular.
+### 1. [`@braid/angular-core`](core/README.md)
+Provides the baseline dependency injection (`provideSkewStore`, `injectSkewStore`) and reactive Signal wrappers (`injectSkewSignal`) to easily integrate `@braid/skew` stores into Angular.
 
-### 2. [`@skewkit/angular-router`](router/README.md)
+### 2. [`@braid/angular-router`](router/README.md)
 Provides chunk recovery for lazy-loaded routes. When a chunk fails to load due to a stale origin, offline device, or deleted route, this library correctly classifies the failure and recovers without bricking the user's tab. 
 
-### 2. [`@skewkit/angular-data`](data/README.md)
+### 2. [`@braid/angular-data`](data/README.md)
 A normalized entity store with a durable mutation outbox. It solves the problem of `resource()` acting as a per-call cache lacking shared identity, and provides optimistic updates, rollbacks, and tag-based invalidation for versioned data.
 
-### 3. [`@skewkit/angular-workflow`](workflow/README.md)
-Durable multi-step flows that survive page refreshes, deployments, and device swaps. It pairs `@skewkit/core` migrations with Angular routing to ensure users can safely resume multi-step wizards across boundaries.
+### 3. [`@braid/angular-workflow`](workflow/README.md)
+Durable multi-step flows that survive page refreshes, deployments, and device swaps. It pairs `@braid/skew` migrations with Angular routing to ensure users can safely resume multi-step wizards across boundaries.
 
 ---
 
-## Using `@skewkit/core` in Angular
+## Using `@braid/skew` in Angular
 
-The `@skewkit/angular-core` package provides the standard way to integrate `@skewkit/core` into an Angular app.
+The `@braid/angular-core` package provides the standard way to integrate `@braid/skew` into an Angular app.
 
 ### Dependency Injection & Tokens
 Instead of instantiating `VersionedStore` instances inline, leverage Angular's Dependency Injection. Define an injection token and provide it at the application or route level:
 
 ```ts
-import { createSkewStoreToken, provideSkewStore, injectSkewStore } from '@skewkit/angular-core';
-import { webStorageDriver } from '@skewkit/core';
+import { createSkewStoreToken, provideSkewStore, injectSkewStore } from '@braid/angular-core';
+import { webStorageDriver } from '@braid/skew';
 
 export const USER_STORE = createSkewStoreToken<UserProfile>('USER_STORE');
 
@@ -44,10 +44,10 @@ const store = injectSkewStore(USER_STORE);
 ```
 
 ### Reactivity with Signals
-`@skewkit/core` methods like `store.get()` return `Promise<SkewResult<T>>`, which works beautifully with modern Angular's async patterns. However, to avoid flashes of empty state during microtasks on synchronous drivers (like `localStorage`), use `injectSkewSignal()`:
+`@braid/skew` methods like `store.get()` return `Promise<SkewResult<T>>`, which works beautifully with modern Angular's async patterns. However, to avoid flashes of empty state during microtasks on synchronous drivers (like `localStorage`), use `injectSkewSignal()`:
 
 ```ts
-import { injectSkewSignal } from '@skewkit/angular-core';
+import { injectSkewSignal } from '@braid/angular-core';
 
 export class ProfileService {
   // Returns { data, error, loading, set, reload }

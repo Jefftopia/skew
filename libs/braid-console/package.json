@@ -1,5 +1,5 @@
 {
-  "name": "@skewkit/braid-console",
+  "name": "@braid/console",
   "version": "0.0.1",
   "description": "A read-only console for a Braid gateway's fragment registry. Mountable React library, or a standalone deployable app.",
   "keywords": [
@@ -22,10 +22,10 @@
     "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "@skewkit/braid-gateway": "^0.0.1",
+    "@braid/gateway": "^0.0.1",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0",
-    "@skewkit/braid-registry": "^0.0.1"
+    "@braid/registry": "^0.0.1"
   },
   "publishConfig": {
     "access": "public"

@@ -14,13 +14,13 @@ graph TD
     end
     
     subgraph AngularIntegration [Angular Integration]
-        D[@skewkit/angular-router] --> |Recovers from Stale Chunks| E[SkewRecoveryService]
-        F[@skewkit/angular-data] --> |Normalized Store & Outbox| G[EntityStore]
-        H[@skewkit/angular-workflow] --> |Durable Flows| I[WorkflowRuntime]
+        D[@braid/angular-router] --> |Recovers from Stale Chunks| E[SkewRecoveryService]
+        F[@braid/angular-data] --> |Normalized Store & Outbox| G[EntityStore]
+        H[@braid/angular-workflow] --> |Durable Flows| I[WorkflowRuntime]
     end
     
     subgraph CorePrimitives [Core Primitives]
-        J[@skewkit/core]
+        J[@braid/skew]
         J --> |Versioned Envelopes| K[Schemas & Migrations]
     end
     
@@ -31,7 +31,7 @@ graph TD
 ```
 
 **Narrative:**
-The Skew ecosystem is explicitly designed so that no Angular package is load-bearing for another; they all independently build upon `@skewkit/core`. The core provides the fundamental, framework-agnostic primitives (versioned envelopes and migration chains). The Angular-specific packages (`@skewkit/angular-router`, `@skewkit/angular-data`, `@skewkit/angular-workflow`) leverage these core primitives to solve specific boundary failures: stale lazy chunks, offline mutation syncing, and parked wizard flows. The Build Phase tools (`@skewkit/build`) provide the necessary timestamp and identity metadata required to make safe, verifiable decisions during runtime version skew events.
+The Skew ecosystem is explicitly designed so that no Angular package is load-bearing for another; they all independently build upon `@braid/skew`. The core provides the fundamental, framework-agnostic primitives (versioned envelopes and migration chains). The Angular-specific packages (`@braid/angular-router`, `@braid/angular-data`, `@braid/angular-workflow`) leverage these core primitives to solve specific boundary failures: stale lazy chunks, offline mutation syncing, and parked wizard flows. The Build Phase tools (`@braid/build`) provide the necessary timestamp and identity metadata required to make safe, verifiable decisions during runtime version skew events.
 
 ---
 
@@ -77,7 +77,7 @@ classDiagram
     }
     
     class EntityStore {
-        <<@skewkit/angular-data>>
+        <<@braid/angular-data>>
         +selectAll()
         +select()
         +transaction()
@@ -91,7 +91,7 @@ classDiagram
     }
 
     class Schema {
-        <<@skewkit/core>>
+        <<@braid/skew>>
         +name: string
         +version: number
         +read(envelope)
@@ -99,7 +99,7 @@ classDiagram
     }
     
     class Draft {
-        <<@skewkit/angular-workflow>>
+        <<@braid/angular-workflow>>
         +id: string
         +payload: unknown
         +schemaVersion: number
@@ -112,6 +112,6 @@ classDiagram
 ```
 
 **Narrative:**
-This entity diagram highlights Skew's structural answer to state and mutation management. Standard Angular primitives like `httpResource()` are excellent for simple reads, but they operate as per-call caches without shared identity or durable write capabilities. `@skewkit/angular-data` replaces this gap with a normalized `EntityStore` and a durable `OutboxService`. 
+This entity diagram highlights Skew's structural answer to state and mutation management. Standard Angular primitives like `httpResource()` are excellent for simple reads, but they operate as per-call caches without shared identity or durable write capabilities. `@braid/angular-data` replaces this gap with a normalized `EntityStore` and a durable `OutboxService`. 
 
-Crucially, all of these state containers tie into `@skewkit/core`'s `Schema` concept. This ensures that data at rest (such as a parked `Draft` or a queued `OutboxService` mutation) is safely stamped with the `schemaVersion` it was authored under. When a newer build attempts to process an older draft or outbox entry, the `Schema` automatically migrates the payload forward, or fails predictably if the payload was written by a build from the future, preventing silent data corruption.
+Crucially, all of these state containers tie into `@braid/skew`'s `Schema` concept. This ensures that data at rest (such as a parked `Draft` or a queued `OutboxService` mutation) is safely stamped with the `schemaVersion` it was authored under. When a newer build attempts to process an older draft or outbox entry, the `Schema` automatically migrates the payload forward, or fails predictably if the payload was written by a build from the future, preventing silent data corruption.

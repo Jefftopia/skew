@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { lazy } from '@skewkit/angular-router';
+import { lazy } from '@braid/angular-router';
 
 // lazy(id, importer) wraps the dynamic import with classified recovery:
 //

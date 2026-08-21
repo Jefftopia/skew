@@ -1,7 +1,7 @@
 /**
  * app.config.ts
  *
- * Wires @skewkit/angular-router chunk recovery into the standalone app config.
+ * Wires @braid/angular-router chunk recovery into the standalone app config.
  *
  * The failure mode we are fixing:
  *   1. Deploy N+1 goes out; hashed chunk files from deploy N are deleted from
@@ -15,7 +15,7 @@
  *     (covers transient CDN/network flakes without a full reload).
  *   - If the chunk is genuinely gone, verify the origin is actually serving a
  *     NEWER build before reloading: fetch the deploy manifest
- *     (skew-manifest.json, emitted by @skewkit/build) with cache: 'no-store' and
+ *     (skew-manifest.json, emitted by @braid/build) with cache: 'no-store' and
  *     compare its buildId against the buildId stamped into THIS bundle.
  *       * manifest.buildId !== SKEW_BUILD_ID  -> a new build exists at the
  *         origin; a reload will pick it up. Safe to reload.
@@ -40,7 +40,7 @@ import {
   withDeployManifest,
   withReloadGuard,
   withReloadLoopProtection,
-} from '@skewkit/angular-router';
+} from '@braid/angular-router';
 
 // Stamped at build time by `skew-build stamp` (see package.json). The
 // generated module exports the git SHA + timestamp identity of THIS bundle.

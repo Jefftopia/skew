@@ -1,6 +1,6 @@
 import { inject, signal, type Signal } from '@angular/core';
 import type { InjectionToken } from '@angular/core';
-import type { VersionedStore, SkewErr } from '@skewkit/core';
+import type { VersionedStore, SkewErr } from '@braid/skew';
 
 export interface SkewSignal<T> {
   /** The current resolved value, or null if loading/failed. */

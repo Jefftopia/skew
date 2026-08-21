@@ -11,8 +11,8 @@ import { dirname } from 'node:path';
  * file changes.
  *
  * This module deliberately duck-types the document rather than importing
- * `@skewkit/contract`: it runs at build time, needs only the document's shape,
- * and `@skewkit/build` stays dependency-free.
+ * `@braid/contract`: it runs at build time, needs only the document's shape,
+ * and `@braid/build` stays dependency-free.
  */
 
 interface ContractDocLike {

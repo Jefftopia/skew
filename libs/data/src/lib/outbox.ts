@@ -1,4 +1,4 @@
-import { versioned } from '@skewkit/core';
+import { versioned } from '@braid/skew';
 import type { RecordDriver } from './record-store.js';
 import { createRecordStore, type ProjectedRecord } from './record-store.js';
 

@@ -1,5 +1,5 @@
 import { InjectionToken } from '@angular/core';
-import { indexedDbRecordDriver, memoryRecordDriver, type RecordDriver } from '@skewkit/data';
+import { indexedDbRecordDriver, memoryRecordDriver, type RecordDriver } from '@braid/data';
 
 export interface DataOptions {
   /**

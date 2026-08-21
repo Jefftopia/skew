@@ -6,7 +6,7 @@ import {
   type StorageDriver,
   type VersionedSchema,
   type VersionedStore,
-} from '@skewkit/core';
+} from '@braid/skew';
 
 export type DriverKind = 'local' | 'indexeddb';
 
@@ -75,7 +75,7 @@ export class SharedStore {
 
   /**
    * `localStorage` is synchronous and `IndexedDB` is not — which is the whole
-   * reason `@skewkit/core` exposes `peek()` separately and has it return `null`
+   * reason `@braid/skew` exposes `peek()` separately and has it return `null`
    * on an async driver rather than pretending. Worth showing in the UI.
    */
   readonly isAsync = () => this.kind() === 'indexeddb';
@@ -95,7 +95,7 @@ export class SharedStore {
 
   /**
    * The raw bytes currently at a key, read straight from the browser store
-   * rather than through `@skewkit/core`.
+   * rather than through `@braid/skew`.
    *
    * Bypassing the library is the point: the panel should show what is
    * genuinely on disk, including when the protections are off and there is no

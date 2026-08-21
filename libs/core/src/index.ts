@@ -1,14 +1,56 @@
-export * from './lib/result.js';
-export * from './lib/context.js';
-export * from './lib/versioned.js';
-export * from './lib/lens.js';
-export * from './lib/list.js';
-export * from './lib/registry.js';
-export * from './lib/fingerprint.js';
-export * from './lib/http.js';
-export * from './lib/identity.js';
-export * from './lib/storage.js';
-export * from './lib/devtools.js';
+/**
+ * @braid/core — the Braid client runtime.
+ *
+ * This build ships the compat adapter as the only — and default — adapter: legacy apps
+ * compose as fragments with zero app-code changes, config only.
+ *
+ * ```ts
+ * import { initBraid } from '@braid/core';
+ * initBraid();
+ * ```
+ * ```html
+ * <fragment-slot name="checkout"></fragment-slot>
+ * ```
+ */
 
-// Not public API. Undocumented on purpose — read the module comment first.
-export * from './lib/disabled.js';
+import { BraidOptions, setBraidConfig } from './config.js';
+import { installAdapter } from './adapters/adapter.js';
+import { compatAdapter } from './adapters/compat-adapter.js';
+import { customElementAdapter } from './adapters/custom-element-adapter.js';
+import { FragmentSlot } from './elements/fragment-slot.js';
+
+export { BraidError } from './errors.js';
+export type { BraidErrorStage } from './errors.js';
+export type { BraidOptions } from './config.js';
+export type { FragmentEnv, EnvDocument, EnvLocation, EnvHistory, EnvContext } from './env/fragment-env.js';
+export type { BraidAdapter } from './adapters/adapter.js';
+export { DEFAULT_ADAPTER } from './adapters/adapter.js';
+export { customElementAdapter } from './adapters/custom-element-adapter.js';
+export { FragmentSlot } from './elements/fragment-slot.js';
+export type { FragmentSlotState } from './elements/fragment-slot.js';
+export { braidContext } from './context/context-bus.js';
+export { registerBraidServiceWorker } from './compat/register-worker.js';
+export type { RegisterBraidServiceWorkerOptions } from './compat/register-worker.js';
+export type { ContextSubscribeOptions, ContextReadOptions } from './context/context-bus.js';
+export { createRealm } from './realm/realm-manager.js';
+export type { RealmKind, RealmHandle, RealmInit, RealmImportMap } from './realm/realm-manager.js';
+export {
+  BRAID_FRAGMENT_PREFIX,
+  BRAID_REALM_PREFIX,
+  BRAID_DOCUMENT_PREFIX,
+  BRAID_PROTOCOL_VERSION,
+} from './protocol.js';
+
+/**
+ * Initializes the Braid client: applies configuration, installs the default compat adapter,
+ * and registers the `<fragment-slot>` element. Call once, before any slot connects.
+ */
+export function initBraid(options: BraidOptions = {}): void {
+  setBraidConfig(options);
+  installAdapter(compatAdapter);
+  installAdapter(customElementAdapter);
+
+  if (!customElements.get('fragment-slot')) {
+    customElements.define('fragment-slot', FragmentSlot);
+  }
+}

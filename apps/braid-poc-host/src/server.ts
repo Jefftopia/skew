@@ -1,9 +1,9 @@
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
-import { createGateway, type TelemetryEvent } from '@skewkit/braid-gateway';
-import type { FragmentManifest } from '@skewkit/braid-gateway';
-import { toNodeMiddleware } from '@skewkit/braid-gateway/node';
-import { createRegistryApi, createRoutingObservations, createSnapshot, serializeObservations } from '@skewkit/braid-registry';
-import { fileSnapshotStore } from '@skewkit/braid-registry/node';
+import { createGateway, type TelemetryEvent } from '@braid/gateway';
+import type { FragmentManifest } from '@braid/gateway';
+import { toNodeMiddleware } from '@braid/gateway/node';
+import { createRegistryApi, createRoutingObservations, createSnapshot, serializeObservations } from '@braid/registry';
+import { fileSnapshotStore } from '@braid/registry/node';
 import { mountDemoApi } from './demo-api.js';
 import express from 'express';
 import { writeFile } from 'node:fs/promises';

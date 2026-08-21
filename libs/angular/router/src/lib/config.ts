@@ -1,5 +1,5 @@
 import { InjectionToken } from '@angular/core';
-import type { BuildIdentity } from '@skewkit/core';
+import type { BuildIdentity } from '@braid/skew';
 
 /**
  * What to do when a lazy chunk cannot be loaded.
@@ -69,7 +69,7 @@ export type StaleChunkStrategy =
   | ((context: StaleChunkContext) => StaleChunkAction | Promise<StaleChunkAction>);
 
 export interface SkewRecoveryOptions {
-  /** Identity of this build. Generate with `@skewkit/build`. */
+  /** Identity of this build. Generate with `@braid/build`. */
   readonly identity: BuildIdentity;
   /**
    * Manifest the origin serves, `Cache-Control: no-store`. Without it the

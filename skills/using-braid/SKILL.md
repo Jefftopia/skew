@@ -1,8 +1,8 @@
 ---
 name: using-braid
 description: >-
-  How to correctly use the Braid packages (@skewkit/braid, @skewkit/braid-gateway,
-  @skewkit/braid-angular, @skewkit/braid-react, @skewkit/braid-cli) to compose independently deployed frontend
+  How to correctly use the Braid packages (@braid/core, @braid/gateway,
+  @braid/angular, @braid/react, @braid/cli) to compose independently deployed frontend
   applications into one page. Use this skill whenever a task involves micro-frontends,
   composing or embedding one web application inside another, <fragment-slot> or
   <braid-fragment>, the /__braid/ URL namespaces, server-side piercing, fragment realms,
@@ -32,11 +32,11 @@ Two things make it work, and most mistakes come from misunderstanding one of the
 | --- | --- |
 | Add an existing app into another page | compat adapter (the default) — no changes to the fragment |
 | Compose a fragment that *is* a web component | `custom-element` adapter: manifest `entry` + `element` |
-| Host a fragment in an Angular app | `@skewkit/braid-angular`: `provideBraid()` + `<braid-fragment>` |
-| Host a fragment in a React app | `@skewkit/braid-react`: `initBraidReact()` + `<BraidFragment>` |
+| Host a fragment in an Angular app | `@braid/angular`: `provideBraid()` + `<braid-fragment>` |
+| Host a fragment in a React app | `@braid/react`: `initBraidReact()` + `<BraidFragment>` |
 | Host a fragment in anything else | `initBraid()` + `<fragment-slot name="…">` |
 | Put a gateway in front of an app | `createGateway()` + a binding (`toNodeMiddleware`, `toFetchHandler`) |
-| Run it all locally | `braid dev` from `@skewkit/braid-cli` |
+| Run it all locally | `braid dev` from `@braid/cli` |
 
 ## The rules that matter
 

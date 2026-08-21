@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
  * Workspace packages this project imports *as values* are aliased to their sources.
  *
  * Type-only imports need no help — they are erased before resolution — which is why most libs
- * here get by without aliases. `braid registry` actually calls into `@skewkit/braid-registry`, so
+ * here get by without aliases. `braid registry` actually calls into `@braid/registry`, so
  * it does. Explicit aliases rather than a tsconfig-paths plugin: one fewer dependency, and the
  * mapping is visible where the failure would be.
  *
@@ -17,17 +17,17 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: '@skewkit/braid-registry/node',
+        find: '@braid/registry/node',
         replacement: resolve(import.meta.dirname, '../braid-registry/src/node.ts'),
       },
       {
-        find: '@skewkit/braid-registry',
+        find: '@braid/registry',
         replacement: resolve(import.meta.dirname, '../braid-registry/src/index.ts'),
       },
       // reached transitively: the access matrix calls the gateway's own canList/canFetch rather
       // than reimplementing them
       {
-        find: '@skewkit/braid-gateway',
+        find: '@braid/gateway',
         replacement: resolve(import.meta.dirname, '../braid-gateway/src/index.ts'),
       },
     ],

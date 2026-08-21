@@ -1,11 +1,11 @@
-# @skewkit/braid-registry
+# @braid/registry
 
 Immutable, content-addressed snapshots of a [Braid](../braid-gateway) fragment registry — plus the
 analysis that tells you what a change would do.
 
 ```ts
-import { createSnapshot, snapshotRegistry } from '@skewkit/braid-registry';
-import { fileSnapshotStore } from '@skewkit/braid-registry/node';
+import { createSnapshot, snapshotRegistry } from '@braid/registry';
+import { fileSnapshotStore } from '@braid/registry/node';
 
 const store = fileSnapshotStore({ directory: '/var/lib/braid' });
 await store.put(await createSnapshot({ manifests }));
@@ -69,7 +69,7 @@ Framework-free and dependency-free, so the same functions back `braid registry v
 terminal and a console in a browser.
 
 ```ts
-import { validateRegistry, diffRegistries } from '@skewkit/braid-registry';
+import { validateRegistry, diffRegistries } from '@braid/registry';
 
 validateRegistry(manifests);          // conflicts decidable from the manifests alone
 diffRegistries(published, proposed);  // what this config would change
@@ -186,8 +186,8 @@ gain needs both sides.
 
 | Store | Where | Use |
 | --- | --- | --- |
-| `memorySnapshotStore()` | `@skewkit/braid-registry` | tests, development |
-| `fileSnapshotStore({ directory })` | `@skewkit/braid-registry/node` | single-instance primary, config volume, or the durable local cache |
+| `memorySnapshotStore()` | `@braid/registry` | tests, development |
+| `fileSnapshotStore({ directory })` | `@braid/registry/node` | single-instance primary, config volume, or the durable local cache |
 
 `SnapshotStore` is four methods and no update path, because a snapshot cannot be edited. Implement
 it against whatever you already run.
@@ -272,5 +272,5 @@ braid registry publish --to ./snapshots --label by=ada --descriptors
 braid registry diff --against ./snapshots
 ```
 
-See [`@skewkit/braid-cli`](../braid-cli), and
+See [`@braid/cli`](../braid-cli), and
 [the plan](../../docs/plans/braid-registry-console-plan.md) for where this is going.

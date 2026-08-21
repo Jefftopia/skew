@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { FragmentManifest } from '@skewkit/braid-gateway';
+import type { FragmentManifest } from '@braid/gateway';
 import { RegistryEditor } from './registry-editor.js';
 
 const manifests: FragmentManifest[] = [

@@ -1,7 +1,7 @@
 /**
  * Client side of the Braid composition protocol.
  *
- * These constants are deliberately duplicated in `@skewkit/braid-gateway/src/protocol.ts`:
+ * These constants are deliberately duplicated in `@braid/gateway/src/protocol.ts`:
  * the client and gateway bundles do not share modules, but always ship in the same package
  * version, and the protocol version below is how a mismatch is detected and reported as a
  * named error instead of a silent misbehavior.

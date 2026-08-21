@@ -68,7 +68,7 @@ That is the entire host-side integration for one fragment: an element, and the f
 host does not import the billing app, does not know its URL, and does not know what framework it is
 written in. It names it and leaves a hole.
 
-It is a real custom element (`libs/braid/src/elements/fragment-slot.ts`) and it does the work:
+It is a real custom element (`libs/core/src/elements/fragment-slot.ts`) and it does the work:
 fetching the fragment, creating its isolated context, putting its DOM on the page, and cleaning all
 of that up when the element is removed.
 
@@ -228,7 +228,7 @@ iframe loads it, the browser reads those bytes directly: no socket, no cache loo
 nothing that can be slow or down. **That is how the round trip is avoided** — not a clever
 optimization, simply no request to make. Once the iframe has loaded the URL is revoked, and the
 document it created lives on. The real thing is `createContractBlobRealm` in
-[`libs/braid/src/realm/realm-manager.ts`](../libs/braid/src/realm/realm-manager.ts).
+[`libs/core/src/realm/realm-manager.ts`](../libs/core/src/realm/realm-manager.ts).
 
 The import map in there is the quiet payoff. Every realm gets its own document, so every realm gets
 its own import map for free — which is how two fragments ship different majors of the same
@@ -266,7 +266,7 @@ trip, and the location illusion its router depends on. That is not a limitation 
 or Vue app running as a fragment gets exactly the same thing, for the same reason. The POC's
 `braid-poc-remote` (Angular) and `braid-poc-react-remote` (React) both boot this way.
 
-**`@skewkit/braid-angular` is a host-side package**, and it does not pick a realm at all. It gives an
+**`@braid/angular` is a host-side package**, and it does not pick a realm at all. It gives an
 Angular *host* a `<braid-fragment>` component to render slots with typed inputs and outputs, and
 `provideBraid()` to tell Braid when the router navigates. If your Angular app is the shell, that is
 the package you want; if it is the fragment, you need nothing at all.

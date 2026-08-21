@@ -4,7 +4,7 @@
     {
       "text": "app.config.ts adds provideSkewRecovery({ identity: BUILD_IDENTITY, manifestUrl: ... }) importing identity from the skew-stamp-generated module",
       "passed": false,
-      "evidence": "Invents a feature-composition API: provideSkewChunkRecovery({buildId}, withChunkRetry(...), withDeployManifest(...), withReloadGuard(...), withReloadLoopProtection(...)). None of these exist in @skewkit/angular-router; the real provider is provideSkewRecovery({ identity, manifestUrl, ... })."
+      "evidence": "Invents a feature-composition API: provideSkewChunkRecovery({buildId}, withChunkRetry(...), withDeployManifest(...), withReloadGuard(...), withReloadLoopProtection(...)). None of these exist in @braid/angular-router; the real provider is provideSkewRecovery({ identity, manifestUrl, ... })."
     },
     {
       "text": "Lazy routes are wrapped as lazy('<module-id>', () => import(...)) so the id cross-references the manifest",
@@ -14,7 +14,7 @@
     {
       "text": "Build wiring runs skew-stamp before the app build to generate build-id.ts and again (or with flags) to emit skew-manifest.json, with --assets pointing at the browser output dir",
       "passed": false,
-      "evidence": "Invents a `skew-build stamp` / `skew-build manifest` CLI with --index-meta/--dist flags. The real @skewkit/build bin is skew-stamp with --out/--manifest/--assets. Conceptual pre/post structure is right; the tool and flags would not run."
+      "evidence": "Invents a `skew-build stamp` / `skew-build manifest` CLI with --index-meta/--dist flags. The real @braid/build bin is skew-stamp with --out/--manifest/--assets. Conceptual pre/post structure is right; the tool and flags would not run."
     },
     {
       "text": "Manifest is documented/configured to be served with no-store (or explicitly uncached) semantics",

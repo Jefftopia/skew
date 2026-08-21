@@ -1,5 +1,5 @@
-import type { DiscoveryEntry, DiscoveryPage, FragmentManifest } from '@skewkit/braid-gateway';
-import type { DescriptorNote, RegistryDiff, RegistryFinding, SnapshotRef } from '@skewkit/braid-registry';
+import type { DiscoveryEntry, DiscoveryPage, FragmentManifest } from '@braid/gateway';
+import type { DescriptorNote, RegistryDiff, RegistryFinding, SnapshotRef } from '@braid/registry';
 
 /**
  * How the console reaches a gateway.

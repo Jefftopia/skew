@@ -1,12 +1,12 @@
-# @skewkit/braid-gateway
+# @braid/gateway
 
 Fetch-native origin-front middleware. A library, not a service.
 
 ## Mounting
 
 ```ts
-import { createGateway } from '@skewkit/braid-gateway';
-import { toNodeMiddleware, toNodeUpgradeHandler } from '@skewkit/braid-gateway/node';
+import { createGateway } from '@braid/gateway';
+import { toNodeMiddleware, toNodeUpgradeHandler } from '@braid/gateway/node';
 
 const gateway = createGateway({ registry, mode: 'production' });
 

@@ -1,4 +1,4 @@
-import { memoryRecordDriver } from '@skewkit/data';
+import { memoryRecordDriver } from '@braid/data';
 import { describe, expect, it, vi } from 'vitest';
 import { createReportQueue, type BraidReport } from './reports.js';
 

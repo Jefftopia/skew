@@ -1,4 +1,4 @@
-# @skewkit/angular-data
+# @braid/angular-data
 
 Normalized entity store, tag-based invalidation, and a **durable mutation outbox** for Angular.
 
@@ -27,7 +27,7 @@ This package supplies the missing half.
 provideSkewData({
   owner: 'bulletin', // this app's name in the shared outbox — required when persisting
   persistOutbox: true, // queued writes survive a reload
-  buildId: BUILD_ID, // from @skewkit/build
+  buildId: BUILD_ID, // from @braid/build
   onOutboxError: (message, detail) => telemetry.error(message, detail),
 });
 ```
@@ -136,8 +136,8 @@ Operations are closures and closures don't serialise, so a queued entry finds it
 - **Optimistic state is kept on queue.** From the user's point of view the change happened; it reaches the server when the network returns. It is kept by being *derived from* the queue, so the two cannot disagree — see the overlay above.
 - **Permanently-failing entries are dropped, loudly.** After `maxOutboxAttempts` the entry is abandoned and reported through `onOutboxError` — never silently, because the user already navigated away believing it saved.
 - **An entry with no registered mutation is _kept_, loudly.** It means this build did not register that mutation kind (or renamed it), so dropping it would discard a write the user was told had saved. It is reported through `onOutboxError` and left for a build that knows what it is; `clear()` is the deliberate way to abandon it.
-- **The drain itself lives in `@skewkit/data`.** Ordering, the cross-tab lock, retry, and give-up are one implementation (`drainOutbox`) shared with every binding — this service keeps the signals and the Angular ergonomics.
-- **A queue written by a newer build is left untouched.** Replaying it would send payloads this build doesn't understand. `@skewkit/core` surfaces that as `ahead` rather than discarding the user's work.
+- **The drain itself lives in `@braid/data`.** Ordering, the cross-tab lock, retry, and give-up are one implementation (`drainOutbox`) shared with every binding — this service keeps the signals and the Angular ergonomics.
+- **A queue written by a newer build is left untouched.** Replaying it would send payloads this build doesn't understand. `@braid/skew` surfaces that as `ahead` rather than discarding the user's work.
 
 ```ts
 const outbox = inject(OutboxService);

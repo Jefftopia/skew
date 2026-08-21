@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { DiscoveryEntry } from '@skewkit/braid-gateway';
+import type { DiscoveryEntry } from '@braid/gateway';
 import {
   INTEGRATION_TARGETS,
   integrationSnippet,
@@ -157,7 +157,7 @@ export function IntegrationPanel({ entry, onClose }: IntegrationPanelProps) {
               </>
             ) : (
               <>
-                Needs <code>@skewkit/braid</code> installed in the host, and this gateway in front of it.
+                Needs <code>@braid/core</code> installed in the host, and this gateway in front of it.
               </>
             )}
           </span>

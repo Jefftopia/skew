@@ -1,7 +1,7 @@
 {
   "eval_id": 2,
   "eval_name": "contract-ahead",
-  "prompt": "Our NestJS API serves portfolio funds. v2 renamed currency to baseCurrency and moved the flat cashPct into liquidity.cashPct alongside a new liquidity.hqlaPct (default 0). Mobile clients pinned to v1 can't redeploy quickly. Using @skewkit/contract, write: (1) the contract document JSON for portfolio-fund, (2) the Nest controller that publishes it at the well-known URL with proper caching, and (3) the client-side code a v1 app uses to read a v2 response body without breaking, labeling what it loses.",
+  "prompt": "Our NestJS API serves portfolio funds. v2 renamed currency to baseCurrency and moved the flat cashPct into liquidity.cashPct alongside a new liquidity.hqlaPct (default 0). Mobile clients pinned to v1 can't redeploy quickly. Using @braid/contract, write: (1) the contract document JSON for portfolio-fund, (2) the Nest controller that publishes it at the well-known URL with proper caching, and (3) the client-side code a v1 app uses to read a v2 response body without breaking, labeling what it loses.",
   "assertions": [
     "Contract JSON has skewContract: \"1\", name, current: 2, and a steps array with from/to numbers",
     "Every op in the document comes from the closed whitelist (rename, move, wrap, hoist, map, default, drop, convert, const) — no executable code in the document",

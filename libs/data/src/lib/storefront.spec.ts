@@ -1,4 +1,4 @@
-import { versioned } from '@skewkit/core';
+import { versioned } from '@braid/skew';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resetSharedInvalidators } from './invalidation.js';
 import { memoryRecordDriver } from './memory-driver.js';

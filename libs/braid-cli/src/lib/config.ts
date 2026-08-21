@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { access, readFile } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
-import type { FragmentManifest } from '@skewkit/braid-gateway';
+import type { FragmentManifest } from '@braid/gateway';
 
 /**
  * `braid.config.json` / `braid.config.mjs` — everything `braid dev` needs to stand up a

@@ -1,12 +1,17 @@
 {
-  "name": "braid",
+  "name": "skew",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/braid/src",
+  "sourceRoot": "libs/skew/src",
   "projectType": "library",
-  "tags": ["scope:shared", "framework:agnostic"],
+  "tags": [
+    "scope:shared",
+    "framework:agnostic"
+  ],
   "release": {
     "version": {
-      "manifestRootsToUpdate": ["dist/{projectRoot}"],
+      "manifestRootsToUpdate": [
+        "dist/{projectRoot}"
+      ],
       "currentVersionResolver": "git-tag",
       "fallbackCurrentVersionResolver": "disk"
     }
@@ -14,12 +19,16 @@
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
-      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
       "options": {
-        "outputPath": "dist/libs/braid",
-        "main": "libs/braid/src/index.ts",
-        "tsConfig": "libs/braid/tsconfig.build.json",
-        "assets": ["libs/braid/*.md"]
+        "outputPath": "dist/libs/skew",
+        "main": "libs/skew/src/index.ts",
+        "tsConfig": "libs/skew/tsconfig.lib.json",
+        "assets": [
+          "libs/skew/*.md"
+        ]
       }
     },
     "nx-release-publish": {
@@ -31,7 +40,7 @@
       "executor": "nx:run-commands",
       "cache": true,
       "options": {
-        "command": "vitest run --config libs/braid/vite.config.ts"
+        "command": "vitest run --config libs/skew/vite.config.ts"
       }
     },
     "lint": {

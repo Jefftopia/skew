@@ -2,7 +2,7 @@
   "name": "bulletin-app",
   "version": "1.4.0",
   "//": [
-    "Build identity + manifest wiring for @skewkit/build.",
+    "Build identity + manifest wiring for @braid/build.",
     "",
     "prebuild  — `skew-build stamp` derives a buildId (git SHA + UTC timestamp,",
     "            e.g. 'a053212-20260810T143012Z') and writes it to",
@@ -42,10 +42,10 @@
     "@angular/common": "^18.2.0",
     "@angular/core": "^18.2.0",
     "@angular/router": "^18.2.0",
-    "@skewkit/angular-router": "^1.0.0"
+    "@braid/angular-router": "^1.0.0"
   },
   "devDependencies": {
     "@angular/cli": "^18.2.0",
-    "@skewkit/build": "^1.0.0"
+    "@braid/build": "^1.0.0"
   }
 }

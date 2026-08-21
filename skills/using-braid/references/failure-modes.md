@@ -108,8 +108,8 @@ so a script that "does nothing" is usually a URL problem, not an execution probl
 own HTML); the client and gateway package versions disagree on the protocol; or the fragment
 endpoint sets `X-Frame-Options: DENY`, which stops the realm iframe loading.
 
-**Prevention.** Mount the gateway first in the middleware chain, upgrade `@skewkit/braid` and
-`@skewkit/braid-gateway` together, and do not let a CDN or WAF inject frame-blocking headers on
+**Prevention.** Mount the gateway first in the middleware chain, upgrade `@braid/core` and
+`@braid/gateway` together, and do not let a CDN or WAF inject frame-blocking headers on
 namespace responses. The error message names which of these it is.
 
 ---

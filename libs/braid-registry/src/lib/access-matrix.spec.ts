@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FragmentManifest } from '@skewkit/braid-gateway';
+import type { FragmentManifest } from '@braid/gateway';
 import { accessMatrix, ANONYMOUS, parsePrincipal, type NamedPrincipal } from './access-matrix.js';
 
 const trader: NamedPrincipal = { name: 'trader', roles: ['trader'] };

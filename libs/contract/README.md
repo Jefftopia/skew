@@ -1,4 +1,4 @@
-# `@skewkit/contract`
+# `@braid/contract`
 
 Data-driven schema migrations: the API that owns a contract **publishes its
 history as a document**, and consumers — including consumers built before the
@@ -42,7 +42,7 @@ newest data it serves.** So the origin that produced the too-new data can also
 serve the document that explains it:
 
 ```ts
-import { createContractResolver, wellKnownContractUrl } from '@skewkit/contract';
+import { createContractResolver, wellKnownContractUrl } from '@braid/contract';
 
 const resolver = createContractResolver();
 const url = wellKnownContractUrl(API_BASE, 'portfolio-fund');
@@ -58,7 +58,7 @@ if (result.ok && result.downgradedFrom) {
 ## Building schemas from a document
 
 ```ts
-import { versionedFromContract } from '@skewkit/contract';
+import { versionedFromContract } from '@braid/contract';
 
 // Drop-in replacement for a hand-maintained versioned().next() chain:
 const FundSchema = versionedFromContract<FundV2>(fundContract);
@@ -76,7 +76,7 @@ a signal the change wanted a new resource, not a new version.
 
 ## Frozen types, generated
 
-`skew-contract gen` (in `@skewkit/build`) emits one frozen interface per
+`skew-contract gen` (in `@braid/build`) emits one frozen interface per
 documented version plus the document as a typed const, which retires the
 hardest rule in schema versioning — "never edit a past version's interface" —
 by making the document the only source:

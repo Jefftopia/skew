@@ -187,11 +187,11 @@ Publishing there writes an immutable snapshot to `.braid/registry`. Note the gap
 deliberately visible: **this gateway serves the inline manifests in `server.ts`**, so a published
 snapshot changes nothing until a deploy pins its id. That is the model rather than a shortcoming of
 the demo — configuration changes are deploys, which is what makes rollback a pointer move. See
-[`@skewkit/braid-registry`](../libs/braid-registry/README.md).
+[`@braid/registry`](../libs/braid-registry/README.md).
 
 ## The host's entire integration
 
-The host uses [`@skewkit/braid-angular`](../libs/braid-angular/README.md), so the integration is
+The host uses [`@braid/angular`](../libs/braid-angular/README.md), so the integration is
 one provider and one element:
 
 ```ts

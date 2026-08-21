@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
-import { DATA_OPTIONS, OutboxService } from '@skewkit/angular-data';
-import { createOutbox, memoryRecordDriver, type Outbox, type QueuedEntry } from '@skewkit/data';
+import { DATA_OPTIONS, OutboxService } from '@braid/angular-data';
+import { createOutbox, memoryRecordDriver, type Outbox, type QueuedEntry } from '@braid/data';
 import { DemoPanel } from './panel';
 
 /**

@@ -1,9 +1,9 @@
 /**
- * @skewkit/braid-registry — immutable snapshots of a Braid fragment registry, and analysis over
+ * @braid/registry — immutable snapshots of a Braid fragment registry, and analysis over
  * them.
  *
  * ```ts
- * import { createSnapshot, memorySnapshotStore, snapshotRegistry } from '@skewkit/braid-registry';
+ * import { createSnapshot, memorySnapshotStore, snapshotRegistry } from '@braid/registry';
  *
  * const snapshot = await createSnapshot({ manifests });
  * await store.put(snapshot);
@@ -12,7 +12,7 @@
  * ```
  *
  * Everything exported here is platform-neutral — it runs on Node, Workers, Deno, Bun, and in a
- * browser. The filesystem store lives at `@skewkit/braid-registry/node`.
+ * browser. The filesystem store lives at `@braid/registry/node`.
  */
 
 export { createSnapshot, verifySnapshot, serializeSnapshot, parseSnapshot, SNAPSHOT_ID_PREFIX } from './lib/snapshot.js';

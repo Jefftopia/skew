@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
-import type { FragmentSlotState } from '@skewkit/braid';
+import type { FragmentSlotState } from '@braid/core';
 
 /** The `detail` of a `braid:error` event. */
 export interface BraidFragmentError {

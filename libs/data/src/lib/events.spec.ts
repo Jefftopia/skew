@@ -1,4 +1,4 @@
-import { versioned } from '@skewkit/core';
+import { versioned } from '@braid/skew';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createEventBus } from './events.js';
 import { createInvalidator, resetSharedInvalidators, type BroadcastChannelLike } from './invalidation.js';

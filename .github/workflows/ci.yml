@@ -57,9 +57,9 @@ jobs:
         run: |
           for dir in dist/libs/*/ dist/libs/angular/*/; do
             [ -f "$dir/package.json" ] || continue
-            # Scoped to @skewkit so a stale directory left over from an earlier
+            # Scoped to @braid so a stale directory left over from an earlier
             # package name can never be mistaken for something we ship.
             case "$(node -p "require('./$dir/package.json').name")" in
-              @skewkit/*) echo "── $dir" && (cd "$dir" && npm pack --dry-run) ;;
+              @braid/*) echo "── $dir" && (cd "$dir" && npm pack --dry-run) ;;
             esac
           done

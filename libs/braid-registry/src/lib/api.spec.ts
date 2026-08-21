@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { FragmentManifest } from '@skewkit/braid-gateway';
+import type { FragmentManifest } from '@braid/gateway';
 import { createRegistryApi } from './api.js';
 import { memorySnapshotStore } from './store.js';
 import { createSnapshot } from './snapshot.js';

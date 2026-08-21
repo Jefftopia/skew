@@ -1,5 +1,5 @@
 {
-  "name": "@skewkit/braid-angular",
+  "name": "@braid/angular",
   "version": "0.0.1",
   "description": "Angular binding for Braid: a typed <braid-fragment> component and provideBraid(), which wires host navigation to the Angular router.",
   "keywords": ["angular", "micro-frontends", "composition", "fragments", "braid"],
@@ -9,7 +9,7 @@
     "@angular/common": "^22.0.0",
     "@angular/core": "^22.0.0",
     "@angular/router": "^22.0.0",
-    "@skewkit/braid": "^0.0.1",
+    "@braid/core": "^0.0.1",
     "rxjs": "^7.8.0"
   },
   "publishConfig": {

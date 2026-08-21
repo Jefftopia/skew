@@ -1,4 +1,4 @@
-import type { OutboxEntry, OutboxService } from '@skewkit/angular-data';
+import type { OutboxEntry, OutboxService } from '@braid/angular-data';
 import { API_BASE, OrderSchemaV2, type OrderV2 } from './contracts';
 import { isSimulatedOffline } from './offline';
 import { trace } from '../trace';

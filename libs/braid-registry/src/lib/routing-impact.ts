@@ -1,5 +1,5 @@
-import { Registry } from '@skewkit/braid-gateway';
-import type { FragmentManifest } from '@skewkit/braid-gateway';
+import { Registry } from '@braid/gateway';
+import type { FragmentManifest } from '@braid/gateway';
 import type { ObservationSet } from './observations.js';
 
 /**

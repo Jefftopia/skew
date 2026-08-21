@@ -1,7 +1,7 @@
-# @skewkit/braid — the client runtime
+# @braid/core — the client runtime
 
 ```ts
-import { initBraid } from '@skewkit/braid';
+import { initBraid } from '@braid/core';
 
 initBraid({
   dev: true,

@@ -1,7 +1,7 @@
 import { createServer, request as httpRequest, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { Duplex } from 'node:stream';
-import { createGateway } from '@skewkit/braid-gateway';
-import { toNodeMiddleware, toNodeUpgradeHandler } from '@skewkit/braid-gateway/node';
+import { createGateway } from '@braid/gateway';
+import { toNodeMiddleware, toNodeUpgradeHandler } from '@braid/gateway/node';
 import type { ResolvedConfig } from './config.js';
 
 /**

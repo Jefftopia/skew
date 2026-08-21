@@ -180,7 +180,7 @@ same number, so each demanded its own version — and the one with the *shorter*
 requesting a version lower than the database already had. IndexedDB refuses that permanently. The
 sibling that "broke" it had done nothing wrong.
 
-**Fix.** Upgrade `@skewkit/data`. The version is now discovered rather than derived, connections
+**Fix.** Upgrade `@braid/data`. The version is now discovered rather than derived, connections
 close themselves on `versionchange` so a sibling's upgrade is not blocked, and a genuinely blocked
 upgrade reports which database and collections are involved instead of hanging. If you are pinned to
 an older version, the workaround is to have every application on the origin declare an identical
@@ -196,7 +196,7 @@ id, wrong tenant. It corrects itself on reload, which makes it look like a rende
 *session*-scoped — a queued write belongs to the session that made it, not to whichever client was on
 screen — so both tabs read one queue, and `holding:h1` means something different in each.
 
-**Fix.** Upgrade `@skewkit/data`. Overlays now carry the partition they were made for, and a reader
+**Fix.** Upgrade `@braid/data`. Overlays now carry the partition they were made for, and a reader
 only applies the ones belonging to the partition it is reading. The queue stays session-scoped, so
 the edit still flushes from whichever tab is open — scoping the queue too would strand a trade behind
 a client the advisor had closed.
@@ -210,7 +210,7 @@ not.
 **Symptom.** Two composed apps write the same shared record. One of the edits is simply gone —
 intermittently, and more often on a fast connection where both writes land close together.
 
-**Cause.** Not a bug in either app. `@skewkit/data` gives every write a single-record transaction, so
+**Cause.** Not a bug in either app. `@braid/data` gives every write a single-record transaction, so
 records are never torn and no update is lost to a read-modify-write — but there is **no compare-and-set**:
 concurrent writes to one key end in last-write-wins. Both values were accepted by the server; the
 store holds whichever arrived second.
@@ -286,8 +286,8 @@ so a script that "does nothing" is usually a URL problem, not an execution probl
 own HTML); the client and gateway package versions disagree on the protocol; or the fragment
 endpoint sets `X-Frame-Options: DENY`, which stops the realm iframe loading.
 
-**Prevention.** Mount the gateway first in the middleware chain, upgrade `@skewkit/braid` and
-`@skewkit/braid-gateway` together, and do not let a CDN or WAF inject frame-blocking headers on
+**Prevention.** Mount the gateway first in the middleware chain, upgrade `@braid/core` and
+`@braid/gateway` together, and do not let a CDN or WAF inject frame-blocking headers on
 namespace responses. The error message names which of these it is.
 
 ---

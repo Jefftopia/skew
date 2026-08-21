@@ -13,7 +13,7 @@
  * Retry is therefore a *precondition* to recovery, not one of the strategies.
  */
 
-import { isSkewDisabled } from '@skewkit/core';
+import { isSkewDisabled } from '@braid/skew';
 
 /** Defaults for `lazy()`, overridable globally by `provideSkewRecovery()`. */
 export const lazyDefaults = {
@@ -110,7 +110,7 @@ export function lazy<T>(
   }
 
   return async () => {
-    // Not public API — see `disabled.ts` in @skewkit/core. A bare dynamic import
+    // Not public API — see `disabled.ts` in @braid/skew. A bare dynamic import
     // with no retry and no attribution: the rejection propagates exactly as the
     // bundler produced it, and nothing downstream knows which module it was.
     if (isSkewDisabled()) return loader();

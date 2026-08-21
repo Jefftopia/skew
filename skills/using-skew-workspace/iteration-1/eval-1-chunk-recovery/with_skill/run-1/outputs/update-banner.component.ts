@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { SkewRecoveryService } from '@skewkit/angular-router';
+import { SkewRecoveryService } from '@braid/angular-router';
 
 /**
  * Shown when automatic recovery was NOT safe and the router degraded to

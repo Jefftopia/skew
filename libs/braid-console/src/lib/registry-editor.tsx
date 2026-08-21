@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { FragmentManifest } from '@skewkit/braid-gateway';
-import type { DescriptorNote, FieldChange, NamedPrincipal, RegistryFinding } from '@skewkit/braid-registry';
+import type { FragmentManifest } from '@braid/gateway';
+import type { DescriptorNote, FieldChange, NamedPrincipal, RegistryFinding } from '@braid/registry';
 import { AccessPanel } from './access-panel.js';
 import {
   fetchHead,
@@ -9,7 +9,7 @@ import {
   type ConsoleApi,
   type PublishOutcome,
 } from './client.js';
-import { accessMatrix, ANONYMOUS } from '@skewkit/braid-registry';
+import { accessMatrix, ANONYMOUS } from '@braid/registry';
 import {
   addFragment,
   createDraft,

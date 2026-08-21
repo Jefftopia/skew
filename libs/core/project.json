@@ -25,7 +25,7 @@
       "options": {
         "outputPath": "dist/libs/core",
         "main": "libs/core/src/index.ts",
-        "tsConfig": "libs/core/tsconfig.lib.json",
+        "tsConfig": "libs/core/tsconfig.build.json",
         "assets": [
           "libs/core/*.md"
         ]

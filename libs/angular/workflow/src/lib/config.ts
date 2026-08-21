@@ -8,7 +8,7 @@ import {
   type VersionedStore,
   createVersionedStore,
   webStorageDriver,
-} from '@skewkit/core';
+} from '@braid/skew';
 
 export interface WorkflowOptions {
   /**

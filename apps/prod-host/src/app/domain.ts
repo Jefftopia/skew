@@ -1,5 +1,5 @@
-import { versioned } from '@skewkit/core';
-import { defineWorkflow } from '@skewkit/angular-workflow';
+import { versioned } from '@braid/skew';
+import { defineWorkflow } from '@braid/angular-workflow';
 
 /**
  * The host's view of the shared contract.
@@ -10,7 +10,7 @@ import { defineWorkflow } from '@skewkit/angular-workflow';
  * could, they would be one deployment and there would be no skew to survive.
  *
  * What they actually share is the **envelope written to storage**: `{ v, data }`.
- * Both sides declare their own understanding of that envelope, and `@skewkit/core`
+ * Both sides declare their own understanding of that envelope, and `@braid/skew`
  * reconciles them at the boundary. The wire format is the contract; the code
  * is not.
  *
@@ -31,7 +31,7 @@ export interface DraftV1 {
 /**
  * Version 1.
  *
- * Records written before `@skewkit/core` was adopted carry no envelope at all;
+ * Records written before `@braid/skew` was adopted carry no envelope at all;
  * those read as v1 too, so there is no backfill to run.
  */
 export const DraftSchemaV1 = versioned<DraftV1>('skew-demo-draft');

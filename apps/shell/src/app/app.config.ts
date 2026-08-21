@@ -1,8 +1,8 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideSkewRecovery } from '@skewkit/angular-router';
-import { provideSkewData } from '@skewkit/angular-data';
-import { provideSkewWorkflow } from '@skewkit/angular-workflow';
+import { provideSkewRecovery } from '@braid/angular-router';
+import { provideSkewData } from '@braid/angular-data';
+import { provideSkewWorkflow } from '@braid/angular-workflow';
 import { appRoutes } from './app.routes';
 import { manifestUrl } from './simulator';
 

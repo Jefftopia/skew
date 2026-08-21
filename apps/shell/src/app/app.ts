@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { SkewRecoveryService } from '@skewkit/angular-router';
+import { SkewRecoveryService } from '@braid/angular-router';
 import { BUILD_IDENTITY } from './app.config';
 import { VERSIONS } from './domain';
 import { Simulator } from './simulator';

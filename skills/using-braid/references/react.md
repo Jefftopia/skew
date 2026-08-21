@@ -1,4 +1,4 @@
-# @skewkit/braid-react
+# @braid/react
 
 ```tsx
 // entry file, module scope — before anything renders a fragment

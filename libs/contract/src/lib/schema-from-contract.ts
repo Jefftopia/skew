@@ -5,7 +5,7 @@ import {
   compileLens,
   registerSteps,
   versionedFromSteps,
-} from '@skewkit/core';
+} from '@braid/skew';
 import { SkewContractDocument, SkewContractStep } from './document.js';
 
 /**

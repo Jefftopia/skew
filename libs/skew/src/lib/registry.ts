@@ -26,7 +26,7 @@ import { stepFingerprint } from './fingerprint.js';
  * This registry is module-level, deliberately outside any DI system. The
  * demo's rule — a remote must not depend on the host having configured
  * providers — holds here: both sides reach the same registry through the one
- * shared `@skewkit/core` instance (`sharedMappings`), with no cooperation beyond
+ * shared `@braid/skew` instance (`sharedMappings`), with no cooperation beyond
  * that.
  *
  * ## Conflicts

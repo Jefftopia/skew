@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FragmentManifest } from '@skewkit/braid-gateway';
+import type { FragmentManifest } from '@braid/gateway';
 import {
   addFragment,
   createDraft,

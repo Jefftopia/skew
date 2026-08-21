@@ -4,7 +4,7 @@ import {
   pierceShellHtml,
   type FragmentManifest,
   type PierceTarget,
-} from '@skewkit/braid-gateway';
+} from '@braid/gateway';
 
 /**
  * Offline composition: the gateway's own piercing, run inside the worker.

@@ -10,13 +10,13 @@ you would actually build it, rather than feature by feature.
 
 | # | Tutorial | Package | You will build |
 | - | -------- | ------- | -------------- |
-| 1 | [Version the data, not the deploy](01-core.md) | `@skewkit/core` | A draft schema that survives three shape changes, migrates in both directions, and refuses dishonestly-shaped data |
-| 2 | [Give your build a name](02-build.md) | `@skewkit/build` | A stamped build identity, a served manifest, a stale-origin detector, and generated frozen types |
-| 3 | [Versioned stores, the Angular way](03-angular-core.md) | `@skewkit/angular-core` | A draft editor on DI + Signals with zero flicker and typed failure states |
-| 4 | [One graph, durable writes](04-angular-data.md) | `@skewkit/angular-data` | A normalized fund list with optimistic, outbox-durable order submission |
-| 5 | [Compose without colliding](05-braid.md) | `@skewkit/braid-gateway` · `@skewkit/braid-client` | An enterprise microfrontend shell with server-side piercing, isolated iframe realms, and zero-blast-radius degradation |
-| 6 | [Client storage that survives a reload](06-data-storage.md) | `@skewkit/data` | A framework-free cache on IndexedDB — shared across apps, invalidated by tag, with a durable queue for writes the network never took |
-| 7 | [Build a storefront, end to end](07-storefront.md) | `@skewkit/data` | The whole layer in build order — guest and customer partitions, a shared catalogue, orders that survive the network dropping, a shipping event pushed from the server, and a sign-out that destroys it all |
+| 1 | [Version the data, not the deploy](01-core.md) | `@braid/skew` | A draft schema that survives three shape changes, migrates in both directions, and refuses dishonestly-shaped data |
+| 2 | [Give your build a name](02-build.md) | `@braid/build` | A stamped build identity, a served manifest, a stale-origin detector, and generated frozen types |
+| 3 | [Versioned stores, the Angular way](03-angular-core.md) | `@braid/angular-core` | A draft editor on DI + Signals with zero flicker and typed failure states |
+| 4 | [One graph, durable writes](04-angular-data.md) | `@braid/angular-data` | A normalized fund list with optimistic, outbox-durable order submission |
+| 5 | [Compose without colliding](05-braid.md) | `@braid/gateway` · `@braid/core` | An enterprise microfrontend shell with server-side piercing, isolated iframe realms, and zero-blast-radius degradation |
+| 6 | [Client storage that survives a reload](06-data-storage.md) | `@braid/data` | A framework-free cache on IndexedDB — shared across apps, invalidated by tag, with a durable queue for writes the network never took |
+| 7 | [Build a storefront, end to end](07-storefront.md) | `@braid/data` | The whole layer in build order — guest and customer partitions, a shared catalogue, orders that survive the network dropping, a shipping event pushed from the server, and a sign-out that destroys it all |
 
 **Read them in the demo.** These pages are also served inside the federated
 demo apps — the remote exposes a `./Tutorials` module and the host routes to

@@ -1,4 +1,4 @@
-import { type VersionedSchema, versioned } from '@skewkit/core';
+import { type VersionedSchema, versioned } from '@braid/skew';
 
 /**
  * Durable multi-step workflows.
@@ -63,7 +63,7 @@ export interface WorkflowDefinition<TData> {
   /** Step to begin at. Defaults to the first declared. */
   readonly initialStep?: StepId;
   /**
-   * Versioning for the *draft*, using `@skewkit/core`.
+   * Versioning for the *draft*, using `@braid/skew`.
    *
    * A draft written under build 41 and resumed under 57 is the same boundary
    * as a client calling a newer server — the counterparty is your own past

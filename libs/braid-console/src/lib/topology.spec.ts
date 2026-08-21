@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { DiscoveryEntry } from '@skewkit/braid-gateway';
+import type { DiscoveryEntry } from '@braid/gateway';
 import { buildTopology, coTenants, neighborhood, FRAGMENT_PREFIX, ROUTE_PREFIX } from './topology.js';
 
 function entry(overrides: Partial<DiscoveryEntry> & { id: string }): DiscoveryEntry {

@@ -1,12 +1,12 @@
 {
-  "name": "@skewkit/angular-core",
+  "name": "@braid/angular-core",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/core": "^22.0.0",
-    "@skewkit/core": "^0.0.1"
+    "@braid/skew": "^0.0.1"
   },
   "sideEffects": false,
-  "description": "Angular DI and signal wrappers for @skewkit/core versioned stores.",
+  "description": "Angular DI and signal wrappers for @braid/skew versioned stores.",
   "publishConfig": {
     "access": "public"
   },

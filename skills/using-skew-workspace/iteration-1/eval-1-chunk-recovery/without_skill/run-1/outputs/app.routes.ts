@@ -1,7 +1,7 @@
 /**
  * app.routes.ts
  *
- * Nothing skew-specific here, and that is the point: @skewkit/angular-router
+ * Nothing skew-specific here, and that is the point: @braid/angular-router
  * attaches to the router's navigation/loader error path via
  * provideSkewChunkRecovery() in app.config.ts, so lazy routes are written
  * exactly as stock Angular. No wrapping of import() calls, no custom

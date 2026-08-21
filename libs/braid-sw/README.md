@@ -1,4 +1,4 @@
-# @skewkit/braid-sw
+# @braid/sw
 
 Skew-aware asset serving for composed pages.
 
@@ -25,7 +25,7 @@ for internal enterprise apps.
 
 ```js
 // your sw.js
-import { braidFetchHandler } from '@skewkit/braid-sw';
+import { braidFetchHandler } from '@braid/sw';
 const braid = braidFetchHandler({ buildId: BUILD_ID });
 
 self.addEventListener('fetch', (event) => {
@@ -38,7 +38,7 @@ self.addEventListener('fetch', (event) => {
 
 ```js
 // sw.js
-import { setupBraidWorker } from '@skewkit/braid-sw';
+import { setupBraidWorker } from '@braid/sw';
 setupBraidWorker({ buildId: BUILD_ID, precache: ['billing', 'notifications'] });
 ```
 
@@ -50,7 +50,7 @@ createGateway({ registry, serviceWorker: { scope: '/apps/' } });   // path-mount
 ```
 
 ```ts
-import { registerBraidServiceWorker } from '@skewkit/braid';
+import { registerBraidServiceWorker } from '@braid/core';
 await registerBraidServiceWorker({ buildId: BUILD_ID });
 ```
 
@@ -146,7 +146,7 @@ the network is back, with no page open and nothing racing teardown. Background S
 so every activation also flushes opportunistically; a browser without it gets that path and nothing
 else.
 
-The queue is `@skewkit/data`'s outbox rather than a second implementation: one record per entry, so
+The queue is `@braid/data`'s outbox rather than a second implementation: one record per entry, so
 appending never reads the queue first and two contexts cannot lose each other's writes. A refused
 batch stays queued in full — partial credit would need the endpoint to say which records it took,
 and no telemetry endpoint does.
@@ -157,4 +157,4 @@ The Cache API stores `Request → Response`. The data layer needs per-entity key
 envelopes, and migrate-on-read; the Cache API offers none of the three, and storing enveloped
 entities as opaque response bodies would defeat the projection the whole design rests on.
 
-**Cache API for assets and stubs. IndexedDB (`@skewkit/data`) for entities.**
+**Cache API for assets and stubs. IndexedDB (`@braid/data`) for entities.**

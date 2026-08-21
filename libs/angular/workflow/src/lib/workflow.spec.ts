@@ -1,6 +1,6 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { createVersionedStore, memoryDriver, versioned } from '@skewkit/core';
+import { createVersionedStore, memoryDriver, versioned } from '@braid/skew';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WORKFLOW_OPTIONS, resolveWorkflowOptions } from './config';
 import { defineWorkflow } from './definition';

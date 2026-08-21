@@ -1,11 +1,11 @@
 /**
- * @skewkit/data — the local-first data layer.
+ * @braid/data — the local-first data layer.
  *
  * Persistence-first: IndexedDB is the source of truth and memory is a derived view. Every record is
- * enveloped by `@skewkit/core` and projected to *this* reader's version on the way out, which is
+ * enveloped by `@braid/skew` and projected to *this* reader's version on the way out, which is
  * what lets independently deployed apps read the same store at different contract versions.
  *
- * Framework-neutral. Angular bindings live in `@skewkit/angular-data`.
+ * Framework-neutral. Angular bindings live in `@braid/angular-data`.
  */
 
 export { createRecordStore } from './lib/record-store.js';

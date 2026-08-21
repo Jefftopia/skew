@@ -58,7 +58,7 @@ export interface WorkerScopeLike {
  *
  * ```js
  * // sw.js
- * import { setupBraidWorker } from '@skewkit/braid-sw';
+ * import { setupBraidWorker } from '@braid/sw';
  * setupBraidWorker({ buildId: BUILD_ID, precache: ['billing', 'notifications'] });
  * ```
  */

@@ -1,4 +1,4 @@
-# @skewkit/braid-console
+# @braid/console
 
 A read-only console for a [Braid](../braid-gateway) gateway's fragment registry. One package, two
 shapes: a mountable React component, and a standalone deployable app.
@@ -12,7 +12,7 @@ gateway today. No snapshot store, no write API.
 For teams who already run an internal admin app and want this inside it rather than beside it:
 
 ```tsx
-import { RegistryConsole } from '@skewkit/braid-console';
+import { RegistryConsole } from '@braid/console';
 
 <RegistryConsole api={{ baseUrl: '/api/gateway', headers: () => ({ Authorization: token }) }} />;
 ```
@@ -73,12 +73,12 @@ library form, so a host never ships two copies.
 ## Editing
 
 ```tsx
-import { RegistryEditor } from '@skewkit/braid-console';
+import { RegistryEditor } from '@braid/console';
 
 <RegistryEditor api={{ apiPath: '/__braid/registry-api' }} onPublished={(o) => toast(o.snapshot.id)} />;
 ```
 
-Needs [`@skewkit/braid-registry`](../braid-registry)'s write API mounted. The flow is **branch from
+Needs [`@braid/registry`](../braid-registry)'s write API mounted. The flow is **branch from
 what is pinned → edit → see what it changes → publish**, and publishing never mutates the snapshot
 being edited: it mints a new one and moves a pointer, so the previous configuration survives
 untouched and rollback is re-pinning it.
@@ -125,7 +125,7 @@ loud rather than letting you mistake a dev listing for a production one.
 
 ## Related
 
-- [`@skewkit/braid-registry`](../braid-registry) — snapshots and analysis, for when the registry
+- [`@braid/registry`](../braid-registry) — snapshots and analysis, for when the registry
   becomes editable
 - [the plan](../../docs/plans/braid-registry-console-plan.md) — including why the console is
   deliberately optional, and the line it must not cross

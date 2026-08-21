@@ -1,16 +1,16 @@
-# @skewkit/braid-react
+# @braid/react
 
 The React binding for [Braid](../braid). A typed component over `<fragment-slot>`, and a hook that
 tells bound fragments when the host has navigated.
 
 ```tsx
 // entry file, module scope
-import { initBraidReact } from '@skewkit/braid-react';
+import { initBraidReact } from '@braid/react';
 initBraidReact();
 ```
 
 ```tsx
-import { BraidFragment } from '@skewkit/braid-react';
+import { BraidFragment } from '@braid/react';
 
 <BraidFragment name="billing" onReady={() => setLoaded(true)} />;
 ```

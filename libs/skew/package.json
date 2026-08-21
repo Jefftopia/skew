@@ -1,13 +1,13 @@
 {
-  "name": "@skewkit/braid",
+  "name": "@braid/skew",
   "version": "0.0.1",
-  "description": "Braid client runtime — compose independently deployed frontend apps into one page. This build ships the compat adapter (the contained web-fragments-style emulation layer) as the default adapter.",
+  "description": "Framework-agnostic primitives for surviving version skew: versioned envelopes, migration chains, build identity and negotiation.",
   "keywords": [
-    "micro-frontends",
-    "composition",
-    "fragments",
     "version-skew",
-    "web-fragments"
+    "migration",
+    "schema-versioning",
+    "deployment",
+    "offline"
   ],
   "license": "MIT",
   "sideEffects": false,
@@ -27,7 +27,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Jefftopia/skew.git",
-    "directory": "libs/braid"
+    "directory": "libs/skew"
   },
   "homepage": "https://github.com/Jefftopia/skew#readme",
   "bugs": {

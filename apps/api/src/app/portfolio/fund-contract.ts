@@ -1,5 +1,5 @@
-import { CompiledLens, compileLens } from '@skewkit/core';
-import type { SkewContractDocument } from '@skewkit/contract';
+import { CompiledLens, compileLens } from '@braid/skew';
+import type { SkewContractDocument } from '@braid/contract';
 
 /**
  * The portfolio-fund contract, as data — the single definition this server

@@ -15,7 +15,7 @@ import { fundLens } from './fund-contract';
  *
  * The response body remains a hand-written `{ v, payload }` envelope — the
  * envelope shape is the contract, and nothing requires a server to construct
- * it through `@skewkit/core`. The `Skew-Contract` header names the document a
+ * it through `@braid/skew`. The `Skew-Contract` header names the document a
  * consumer can fetch to learn the rest.
  */
 const clock = { now: () => new Date() };

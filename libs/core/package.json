@@ -1,13 +1,13 @@
 {
-  "name": "@skewkit/core",
+  "name": "@braid/core",
   "version": "0.0.1",
-  "description": "Framework-agnostic primitives for surviving version skew: versioned envelopes, migration chains, build identity and negotiation.",
+  "description": "Braid client runtime — compose independently deployed frontend apps into one page. This build ships the compat adapter (the contained web-fragments-style emulation layer) as the default adapter.",
   "keywords": [
+    "micro-frontends",
+    "composition",
+    "fragments",
     "version-skew",
-    "migration",
-    "schema-versioning",
-    "deployment",
-    "offline"
+    "web-fragments"
   ],
   "license": "MIT",
   "sideEffects": false,

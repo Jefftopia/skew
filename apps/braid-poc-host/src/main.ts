@@ -1,5 +1,5 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-import { provideBraid } from '@skewkit/braid-angular';
+import { provideBraid } from '@braid/angular';
 import { App } from './app/app';
 import { appConfig } from './app/app.config';
 

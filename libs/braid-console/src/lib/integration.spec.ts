@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { DiscoveryEntry } from '@skewkit/braid-gateway';
+import type { DiscoveryEntry } from '@braid/gateway';
 import { allIntegrationSnippets, integrationSnippet, integrationWarnings } from './integration.js';
 
 function entry(overrides: Partial<DiscoveryEntry> & { id: string }): DiscoveryEntry {
@@ -25,7 +25,7 @@ describe('integrationSnippet', () => {
   it('includes the one-time setup, not just the markup', () => {
     // A snippet that shows only the slot produces one that never boots, and the reader has no way
     // to know which half is missing.
-    expect(integrationSnippet(screen, 'html').code).toContain("import { initBraid } from '@skewkit/braid';");
+    expect(integrationSnippet(screen, 'html').code).toContain("import { initBraid } from '@braid/core';");
     expect(integrationSnippet(screen, 'angular').code).toContain('provideBraid');
     expect(integrationSnippet(screen, 'react').code).toContain('initBraidReact');
   });

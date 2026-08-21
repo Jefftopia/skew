@@ -123,7 +123,7 @@ const BASICS_STEPS: readonly TourStep[] = [
     placement: 'left',
     title: 'That panel is a different application',
     body:
-      'Built separately, deployed separately, fetched over the network at runtime, and rendered here. It shares no code with this page except the `@skewkit/core` runtime itself — the two builds agree on a storage envelope, nothing more.',
+      'Built separately, deployed separately, fetched over the network at runtime, and rendered here. It shares no code with this page except the `@braid/skew` runtime itself — the two builds agree on a storage envelope, nothing more.',
   },
   {
     id: 'store',
@@ -242,7 +242,7 @@ const PORTFOLIO_STEPS: readonly TourStep[] = [
     placement: 'left',
     title: 'The client → API boundary',
     body:
-      'Submitting an order goes through the @skewkit/angular-data outbox. The API genuinely refuses a v1-shaped order with 409 version-skew, and the runner catches that, migrates the queued payload, and retries — rather than the queue resending the same stale envelope forever.',
+      'Submitting an order goes through the @braid/angular-data outbox. The API genuinely refuses a v1-shaped order with 409 version-skew, and the runner catches that, migrates the queued payload, and retries — rather than the queue resending the same stale envelope forever.',
     hint: 'The "queue as v1" button provokes the 409 on purpose.',
   },
   {

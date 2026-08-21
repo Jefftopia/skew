@@ -36,28 +36,28 @@ const TUTORIALS: readonly TutorialEntry[] = [
   {
     slug: '01-core',
     title: 'Version the data, not the deploy',
-    pkg: '@skewkit/core',
+    pkg: '@braid/skew',
     summary:
       'Envelopes, migration chains in both directions, labeled guesses, and storage that refuses to lie.',
   },
   {
     slug: '02-build',
     title: 'Give your build a name',
-    pkg: '@skewkit/build',
+    pkg: '@braid/build',
     summary:
       'Stamped identity, the served manifest, stale-origin detection, and generated frozen types.',
   },
   {
     slug: '03-angular-core',
     title: 'Versioned stores, the Angular way',
-    pkg: '@skewkit/angular-core',
+    pkg: '@braid/angular-core',
     summary:
       'A versioned store through DI, read as Signals with zero flicker and typed failure states.',
   },
   {
     slug: '04-angular-data',
     title: 'One graph, durable writes',
-    pkg: '@skewkit/angular-data',
+    pkg: '@braid/angular-data',
     summary:
       'Normalized queries, optimistic mutations with precise rollback, and the version-aware outbox.',
   },

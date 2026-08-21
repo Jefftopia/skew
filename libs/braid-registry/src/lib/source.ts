@@ -1,4 +1,4 @@
-import type { FragmentManifest } from '@skewkit/braid-gateway';
+import type { FragmentManifest } from '@braid/gateway';
 import type { SnapshotStore } from './store.js';
 import type { RegistrySnapshot } from './snapshot.js';
 import { verifySnapshot } from './snapshot.js';

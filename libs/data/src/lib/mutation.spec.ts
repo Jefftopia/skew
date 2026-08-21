@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { versioned } from '@skewkit/core';
+import { versioned } from '@braid/skew';
 import { memoryRecordDriver } from './memory-driver.js';
 import { resetSharedInvalidators } from './invalidation.js';
 import { createOutbox } from './outbox.js';

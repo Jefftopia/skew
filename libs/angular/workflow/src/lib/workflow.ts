@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { type VersionedStore, isOk } from '@skewkit/core';
+import { type VersionedStore, isOk } from '@braid/skew';
 import { type StepId, type Workflow } from './definition';
 import * as engine from './engine';
 import { WORKFLOW_OPTIONS } from './config';

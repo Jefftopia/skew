@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { registerSchema, resetSchemaRegistry, versioned } from '@skewkit/core';
+import { registerSchema, resetSchemaRegistry, versioned } from '@braid/skew';
 import { memoryRecordDriver } from './memory-driver.js';
 import { createRecordStore } from './record-store.js';
 

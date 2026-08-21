@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { memoryRecordDriver, type RecordDriver } from '@skewkit/data';
+import { memoryRecordDriver, type RecordDriver } from '@braid/data';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DATA_OPTIONS, resolveDataOptions } from './config';
 import { OutboxService } from './outbox';

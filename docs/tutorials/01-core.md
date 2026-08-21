@@ -1,6 +1,6 @@
 # Tutorial 1 — Version the data, not the deploy
 
-**Package:** `@skewkit/core` · **Time:** ~25 minutes · **Prerequisites:** any
+**Package:** `@braid/skew` · **Time:** ~25 minutes · **Prerequisites:** any
 TypeScript project. No framework required — everything here runs in Node, a
 browser, or a test.
 
@@ -11,7 +11,7 @@ survive a redeploy. At every step you will see exactly what would have broken
 without the envelope.
 
 ```sh
-npm install @skewkit/core
+npm install @braid/skew
 ```
 
 ---
@@ -23,7 +23,7 @@ the point is to start writing envelopes now, so every future reader can tell
 what it is looking at.
 
 ```ts
-import { versioned } from '@skewkit/core';
+import { versioned } from '@braid/skew';
 
 interface DraftV1 {
   id: string;
@@ -239,7 +239,7 @@ same read returns the projection — with the dropped fields labeled **LOST**:
 (The sharing mechanism — `registerSchema` and the page-wide registry — is
 what lets two *separately built bundles* lend each other migration knowledge.
 It matters most under module federation; see the walkthrough's step 5 and
-`libs/core/src/lib/registry.ts` when you get there.)
+`libs/skew/src/lib/registry.ts` when you get there.)
 
 ---
 
@@ -285,7 +285,7 @@ changes, every cached record on every user's machine has the old shape while
 being *typed* as the new one. Route storage through the schema instead:
 
 ```ts
-import { createVersionedStore, webStorageDriver } from '@skewkit/core';
+import { createVersionedStore, webStorageDriver } from '@braid/skew';
 
 const drafts = createVersionedStore(Draft, {
   driver: webStorageDriver('local'),
@@ -335,9 +335,9 @@ The op set is closed and non-Turing-complete on purpose: `rename`, `move`,
 evolution fits it; semantic transforms (deriving `summary` from `body`, say)
 deliberately do not — those stay as code. This split is what makes it safe
 for an API to *publish* its migrations as a document a client can fetch at
-runtime (`@skewkit/contract`), which is where the `ahead` story gets its
+runtime (`@braid/contract`), which is where the `ahead` story gets its
 final act. That is its own tutorial's worth of material — see the
-[`@skewkit/contract` README](../../libs/contract/README.md) when you are
+[`@braid/contract` README](../../libs/contract/README.md) when you are
 ready.
 
 ---

@@ -53,3 +53,7 @@ docs/plans/*
 
 __screenshots__/
 .braid/
+
+# VitePress build output
+docs/.vitepress/dist
+docs/.vitepress/cache

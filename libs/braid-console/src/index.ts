@@ -1,11 +1,11 @@
 /**
- * @skewkit/braid-console — a read-only view of a Braid gateway's fragment registry.
+ * @braid/console — a read-only view of a Braid gateway's fragment registry.
  *
  * Two ways to use it, from one package:
  *
  * ```tsx
  * // as a library, inside an admin app you already run
- * import { RegistryConsole } from '@skewkit/braid-console';
+ * import { RegistryConsole } from '@braid/console';
  * <RegistryConsole api={{ baseUrl: '/api/gateway' }} />
  * ```
  *

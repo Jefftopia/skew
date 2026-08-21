@@ -37,7 +37,7 @@ export interface RegisterBraidServiceWorkerOptions {
  * Registers the worker and introduces the page to it.
  *
  * ```ts
- * import { registerBraidServiceWorker } from '@skewkit/braid';
+ * import { registerBraidServiceWorker } from '@braid/core';
  * await registerBraidServiceWorker({ buildId: BUILD_ID });
  * ```
  *

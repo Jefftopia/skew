@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Injector, runInInjectionContext } from '@angular/core';
-import { memoryRecordDriver, type RecordDriver } from '@skewkit/data';
+import { memoryRecordDriver, type RecordDriver } from '@braid/data';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DATA_OPTIONS, resolveDataOptions } from './config';
 import { entity } from './entity';

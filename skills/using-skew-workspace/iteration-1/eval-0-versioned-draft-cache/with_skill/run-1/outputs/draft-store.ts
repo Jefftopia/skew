@@ -10,7 +10,7 @@
  * that merely came from the future (the user's other tab or device that got
  * the new deploy first); the next deploy of this app will read it fine.
  */
-import { createVersionedStore, webStorageDriver } from '@skewkit/core';
+import { createVersionedStore, webStorageDriver } from '@braid/skew';
 import { BUILD_ID } from './generated/build-id';
 import { WeeklyContentSchema, WeeklyContentDraft } from './weekly-content.schema';
 

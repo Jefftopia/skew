@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { FragmentManifest } from '@skewkit/braid-gateway';
-import { accessMatrix, ANONYMOUS, parsePrincipal, type NamedPrincipal } from '@skewkit/braid-registry';
+import type { FragmentManifest } from '@braid/gateway';
+import { accessMatrix, ANONYMOUS, parsePrincipal, type NamedPrincipal } from '@braid/registry';
 
 export interface AccessPanelProps {
   /** The draft being edited. */

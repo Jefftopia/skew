@@ -74,11 +74,11 @@ tooling, contract documents — is an application of the same idea to a
 specific boundary, and every package is independently adoptable.
 
 ```sh
-npm install @skewkit/core @skewkit/build
+npm install @braid/skew @braid/build
 ```
 
 ```ts
-import { versioned } from '@skewkit/core';
+import { versioned } from '@braid/skew';
 
 // Snapshot shapes: frozen copies of what each version looked like.
 interface DraftV1 { id: string; body: string }
@@ -125,21 +125,21 @@ under the running host.
 
 | Package                                               | What it does                                                                                            |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **[`@skewkit/core`](libs/core)**                         | Envelopes, migration chains, versioned storage, build identity, the shared schema registry. No deps.    |
-| **[`@skewkit/contract`](libs/contract)**                 | Migration history published as a document the API serves; clients resolve it at runtime.                |
-| **[`@skewkit/build`](libs/build)**                       | `skew-stamp` (build identity + manifest) and `skew-contract gen` (frozen types from a contract).        |
-| **[`@skewkit/studio`](libs/studio)**                     | Inspection tooling: structural payload diffs that mark guessed and discarded values. Framework-free.    |
-| **[`@skewkit/angular-core`](libs/angular/core)**         | Angular DI and signal wrappers for versioned stores.                                                    |
-| **[`@skewkit/angular-router`](libs/angular/router)**     | Chunk-load recovery for lazy routes, without reload loops or lost work.                                 |
-| **[`@skewkit/angular-data`](libs/angular/data)**         | Normalized entity store, tag invalidation, and a durable mutation outbox.                               |
-| **[`@skewkit/angular-workflow`](libs/angular/workflow)** | Multi-step flows whose drafts survive refresh, deploys, and device changes.                             |
-| **[`@skewkit/braid`](libs/braid)**                       | Braid client runtime: isolated iframe realms, declarative shadow DOM, and compat adapter for microfrontends. |
-| **[`@skewkit/braid-gateway`](libs/braid-gateway)**       | Fetch-native origin-front middleware with manifest routing, clean namespaces, and server-side piercing.      |
-| **[`@skewkit/braid-angular`](libs/braid-angular)**       | Angular binding for Braid: typed `<braid-fragment>` component and router integration.                        |
-| **[`@skewkit/braid-react`](libs/braid-react)**           | React binding for Braid: `<BraidFragment>` component and router integration.                                 |
-| **[`@skewkit/braid-cli`](libs/braid-cli)**               | Braid CLI (`braid dev`): local dev server orchestration with live reload.                                   |
+| **[`@braid/skew`](libs/skew)**                         | Envelopes, migration chains, versioned storage, build identity, the shared schema registry. No deps.    |
+| **[`@braid/contract`](libs/contract)**                 | Migration history published as a document the API serves; clients resolve it at runtime.                |
+| **[`@braid/build`](libs/build)**                       | `skew-stamp` (build identity + manifest) and `skew-contract gen` (frozen types from a contract).        |
+| **[`@braid/studio`](libs/studio)**                     | Inspection tooling: structural payload diffs that mark guessed and discarded values. Framework-free.    |
+| **[`@braid/angular-core`](libs/angular/core)**         | Angular DI and signal wrappers for versioned stores.                                                    |
+| **[`@braid/angular-router`](libs/angular/router)**     | Chunk-load recovery for lazy routes, without reload loops or lost work.                                 |
+| **[`@braid/angular-data`](libs/angular/data)**         | Normalized entity store, tag invalidation, and a durable mutation outbox.                               |
+| **[`@braid/angular-workflow`](libs/angular/workflow)** | Multi-step flows whose drafts survive refresh, deploys, and device changes.                             |
+| **[`@braid/core`](libs/core)**                       | Braid client runtime: isolated iframe realms, declarative shadow DOM, and compat adapter for microfrontends. |
+| **[`@braid/gateway`](libs/braid-gateway)**       | Fetch-native origin-front middleware with manifest routing, clean namespaces, and server-side piercing.      |
+| **[`@braid/angular`](libs/braid-angular)**       | Angular binding for Braid: typed `<braid-fragment>` component and router integration.                        |
+| **[`@braid/react`](libs/braid-react)**           | React binding for Braid: `<BraidFragment>` component and router integration.                                 |
+| **[`@braid/cli`](libs/braid-cli)**               | Braid CLI (`braid dev`): local dev server orchestration with live reload.                                   |
 
-Every package depends on `@skewkit/core` and never on a sibling. You can adopt
+Every package depends on `@braid/skew` and never on a sibling. You can adopt
 one, several, or none of the Angular ones; nothing is load-bearing for
 anything else.
 
@@ -151,20 +151,20 @@ These are the groupings that come up in practice.
 
 ### An app that autosaves drafts or caches API data locally
 
-**`@skewkit/core`** (+ **`@skewkit/angular-core`** in Angular).
+**`@braid/skew`** (+ **`@braid/angular-core`** in Angular).
 
 The moment you write `JSON.parse(raw) as Draft`, you have an assertion where
 you need a check, and the first release that changes the model breaks every
 record already sitting in users' browsers. `versioned()` +
 `createVersionedStore` replaces the cast with migration at the boundary.
-`@skewkit/angular-core` adds the DI token and signal wrappers
+`@braid/angular-core` adds the DI token and signal wrappers
 (`provideSkewStore`, `injectSkewSignal`) so components consume the store
 without a flash of empty state. You do not need anything else for this —
 no build stamping, no contracts.
 
 ### An app whose users keep tabs open across deploys
 
-**`@skewkit/build`** + **`@skewkit/angular-router`** (+ `@skewkit/core`, which they build on).
+**`@braid/build`** + **`@braid/angular-router`** (+ `@braid/skew`, which they build on).
 
 Chunk recovery needs two things migrations don't: a *build identity* to
 compare against (that's `skew-stamp`, which generates a build-id module and a
@@ -178,11 +178,11 @@ deleted route means "redirect, reloading will 404 forever".
 
 ### Offline-capable data entry
 
-**`@skewkit/core`** + **`@skewkit/build`** + **`@skewkit/angular-data`**.
+**`@braid/skew`** + **`@braid/build`** + **`@braid/angular-data`**.
 
 A mutation queued while offline must survive a page reload, which means it
 must be persisted — and anything persisted can outlive the build that wrote
-it. The outbox in `@skewkit/angular-data` therefore needs `@skewkit/core`'s
+it. The outbox in `@braid/angular-data` therefore needs `@braid/skew`'s
 versioning twice over: queued payloads carry the schema version they were
 authored under (so a flush after a deploy can migrate them before sending),
 and a queue written by a *newer* build is left untouched rather than
@@ -193,26 +193,26 @@ just arrive later, with less context.
 
 ### A multi-step wizard users abandon and resume
 
-**`@skewkit/core`** + **`@skewkit/angular-workflow`** (+ **`@skewkit/angular-router`**
+**`@braid/skew`** + **`@braid/angular-workflow`** (+ **`@braid/angular-router`**
 if the steps are lazy-loaded routes).
 
 A six-step application form is abandoned on Thursday and resumed on Monday;
 in between, a release added a step and renamed two fields. The workflow
 package owns step↔route mapping, guarded deep links, resumption, and
-idempotent submit — and takes a `schema` from `@skewkit/core` so the parked
+idempotent submit — and takes a `schema` from `@braid/skew` so the parked
 draft is migrated on resume instead of silently corrupted. If the steps are
 lazily loaded, the deploy can also break the *code* loading mid-wizard,
 which is the router package's job.
 
 ### An API whose clients you cannot force-update
 
-**`@skewkit/contract`** + **`@skewkit/core`** + **`@skewkit/build`**, on both sides.
+**`@braid/contract`** + **`@braid/skew`** + **`@braid/build`**, on both sides.
 
 Mobile release trains, partner integrations, or simply many web clients on
 different deploy cadences: the server moves to v2 while v1 clients keep
 running for weeks. Code-shipped migration chains cannot fix the direction
 that matters here — a v1 client reading v2 data (`ahead`) needs knowledge
-that didn't exist when it was built. `@skewkit/contract` closes the gap: the
+that didn't exist when it was built. `@braid/contract` closes the gap: the
 server publishes its migration history as a data document at
 `/.well-known/skew/contracts/:name`, and clients resolve it at runtime
 (`readResolving`) to read newer data as an honest, labeled projection. On
@@ -223,8 +223,8 @@ one definition. See [Contracts as data](#contracts-as-data--migrations-without-a
 
 ### Independently deployed micro-frontends on one page
 
-**`@skewkit/core`** + **`@skewkit/build`** + **`@skewkit/angular-router`**
-(+ **`@skewkit/contract`** if the host and remotes also disagree with an API).
+**`@braid/skew`** + **`@braid/build`** + **`@braid/angular-router`**
+(+ **`@braid/contract`** if the host and remotes also disagree with an API).
 
 A host built against v1 and a remote built against v2 share one JavaScript
 runtime. Three boundaries are live at once: the remote's chunk can vanish
@@ -236,7 +236,7 @@ can downgrade v2 records it could never have understood alone, with the
 discarded fields named. The registry also detects two builds that disagree
 about what a version *means*, via content fingerprints on every step.
 
-## `@skewkit/core` in more depth
+## `@braid/skew` in more depth
 
 ### Results, not exceptions
 
@@ -309,7 +309,7 @@ Reads below the floor fail with `reason: 'retired'` — a policy outcome
 (discard/refetch/reset), deliberately distinct from `gap`, which still means
 "a step is missing and that's a bug". Retire aggressively for refetchable
 caches, conservatively for user work you can't refetch (drain outboxes
-first). Details in the [core README](libs/core/README.md).
+first). Details in the [core README](libs/skew/README.md).
 
 ### Runtime validation
 
@@ -365,7 +365,7 @@ the running demo is in the sections below it:
 ## The shared registry — when both builds share a page
 
 In a federated page, the host built against v1 and the remote built against
-v2 are loaded into the same JavaScript runtime and share one `@skewkit/core`
+v2 are loaded into the same JavaScript runtime and share one `@braid/skew`
 instance. The remote's bundle contains exactly the migration knowledge the
 host lacks, and `registerSchema()` lets it say so:
 
